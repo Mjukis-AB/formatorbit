@@ -1,7 +1,7 @@
 //! MessagePack format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{CoreValue, Interpretation};
 
 pub struct MsgPackFormat;
 
@@ -48,28 +48,10 @@ impl Format for MsgPackFormat {
         Some(bytes.iter().map(|b| format!("{b:02X}")).collect())
     }
 
-    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Bytes(bytes) = value else {
-            return vec![];
-        };
-
-        // Try to decode MessagePack
-        let Ok(decoded): Result<serde_json::Value, _> = rmp_serde::from_slice(bytes) else {
-            return vec![];
-        };
-
-        // Format as JSON for display
-        let display = serde_json::to_string_pretty(&decoded).unwrap_or_default();
-
-        vec![Conversion {
-            value: CoreValue::Json(decoded),
-            target_format: "msgpack".to_string(),
-            display: format!("(decoded) {}", display),
-            path: vec!["msgpack".to_string()],
-            is_lossy: false,
-            priority: ConversionPriority::Structured,
-        }]
-    }
+    // Note: No conversions() - msgpack decoding is too noisy in conversion paths.
+    // Almost any bytes decode to "valid" msgpack (small integers, etc.).
+    // If we add msgpack parsing from string input (e.g., hex-encoded msgpack),
+    // the parsed result will show the decoded content in the description.
 
     fn aliases(&self) -> &'static [&'static str] {
         &["mp", "mpack"]
@@ -100,22 +82,8 @@ impl MsgPackFormat {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_decode_msgpack_from_bytes() {
-        let format = MsgPackFormat;
-
-        // Encode a simple JSON object to msgpack
-        let json = serde_json::json!({"hello": "world"});
-        let msgpack_bytes = rmp_serde::to_vec(&json).unwrap();
-
-        let value = CoreValue::Bytes(msgpack_bytes);
-        let conversions = format.conversions(&value);
-
-        assert_eq!(conversions.len(), 1);
-        assert_eq!(conversions[0].target_format, "msgpack");
-        assert!(conversions[0].display.contains("hello"));
-        assert!(conversions[0].display.contains("world"));
-    }
+    // Note: conversions() tests removed because that method is now disabled
+    // to avoid noise from arbitrary bytes→msgpack decoding.
 
     #[test]
     fn test_encode_json_to_msgpack() {
@@ -134,29 +102,5 @@ mod tests {
 
         let decoded: serde_json::Value = rmp_serde::from_slice(&bytes).unwrap();
         assert_eq!(decoded["key"], 42);
-    }
-
-    #[test]
-    fn test_decode_simple_msgpack() {
-        let format = MsgPackFormat;
-
-        // MessagePack for the string "hello"
-        let msgpack_bytes = rmp_serde::to_vec(&"hello").unwrap();
-
-        let value = CoreValue::Bytes(msgpack_bytes);
-        let conversions = format.conversions(&value);
-
-        assert_eq!(conversions.len(), 1);
-        assert!(conversions[0].display.contains("hello"));
-    }
-
-    #[test]
-    fn test_invalid_msgpack() {
-        let format = MsgPackFormat;
-        // Truncated msgpack array header (says 16 elements but has none)
-        let value = CoreValue::Bytes(vec![0x9F]);
-        let conversions = format.conversions(&value);
-
-        assert!(conversions.is_empty());
     }
 }

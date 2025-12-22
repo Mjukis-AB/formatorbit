@@ -5,9 +5,11 @@ use chrono::{DateTime, TimeZone, Utc};
 use crate::format::{Format, FormatInfo};
 use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
-/// Reasonable epoch range: 1970-01-01 to 2100-01-01
-const MIN_EPOCH_SECONDS: i64 = 0;
-const MAX_EPOCH_SECONDS: i64 = 4_102_444_800;
+/// Reasonable epoch range: 2000-01-01 to 2100-01-01
+/// We use 2000 as minimum to avoid false positives from small integers
+/// (like IP octets converted to int, which gives values in 1970s-1980s).
+const MIN_EPOCH_SECONDS: i64 = 946_684_800; // 2000-01-01
+const MAX_EPOCH_SECONDS: i64 = 4_102_444_800; // 2100-01-01
 
 /// For milliseconds, multiply by 1000
 const MIN_EPOCH_MILLIS: i64 = MIN_EPOCH_SECONDS * 1000;
@@ -17,8 +19,10 @@ const MAX_EPOCH_MILLIS: i64 = MAX_EPOCH_SECONDS * 1000;
 /// This is 978307200 seconds after Unix epoch (1970-01-01)
 const APPLE_REFERENCE_DATE: i64 = 978_307_200;
 
-/// Valid range for Apple timestamps (reference date to 2100)
-const MIN_APPLE_SECONDS: i64 = -APPLE_REFERENCE_DATE; // Back to 1970
+/// Valid range for Apple timestamps (2010-01-01 to 2100-01-01 in Apple time)
+/// We use 2010 as minimum to avoid false positives from small integers.
+/// 2010-01-01 = Unix 1262304000 = Apple 283996800
+const MIN_APPLE_SECONDS: i64 = 283_996_800; // 2010-01-01 in Apple time
 const MAX_APPLE_SECONDS: i64 = MAX_EPOCH_SECONDS - APPLE_REFERENCE_DATE;
 
 /// Windows FILETIME: 100-nanosecond intervals since 1601-01-01

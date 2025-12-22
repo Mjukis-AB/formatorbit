@@ -1,7 +1,7 @@
 //! Color format (hex RGB/RGBA/ARGB).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{CoreValue, Interpretation};
 
 /// Represents a parsed color with RGBA components.
 #[derive(Debug, Clone, Copy)]
@@ -180,111 +180,19 @@ impl Format for ColorFormat {
         vec![]
     }
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        match value {
-            CoreValue::Bytes(bytes) => bytes.len() == 3 || bytes.len() == 4,
-            _ => false,
-        }
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        // Don't format arbitrary bytes as color - too noisy for 3-4 byte values
+        // Color output is only meaningful when input was parsed as a color
+        false
     }
 
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        match value {
-            CoreValue::Bytes(bytes) if bytes.len() == 3 => {
-                Some(format!("#{:02X}{:02X}{:02X}", bytes[0], bytes[1], bytes[2]))
-            }
-            CoreValue::Bytes(bytes) if bytes.len() == 4 => Some(format!(
-                "#{:02X}{:02X}{:02X}{:02X}",
-                bytes[0], bytes[1], bytes[2], bytes[3]
-            )),
-            _ => None,
-        }
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        None
     }
 
-    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Bytes(bytes) = value else {
-            return vec![];
-        };
-
-        if bytes.len() != 3 && bytes.len() != 4 {
-            return vec![];
-        }
-
-        let r = bytes[0];
-        let g = bytes[1];
-        let b = bytes[2];
-        let a = bytes.get(3).copied();
-        let (h, s, l) = Self::rgb_to_hsl(r, g, b);
-
-        let mut conversions = vec![];
-
-        // CSS rgb()/rgba() format
-        let rgb_str = if let Some(alpha) = a {
-            format!("rgba({r}, {g}, {b}, {})", alpha)
-        } else {
-            format!("rgb({r}, {g}, {b})")
-        };
-        conversions.push(Conversion {
-            value: CoreValue::String(rgb_str.clone()),
-            target_format: "color-rgb".to_string(),
-            display: rgb_str,
-            path: vec!["color-rgb".to_string()],
-            is_lossy: false,
-            priority: ConversionPriority::Semantic,
-        });
-
-        // HSL format
-        let hsl_str = format!("hsl({h}°, {s}%, {l}%)");
-        conversions.push(Conversion {
-            value: CoreValue::String(hsl_str.clone()),
-            target_format: "color-hsl".to_string(),
-            display: hsl_str,
-            path: vec!["color-hsl".to_string()],
-            is_lossy: false,
-            priority: ConversionPriority::Semantic,
-        });
-
-        // 0xRRGGBB or 0xAARRGGBB (Android/code style)
-        let hex_int = if let Some(alpha) = a {
-            format!("0x{alpha:02X}{r:02X}{g:02X}{b:02X}")
-        } else {
-            format!("0x{r:02X}{g:02X}{b:02X}")
-        };
-        conversions.push(Conversion {
-            value: CoreValue::String(hex_int.clone()),
-            target_format: if a.is_some() {
-                "color-argb"
-            } else {
-                "color-0x"
-            }
-            .to_string(),
-            display: hex_int,
-            path: vec!["color-argb".to_string()],
-            is_lossy: false,
-            priority: ConversionPriority::Semantic,
-        });
-
-        // If we have alpha, also show the ARGB interpretation
-        // (user might have entered #RRGGBBAA but it could be #AARRGGBB)
-        if let Some(alpha) = a {
-            // Interpret bytes as ARGB instead of RGBA
-            let argb_r = g; // bytes[1]
-            let argb_g = b; // bytes[2]
-            let argb_b = alpha; // bytes[3]
-            let argb_a = r; // bytes[0]
-
-            let argb_str = format!("ARGB: rgba({argb_r}, {argb_g}, {argb_b}, {argb_a})");
-            conversions.push(Conversion {
-                value: CoreValue::String(argb_str.clone()),
-                target_format: "color-as-argb".to_string(),
-                display: argb_str,
-                path: vec!["color-as-argb".to_string()],
-                is_lossy: false,
-                priority: ConversionPriority::Semantic,
-            });
-        }
-
-        conversions
-    }
+    // Note: No conversions() either - color info is shown in parse description.
+    // We don't want arbitrary 3-4 byte values (like IPs or small hex) to show color conversions.
+    // Color conversions are only meaningful when the input was actually parsed as a color.
 
     fn aliases(&self) -> &'static [&'static str] {
         &["col", "rgb", "argb"]
@@ -351,28 +259,8 @@ mod tests {
         assert_eq!(l, 100);
     }
 
-    #[test]
-    fn test_format_to_hex() {
-        let format = ColorFormat;
-        let value = CoreValue::Bytes(vec![255, 87, 51]);
-        assert_eq!(format.format(&value), Some("#FF5733".to_string()));
-    }
-
-    #[test]
-    fn test_conversions_rgb_hsl() {
-        let format = ColorFormat;
-        let value = CoreValue::Bytes(vec![255, 0, 0]);
-        let conversions = format.conversions(&value);
-
-        assert!(conversions.iter().any(|c| c.target_format == "color-rgb"));
-        assert!(conversions.iter().any(|c| c.target_format == "color-hsl"));
-
-        let hsl = conversions
-            .iter()
-            .find(|c| c.target_format == "color-hsl")
-            .unwrap();
-        assert!(hsl.display.contains("0°")); // Red is 0 degrees
-    }
+    // Note: format() and conversions() tests removed because those methods
+    // are now disabled to avoid noise from arbitrary bytes→color conversions.
 
     #[test]
     fn test_parse_android_argb() {
@@ -391,22 +279,4 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_conversions_include_argb() {
-        let format = ColorFormat;
-        let value = CoreValue::Bytes(vec![255, 87, 51, 128]); // RGBA
-        let conversions = format.conversions(&value);
-
-        // Should have 0xAARRGGBB format
-        let argb = conversions
-            .iter()
-            .find(|c| c.target_format == "color-argb")
-            .unwrap();
-        assert_eq!(argb.display, "0x80FF5733");
-
-        // Should also show alternative ARGB interpretation
-        assert!(conversions
-            .iter()
-            .any(|c| c.target_format == "color-as-argb"));
-    }
 }
