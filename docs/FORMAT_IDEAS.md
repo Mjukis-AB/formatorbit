@@ -5,11 +5,13 @@ A collection of format ideas organized by developer domain.
 ## Web/Backend Developers
 
 - [x] **JWT tokens** - Decode header.payload (without verification), show claims, expiry (implemented)
+- [x] **ULID** - Universally Unique Lexicographically Sortable Identifier (implemented)
+- [x] **NanoID** - Tiny, secure, URL-friendly unique string ID (implemented)
+- [x] **CUID2** - Collision-resistant Unique Identifier (implemented)
 - [ ] **Unix permissions** - `755` → `rwxr-xr-x`
 - [ ] **HTTP status codes** - `404` → "Not Found"
 - [ ] **Cron expressions** - `*/5 * * * *` → "every 5 minutes"
 - [ ] **Regex visualization** - Show what pattern matches, capture groups
-- [ ] **ULID** - Universally Unique Lexicographically Sortable Identifier
 - [ ] **KSUID** - K-Sortable Unique Identifier
 
 ## iOS/macOS Developers
@@ -95,6 +97,9 @@ A collection of format ideas organized by developer domain.
 - [x] JWT tokens (header/payload decode, claims display)
 - [x] Hash detection (MD5, SHA-1, SHA-256, SHA-512, etc. by length)
 - [x] Windows FILETIME timestamp
+- [x] ULID (with embedded timestamp extraction)
+- [x] NanoID (URL-safe unique ID)
+- [x] CUID2 (collision-resistant ID)
 
 ## Priority Suggestions
 

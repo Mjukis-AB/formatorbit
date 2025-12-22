@@ -157,7 +157,7 @@ forb --formats
 | **Hashing** | MD5, SHA-1, SHA-256, SHA-512 (detection by length) |
 | **Numbers** | decimal, binary, big-endian int, little-endian int |
 | **Timestamps** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601 |
-| **Identifiers** | UUID (v1-v8 detection), JWT |
+| **Identifiers** | UUID (v1-v8 detection), ULID (with timestamp), NanoID, CUID2, JWT |
 | **Network** | IPv4, IPv6 |
 | **Colors** | #RGB, #RRGGBB, #RRGGBBAA, 0xAARRGGBB (Android) |
 | **Data** | JSON, MessagePack, plist (XML/binary), UTF-8 |
