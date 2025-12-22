@@ -101,7 +101,10 @@ mod tests {
         let conversions = find_all_conversions(&formats, &bytes);
 
         // Should have hex, base64, int-be, int-le
-        let format_ids: Vec<_> = conversions.iter().map(|c| c.target_format.as_str()).collect();
+        let format_ids: Vec<_> = conversions
+            .iter()
+            .map(|c| c.target_format.as_str())
+            .collect();
 
         assert!(format_ids.contains(&"hex"));
         assert!(format_ids.contains(&"base64"));
@@ -144,7 +147,10 @@ mod tests {
             .iter()
             .find(|c| c.target_format == "epoch-seconds");
 
-        assert!(datetime_conv.is_some(), "Should find epoch-seconds conversion");
+        assert!(
+            datetime_conv.is_some(),
+            "Should find epoch-seconds conversion"
+        );
         let dt = datetime_conv.unwrap();
         assert!(dt.display.contains("2025"));
         assert!(dt.path.len() >= 1); // Has a path

@@ -123,18 +123,16 @@ impl Format for BytesToIntFormat {
         let be_value = Self::bytes_to_int_be(bytes);
         let le_value = Self::bytes_to_int_le(bytes);
 
-        let mut conversions = vec![
-            Conversion {
-                value: CoreValue::Int {
-                    value: be_value,
-                    original_bytes: Some(bytes.clone()),
-                },
-                target_format: "int-be".to_string(),
-                display: be_value.to_string(),
-                path: vec!["int-be".to_string()],
-                is_lossy: false,
+        let mut conversions = vec![Conversion {
+            value: CoreValue::Int {
+                value: be_value,
+                original_bytes: Some(bytes.clone()),
             },
-        ];
+            target_format: "int-be".to_string(),
+            display: be_value.to_string(),
+            path: vec!["int-be".to_string()],
+            is_lossy: false,
+        }];
 
         // Only add little-endian if it's different
         if le_value != be_value {
@@ -207,10 +205,16 @@ mod tests {
 
         assert_eq!(conversions.len(), 2);
 
-        let be = conversions.iter().find(|c| c.target_format == "int-be").unwrap();
+        let be = conversions
+            .iter()
+            .find(|c| c.target_format == "int-be")
+            .unwrap();
         assert_eq!(be.display, "1763574200");
 
-        let le = conversions.iter().find(|c| c.target_format == "int-le").unwrap();
+        let le = conversions
+            .iter()
+            .find(|c| c.target_format == "int-le")
+            .unwrap();
         assert_eq!(le.display, "3087081065");
     }
 }

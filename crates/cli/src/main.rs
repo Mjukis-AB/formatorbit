@@ -120,10 +120,7 @@ fn print_formats() {
     ];
 
     for category in categories {
-        let formats_in_cat: Vec<_> = infos
-            .iter()
-            .filter(|f| f.category == category)
-            .collect();
+        let formats_in_cat: Vec<_> = infos.iter().filter(|f| f.category == category).collect();
 
         if formats_in_cat.is_empty() {
             continue;
@@ -137,7 +134,12 @@ fn print_formats() {
             }
             println!();
             if !info.examples.is_empty() {
-                let examples: Vec<_> = info.examples.iter().take(3).map(|e| e.green().to_string()).collect();
+                let examples: Vec<_> = info
+                    .examples
+                    .iter()
+                    .take(3)
+                    .map(|e| e.green().to_string())
+                    .collect();
                 println!("      {}", format!("e.g. {}", examples.join(", ")).dimmed());
             }
         }
@@ -145,15 +147,46 @@ fn print_formats() {
     }
 
     println!("{}", "Hex Input Styles".bold().underline());
-    println!("  The {} format accepts multiple common paste styles:", "hex".yellow());
+    println!(
+        "  The {} format accepts multiple common paste styles:",
+        "hex".yellow()
+    );
     println!();
-    println!("    {}           {}", "691E01B8".green(), "Continuous".dimmed());
-    println!("    {}         {}", "0x691E01B8".green(), "With 0x prefix".dimmed());
-    println!("    {}        {}", "69 1E 01 B8".green(), "Space-separated (hex dumps)".dimmed());
-    println!("    {}        {}", "69:1E:01:B8".green(), "Colon-separated (MAC address)".dimmed());
-    println!("    {}        {}", "69-1E-01-B8".green(), "Dash-separated".dimmed());
-    println!("    {}   {}", "0x69, 0x1E, 0x01".green(), "Comma-separated".dimmed());
-    println!("    {}  {}", "{0x69, 0x1E, 0x01}".green(), "C/C++ array style".dimmed());
+    println!(
+        "    {}           {}",
+        "691E01B8".green(),
+        "Continuous".dimmed()
+    );
+    println!(
+        "    {}         {}",
+        "0x691E01B8".green(),
+        "With 0x prefix".dimmed()
+    );
+    println!(
+        "    {}        {}",
+        "69 1E 01 B8".green(),
+        "Space-separated (hex dumps)".dimmed()
+    );
+    println!(
+        "    {}        {}",
+        "69:1E:01:B8".green(),
+        "Colon-separated (MAC address)".dimmed()
+    );
+    println!(
+        "    {}        {}",
+        "69-1E-01-B8".green(),
+        "Dash-separated".dimmed()
+    );
+    println!(
+        "    {}   {}",
+        "0x69, 0x1E, 0x01".green(),
+        "Comma-separated".dimmed()
+    );
+    println!(
+        "    {}  {}",
+        "{0x69, 0x1E, 0x01}".green(),
+        "C/C++ array style".dimmed()
+    );
 }
 
 fn main() {
@@ -238,10 +271,7 @@ fn main() {
             result.interpretation.source_format.green().bold(),
             conf
         );
-        println!(
-            "  {}",
-            result.interpretation.description.dimmed()
-        );
+        println!("  {}", result.interpretation.description.dimmed());
 
         if result.conversions.is_empty() {
             println!("  {}", "(no conversions available)".dimmed());

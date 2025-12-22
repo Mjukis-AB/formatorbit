@@ -55,11 +55,7 @@ impl Format for DateTimeFormat {
             name: self.name(),
             category: "Timestamps",
             description: "Date/time parsing (ISO 8601, RFC 2822/3339) and epoch conversions",
-            examples: &[
-                "2025-11-19T17:43:20Z",
-                "1763574200",
-                "1763574200000",
-            ],
+            examples: &["2025-11-19T17:43:20Z", "1763574200", "1763574200000"],
         }
     }
 
