@@ -1,3 +1,8 @@
+mod pipe;
+mod tokenizer;
+
+use std::io::IsTerminal;
+
 use clap::Parser;
 use colored::Colorize;
 use formatorbit_core::Formatorbit;
@@ -66,6 +71,34 @@ struct Cli {
     /// List all supported formats
     #[arg(long)]
     formats: bool,
+
+    // === Pipe mode options ===
+    /// Minimum confidence threshold for showing annotations (0.0-1.0)
+    ///
+    /// In pipe mode, only values with confidence >= threshold are annotated.
+    #[arg(long, short = 't', default_value = "0.8")]
+    threshold: f32,
+
+    /// Highlight interesting values inline with color
+    ///
+    /// In pipe mode, highlights matched tokens with background color.
+    #[arg(long, short = 'H')]
+    highlight: bool,
+
+    /// Only use specific formats (comma-separated, supports aliases)
+    ///
+    /// Examples: --only uuid,hex,ts  or  -o b64,ip
+    /// Use --formats to see available format IDs and aliases.
+    #[arg(long, short = 'o', value_delimiter = ',')]
+    only: Option<Vec<String>>,
+
+    /// Force pipe mode even when stdin is a TTY (for testing)
+    #[arg(long, hide = true)]
+    force_pipe: bool,
+
+    /// Maximum tokens to analyze per line in pipe mode
+    #[arg(long, default_value = "50", hide = true)]
+    max_tokens: usize,
 }
 
 fn print_formats() {
@@ -131,6 +164,27 @@ fn main() {
         return;
     }
 
+    let forb = Formatorbit::new();
+
+    // Check if we should run in pipe mode
+    let stdin_is_pipe = !std::io::stdin().is_terminal();
+    if stdin_is_pipe || cli.force_pipe {
+        let config = pipe::PipeModeConfig {
+            threshold: cli.threshold,
+            highlight: cli.highlight,
+            max_tokens: cli.max_tokens,
+            json: cli.json,
+            format_filter: cli.only.unwrap_or_default(),
+        };
+
+        if let Err(e) = pipe::run_pipe_mode(&forb, &config) {
+            eprintln!("{}: Failed to read stdin: {}", "error".red().bold(), e);
+            std::process::exit(1);
+        }
+        return;
+    }
+
+    // Direct input mode
     let Some(input) = cli.input else {
         eprintln!("{}: No input provided", "error".red().bold());
         eprintln!();
@@ -142,12 +196,17 @@ fn main() {
         eprintln!("  forb 1703456789            Unix timestamp");
         eprintln!("  forb \"#FF5733\"             Color");
         eprintln!();
+        eprintln!("Pipe mode:");
+        eprintln!("  cat logs.txt | forb        Annotate log lines");
+        eprintln!("  cat logs.txt | forb -H     With highlighting");
+        eprintln!();
         eprintln!("Run {} for more information.", "forb --help".bold());
         std::process::exit(1);
     };
 
-    let forb = Formatorbit::new();
-    let results = forb.convert_all(&input);
+    // Apply format filter if specified
+    let format_filter = cli.only.unwrap_or_default();
+    let results = forb.convert_all_filtered(&input, &format_filter);
 
     if cli.json {
         println!("{}", serde_json::to_string_pretty(&results).unwrap());

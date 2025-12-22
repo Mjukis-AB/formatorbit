@@ -87,6 +87,11 @@ Architecture:
 - [x] `--json` flag for machine-readable output
 - [x] Colored output matching conversion display style
 - [x] Self-documenting format system (FormatInfo from each format)
+- [x] **Pipe mode** - auto-detects stdin pipe, annotates log lines
+- [x] `--threshold` / `-t` - confidence threshold for annotations (default 0.8)
+- [x] `--highlight` / `-H` - highlight matched tokens inline
+- [x] `--only` / `-o` - filter to specific formats (supports aliases like `b64`, `ts`, `uuid`)
+- [x] Format aliases for quick filtering (e.g., `hex`→`h`, `base64`→`b64`, `datetime`→`ts`)
 
 ---
 
@@ -185,12 +190,17 @@ The CLI tool `forb` is fully functional with:
 # Build
 cargo build
 
-# Run examples
+# Direct input examples
 cargo run -p formatorbit-cli -- "691E01B8"
 cargo run -p formatorbit-cli -- "87 A3 69 6E 74 01"
 cargo run -p formatorbit-cli -- "#FF5733"
 cargo run -p formatorbit-cli -- --formats
 cargo run -p formatorbit-cli -- --help
+
+# Pipe mode (annotate log files)
+cat logs.txt | cargo run -p formatorbit-cli --
+cat logs.txt | cargo run -p formatorbit-cli -- -t 0.5 -H
+cat logs.txt | cargo run -p formatorbit-cli -- -o uuid,hex
 
 # Run tests
 cargo test
