@@ -58,7 +58,7 @@ A collection of format ideas organized by developer domain.
 - [x] **Unix epoch** - Seconds since 1970-01-01 (implemented)
 - [x] **Unix epoch millis** - Milliseconds since 1970 (implemented)
 - [x] **Apple epoch** - Seconds since 2001-01-01 (implemented)
-- [ ] **Windows FILETIME** - 100-nanosecond intervals since 1601-01-01
+- [x] **Windows FILETIME** - 100-nanosecond intervals since 1601-01-01 (implemented)
 - [ ] **GPS time** - Seconds since 1980-01-06 (no leap seconds)
 - [ ] **NTP timestamp** - Seconds since 1900-01-01
 - [ ] **UUID v1 timestamp** - Extract timestamp from UUID v1
@@ -94,6 +94,7 @@ A collection of format ideas organized by developer domain.
 - [x] Apple plist (XML and binary formats)
 - [x] JWT tokens (header/payload decode, claims display)
 - [x] Hash detection (MD5, SHA-1, SHA-256, SHA-512, etc. by length)
+- [x] Windows FILETIME timestamp
 
 ## Priority Suggestions
 

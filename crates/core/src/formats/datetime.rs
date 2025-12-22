@@ -21,6 +21,15 @@ const APPLE_REFERENCE_DATE: i64 = 978_307_200;
 const MIN_APPLE_SECONDS: i64 = -APPLE_REFERENCE_DATE; // Back to 1970
 const MAX_APPLE_SECONDS: i64 = MAX_EPOCH_SECONDS - APPLE_REFERENCE_DATE;
 
+/// Windows FILETIME: 100-nanosecond intervals since 1601-01-01
+/// Difference between 1601-01-01 and 1970-01-01 in seconds: 11644473600
+const FILETIME_EPOCH_DIFF: i64 = 11_644_473_600;
+/// 100-nanosecond intervals per second
+const FILETIME_TICKS_PER_SECOND: i64 = 10_000_000;
+/// Reasonable FILETIME range (1970 to 2100)
+const MIN_FILETIME: i64 = FILETIME_EPOCH_DIFF * FILETIME_TICKS_PER_SECOND;
+const MAX_FILETIME: i64 = (MAX_EPOCH_SECONDS + FILETIME_EPOCH_DIFF) * FILETIME_TICKS_PER_SECOND;
+
 pub struct DateTimeFormat;
 
 impl DateTimeFormat {
@@ -37,6 +46,21 @@ impl DateTimeFormat {
     /// Check if a value is a reasonable Apple/Cocoa timestamp.
     fn is_valid_apple_timestamp(value: i64) -> bool {
         (MIN_APPLE_SECONDS..=MAX_APPLE_SECONDS).contains(&value)
+    }
+
+    /// Check if a value is a reasonable Windows FILETIME.
+    fn is_valid_filetime(value: i128) -> bool {
+        value >= MIN_FILETIME as i128 && value <= MAX_FILETIME as i128
+    }
+
+    /// Convert FILETIME to Unix timestamp.
+    fn filetime_to_unix(filetime: i128) -> Option<(i64, u32)> {
+        // FILETIME is in 100-nanosecond intervals since 1601-01-01
+        let unix_ticks = filetime - (FILETIME_EPOCH_DIFF as i128 * FILETIME_TICKS_PER_SECOND as i128);
+        let secs = unix_ticks / FILETIME_TICKS_PER_SECOND as i128;
+        let nanos = ((unix_ticks % FILETIME_TICKS_PER_SECOND as i128) * 100) as u32;
+
+        i64::try_from(secs).ok().map(|s| (s, nanos))
     }
 }
 
@@ -148,6 +172,23 @@ impl Format for DateTimeFormat {
             }
         }
 
+        // Try as Windows FILETIME (100-nanosecond intervals since 1601-01-01)
+        // FILETIME values are typically large (> 100 trillion for modern dates)
+        if Self::is_valid_filetime(*int_val) {
+            if let Some((unix_secs, nanos)) = Self::filetime_to_unix(*int_val) {
+                if let Some(dt) = Utc.timestamp_opt(unix_secs, nanos).single() {
+                    conversions.push(Conversion {
+                        value: CoreValue::DateTime(dt),
+                        target_format: "filetime".to_string(),
+                        display: dt.to_rfc3339(),
+                        path: vec!["filetime".to_string()],
+                        is_lossy: false,
+                        priority: ConversionPriority::Semantic,
+                    });
+                }
+            }
+        }
+
         conversions
     }
 
@@ -238,5 +279,44 @@ mod tests {
             .find(|c| c.target_format == "apple-cocoa")
             .expect("Should have apple-cocoa conversion");
         assert!(apple.display.contains("2025-11-19"));
+    }
+
+    #[test]
+    fn test_windows_filetime() {
+        let format = DateTimeFormat;
+        // FILETIME for 2025-01-01 00:00:00 UTC
+        // Unix timestamp for 2025-01-01: 1735689600
+        // FILETIME = (unix_timestamp + 11644473600) * 10_000_000
+        // = (1735689600 + 11644473600) * 10_000_000 = 133801632000000000
+        let value = CoreValue::Int {
+            value: 133801632000000000,
+            original_bytes: None,
+        };
+
+        let conversions = format.conversions(&value);
+
+        let filetime = conversions
+            .iter()
+            .find(|c| c.target_format == "filetime")
+            .expect("Should have filetime conversion");
+        assert!(filetime.display.contains("2025-01-01"));
+    }
+
+    #[test]
+    fn test_filetime_out_of_range() {
+        let format = DateTimeFormat;
+        // Very small value - before 1970
+        let value = CoreValue::Int {
+            value: 100,
+            original_bytes: None,
+        };
+
+        let conversions = format.conversions(&value);
+
+        // Should not have filetime (too small)
+        assert!(conversions
+            .iter()
+            .find(|c| c.target_format == "filetime")
+            .is_none());
     }
 }
