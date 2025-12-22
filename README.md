@@ -154,6 +154,7 @@ forb --formats
 | Category | Formats |
 |----------|---------|
 | **Encoding** | hex, base64, binary, url-encoding |
+| **Hashing** | MD5, SHA-1, SHA-256, SHA-512 (detection by length) |
 | **Numbers** | decimal, binary, big-endian int, little-endian int |
 | **Timestamps** | Unix epoch (sec/ms), Apple/Cocoa epoch, ISO 8601, RFC 2822 |
 | **Identifiers** | UUID (v1-v8 detection), JWT |
@@ -199,6 +200,7 @@ For quick filtering with `--only`, formats have short aliases:
 | decimal | dec, int, num |
 | uuid | guid |
 | jwt | token |
+| hash | md5, sha1, sha256, sha512 |
 | ip | ipv4, ipv6 |
 | color | col, rgb, argb |
 | json | j |

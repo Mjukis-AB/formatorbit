@@ -13,8 +13,8 @@ pub use types::*;
 
 use formats::{
     Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, DateTimeFormat, DecimalFormat,
-    HexFormat, IpAddrFormat, JsonFormat, JwtFormat, MsgPackFormat, PlistFormat, UrlEncodingFormat,
-    Utf8Format, UuidFormat,
+    HashFormat, HexFormat, IpAddrFormat, JsonFormat, JwtFormat, MsgPackFormat, PlistFormat,
+    UrlEncodingFormat, Utf8Format, UuidFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -35,6 +35,7 @@ impl Formatorbit {
                 Box::new(ColorFormat),
                 Box::new(UrlEncodingFormat),
                 // Common formats
+                Box::new(HashFormat),
                 Box::new(HexFormat),
                 Box::new(BinaryFormat),
                 Box::new(Base64Format),

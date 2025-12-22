@@ -67,7 +67,7 @@ A collection of format ideas organized by developer domain.
 
 ## Hashing/Encoding
 
-- [ ] **Hash detection** - Identify by length (32 hex=MD5, 40=SHA1, 64=SHA256)
+- [x] **Hash detection** - Identify by length (32 hex=MD5, 40=SHA1, 64=SHA256) (implemented)
 - [x] **Base64** - Standard base64 (implemented)
 - [ ] **Base32** - RFC 4648
 - [ ] **Base58** - Bitcoin/IPFS alphabet (no 0OIl)
@@ -93,6 +93,7 @@ A collection of format ideas organized by developer domain.
 - [x] Binary literals (0b prefix, % prefix, space-separated)
 - [x] Apple plist (XML and binary formats)
 - [x] JWT tokens (header/payload decode, claims display)
+- [x] Hash detection (MD5, SHA-1, SHA-256, SHA-512, etc. by length)
 
 ## Priority Suggestions
 
