@@ -12,9 +12,19 @@ use crate::types::{Conversion, ConversionPriority, CoreValue};
 ///
 /// This traverses the conversion graph, collecting all reachable formats.
 /// The path is tracked to show how we got from the source to each target.
-pub fn find_all_conversions(formats: &[Box<dyn Format>], initial: &CoreValue) -> Vec<Conversion> {
+/// If `exclude_format` is provided, skip conversions to that format (to avoid hex→hex etc.)
+pub fn find_all_conversions(
+    formats: &[Box<dyn Format>],
+    initial: &CoreValue,
+    exclude_format: Option<&str>,
+) -> Vec<Conversion> {
     let mut results = Vec::new();
     let mut seen_formats: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    // Pre-exclude the source format if specified
+    if let Some(excluded) = exclude_format {
+        seen_formats.insert(excluded.to_string());
+    }
 
     // Queue holds (value, path_so_far)
     let mut queue: VecDeque<(CoreValue, Vec<String>)> = VecDeque::new();
@@ -107,7 +117,7 @@ mod tests {
         ];
 
         let bytes = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        let conversions = find_all_conversions(&formats, &bytes);
+        let conversions = find_all_conversions(&formats, &bytes, None);
 
         // Should have hex, base64, int-be, int-le
         let format_ids: Vec<_> = conversions
@@ -130,7 +140,7 @@ mod tests {
             original_bytes: None,
         };
 
-        let conversions = find_all_conversions(&formats, &value);
+        let conversions = find_all_conversions(&formats, &value, None);
 
         let datetime_conv = conversions
             .iter()
@@ -149,7 +159,7 @@ mod tests {
 
         // Start with bytes that represent epoch 1763574200
         let bytes = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        let conversions = find_all_conversions(&formats, &bytes);
+        let conversions = find_all_conversions(&formats, &bytes, None);
 
         // Should find datetime via bytes -> int-be -> epoch-seconds
         let datetime_conv = conversions

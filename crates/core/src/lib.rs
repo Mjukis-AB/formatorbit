@@ -64,7 +64,12 @@ impl Formatorbit {
 
     /// Find all possible conversions from a value.
     pub fn convert(&self, value: &CoreValue) -> Vec<Conversion> {
-        convert::find_all_conversions(&self.formats, value)
+        convert::find_all_conversions(&self.formats, value, None)
+    }
+
+    /// Find all possible conversions, excluding the source format (to avoid hex→hex etc.)
+    pub fn convert_excluding(&self, value: &CoreValue, source_format: &str) -> Vec<Conversion> {
+        convert::find_all_conversions(&self.formats, value, Some(source_format))
     }
 
     /// Combined: interpret input and find all conversions.
@@ -72,7 +77,8 @@ impl Formatorbit {
         self.interpret(input)
             .into_iter()
             .map(|interp| {
-                let conversions = self.convert(&interp.value);
+                // Skip self-conversion (e.g., hex→hex)
+                let conversions = self.convert_excluding(&interp.value, &interp.source_format);
                 ConversionResult {
                     input: input.to_string(),
                     interpretation: interp,
@@ -116,7 +122,8 @@ impl Formatorbit {
         self.interpret_filtered(input, format_filter)
             .into_iter()
             .map(|interp| {
-                let conversions = self.convert(&interp.value);
+                // Skip self-conversion (e.g., hex→hex)
+                let conversions = self.convert_excluding(&interp.value, &interp.source_format);
                 ConversionResult {
                     input: input.to_string(),
                     interpretation: interp,
@@ -130,5 +137,38 @@ impl Formatorbit {
 impl Default for Formatorbit {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression test: SHA-1 hash detection should appear in results
+    #[test]
+    fn test_sha1_hash_interpretation() {
+        let forb = Formatorbit::new();
+        // SHA-1 of empty string
+        let results = forb.convert_all("da39a3ee5e6b4b0d3255bfef95601890afd80709");
+
+        let has_hash = results
+            .iter()
+            .any(|r| r.interpretation.source_format == "hash");
+
+        assert!(
+            has_hash,
+            "Expected 'hash' interpretation but got: {:?}",
+            results
+                .iter()
+                .map(|r| &r.interpretation.source_format)
+                .collect::<Vec<_>>()
+        );
+
+        // Verify hash description mentions SHA-1
+        let hash_result = results
+            .iter()
+            .find(|r| r.interpretation.source_format == "hash")
+            .unwrap();
+        assert!(hash_result.interpretation.description.contains("SHA-1"));
     }
 }
