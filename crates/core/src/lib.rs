@@ -13,8 +13,8 @@ pub use types::*;
 
 use formats::{
     Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, DateTimeFormat, DecimalFormat,
-    HexFormat, IpAddrFormat, JsonFormat, MsgPackFormat, PlistFormat, UrlEncodingFormat, Utf8Format,
-    UuidFormat,
+    HexFormat, IpAddrFormat, JsonFormat, JwtFormat, MsgPackFormat, PlistFormat, UrlEncodingFormat,
+    Utf8Format, UuidFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -29,6 +29,7 @@ impl Formatorbit {
         Self {
             formats: vec![
                 // High-specificity formats first
+                Box::new(JwtFormat),
                 Box::new(UuidFormat),
                 Box::new(IpAddrFormat),
                 Box::new(ColorFormat),
