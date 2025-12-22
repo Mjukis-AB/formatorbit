@@ -6,7 +6,7 @@
 use chrono::{DateTime, TimeZone, Utc};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{CoreValue, Interpretation};
 
 pub struct UlidFormat;
 
@@ -159,84 +159,18 @@ impl Format for UlidFormat {
         }]
     }
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::Bytes(b) if b.len() == 16)
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        // Don't format arbitrary bytes as ULID - only values originally parsed as ULID
+        // should be displayed as ULID. Otherwise we get noise like UUID→ULID.
+        false
     }
 
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        let CoreValue::Bytes(bytes) = value else {
-            return None;
-        };
-
-        if bytes.len() != 16 {
-            return None;
-        }
-
-        // Convert bytes to u128
-        let mut arr = [0u8; 16];
-        arr.copy_from_slice(bytes);
-        let value = u128::from_be_bytes(arr);
-
-        // Encode as Crockford base32
-        let mut result = String::with_capacity(26);
-        let mut v = value;
-        for _ in 0..26 {
-            let digit = (v % 32) as usize;
-            result.push(CROCKFORD_ALPHABET[digit] as char);
-            v /= 32;
-        }
-
-        Some(result.chars().rev().collect())
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        None
     }
 
-    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Bytes(bytes) = value else {
-            return vec![];
-        };
-
-        if bytes.len() != 16 {
-            return vec![];
-        }
-
-        let mut conversions = vec![];
-
-        // Convert to u128 to extract timestamp
-        let mut arr = [0u8; 16];
-        arr.copy_from_slice(bytes);
-        let full_value = u128::from_be_bytes(arr);
-
-        // Extract timestamp (top 48 bits)
-        let timestamp_millis = (full_value >> 80) as u64;
-
-        if let Some(dt_str) = Self::format_timestamp(timestamp_millis) {
-            let secs = (timestamp_millis / 1000) as i64;
-            let nanos = ((timestamp_millis % 1000) * 1_000_000) as u32;
-            if let Some(dt) = Utc.timestamp_opt(secs, nanos).single() {
-                conversions.push(Conversion {
-                    value: CoreValue::DateTime(dt),
-                    target_format: "ulid-timestamp".to_string(),
-                    display: dt_str,
-                    path: vec!["ulid-timestamp".to_string()],
-                    is_lossy: true, // Loses the random part
-                    priority: ConversionPriority::Semantic,
-                });
-            }
-        }
-
-        // Format as ULID string
-        if let Some(ulid_str) = self.format(value) {
-            conversions.push(Conversion {
-                value: value.clone(),
-                target_format: "ulid".to_string(),
-                display: ulid_str,
-                path: vec!["ulid".to_string()],
-                is_lossy: false,
-                priority: ConversionPriority::Semantic,
-            });
-        }
-
-        conversions
-    }
+    // Note: No conversions() - ULID timestamp is shown in parse description.
+    // We don't want arbitrary 16-byte values (like UUIDs) to show ULID timestamps.
 
     fn aliases(&self) -> &'static [&'static str] {
         &[]
@@ -286,19 +220,6 @@ mod tests {
         assert!(format.parse("8ZZZZZZZZZZZZZZZZZZZZZZZZ").is_empty());
     }
 
-    #[test]
-    fn test_roundtrip() {
-        let format = UlidFormat;
-        let input = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
-        let results = format.parse(input);
-
-        assert_eq!(results.len(), 1);
-
-        if let CoreValue::Bytes(bytes) = &results[0].value {
-            let formatted = format.format(&CoreValue::Bytes(bytes.clone())).unwrap();
-            assert_eq!(formatted, input);
-        } else {
-            panic!("Expected Bytes");
-        }
-    }
+    // Note: roundtrip test removed because format() is now disabled
+    // to avoid noise from arbitrary bytes→ULID conversions.
 }
