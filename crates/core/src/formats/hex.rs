@@ -15,6 +15,26 @@ use crate::types::{CoreValue, Interpretation};
 
 pub struct HexFormat;
 
+/// Known hash types by byte length (not hex length).
+/// Only includes common hash sizes that are unlikely to be coincidental.
+/// Excludes CRC-32 (4 bytes) as it's too common to be meaningful.
+const HASH_BYTE_LENGTHS: &[(usize, &str)] = &[
+    (16, "MD5/MD4"),
+    (20, "SHA-1/RIPEMD-160"),
+    (28, "SHA-224"),
+    (32, "SHA-256"),
+    (48, "SHA-384"),
+    (64, "SHA-512"),
+];
+
+/// Get hash type hint for a given byte length.
+fn hash_hint_for_length(byte_len: usize) -> Option<&'static str> {
+    HASH_BYTE_LENGTHS
+        .iter()
+        .find(|(len, _)| *len == byte_len)
+        .map(|(_, name)| *name)
+}
+
 /// Result of normalizing hex input
 struct NormalizedHex {
     hex: String,
@@ -252,10 +272,13 @@ impl Format for HexFormat {
             0.4
         };
 
-        let description = if normalized.format_hint == "hex" {
-            format!("{} bytes", bytes.len())
-        } else {
-            format!("{} bytes ({})", bytes.len(), normalized.format_hint)
+        // Build description with optional hash hint
+        let hash_hint = hash_hint_for_length(bytes.len());
+        let description = match (normalized.format_hint, hash_hint) {
+            ("hex", Some(hash)) => format!("{} bytes — possible {} hash", bytes.len(), hash),
+            ("hex", None) => format!("{} bytes", bytes.len()),
+            (fmt, Some(hash)) => format!("{} bytes ({}) — possible {} hash", bytes.len(), fmt, hash),
+            (fmt, None) => format!("{} bytes ({})", bytes.len(), fmt),
         };
 
         vec![Interpretation {
