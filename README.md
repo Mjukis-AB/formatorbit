@@ -17,6 +17,17 @@ $ forb 691E01B8
 
 Conversions are sorted by usefulness - structured data (JSON, MessagePack, Protobuf) first, then semantic types (datetime, UUID, IP), then encodings. Structured data is pretty-printed with syntax highlighting.
 
+```mermaid
+graph LR
+  input(["691E01B8"])
+  hex["hex (92%)"]
+  input -->|parse| hex
+  hex --> ipv4["105.30.1.184"]
+  hex -->|int-be| epoch["2025-11-19T17:43:20Z"]
+  hex --> base64["aR4BuA=="]
+  hex --> binary["01101001..."]
+```
+
 ## Why forb?
 
 Ever paste a blob of hex into a dozen different tools trying to figure out what it is? `forb` does it all at once. It tries every interpretation and shows you what makes sense.
@@ -151,8 +162,29 @@ forb 691E01B8 -C
 # JSON for scripting
 forb 691E01B8 --json
 
+# Raw output (just values, for scripting)
+forb 691E01B8 -r -1 -l 1
+
+# Show only highest-confidence interpretation
+forb 691E01B8 -1
+
+# Force specific format
+forb -f hex 1234
+
 # List all supported formats
 forb --formats
+```
+
+### Graph Output
+
+Visualize the conversion graph:
+
+```bash
+# Graphviz DOT format (pipe to dot to render)
+forb --dot 691E01B8 | dot -Tpng > graph.png
+
+# Mermaid format (renders in GitHub/GitLab markdown)
+forb --mermaid 691E01B8
 ```
 
 ## Supported Formats
