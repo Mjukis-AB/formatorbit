@@ -148,10 +148,12 @@ struct Cli {
     from: Option<String>,
 
     /// Output conversion graph in Graphviz DOT format
+    ///
+    /// Pipe to dot to render: forb --dot INPUT | dot -Tpng > graph.png
     #[arg(long)]
     dot: bool,
 
-    /// Output conversion graph in Mermaid format
+    /// Output conversion graph in Mermaid format (renders in GitHub/GitLab)
     #[arg(long)]
     mermaid: bool,
 }
