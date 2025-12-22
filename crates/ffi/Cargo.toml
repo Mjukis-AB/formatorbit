@@ -1,0 +1,11 @@
+[package]
+name = "formatorbit-ffi"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+formatorbit-core = { workspace = true }
+serde_json = { workspace = true }
