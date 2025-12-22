@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Binary format** - parse `0b1010`, `%1010`, and space-separated binary
 - `--compact` (`-c`) flag for single-line JSON/Protobuf output
 - `--no-color` (`-C`) flag to disable colored output
+- `--raw` (`-r`) flag for scriptable output (just values, no labels)
+- `--first` (`-1`) flag to show only the highest-confidence interpretation
+- `--from` (`-f`) flag to force input to be interpreted as a specific format
+- `--dot` flag to output conversion graph in Graphviz DOT format
+- `--mermaid` flag to output conversion graph in Mermaid format
 - `CoreValue::Protobuf` type for structured protobuf data (enables custom UI rendering)
 
 ### Changed

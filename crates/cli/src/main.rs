@@ -128,6 +128,32 @@ struct Cli {
     /// Compact output for structured data (single line)
     #[arg(long, short = 'c')]
     compact: bool,
+
+    /// Output only raw converted values (for scripting)
+    ///
+    /// Outputs just the conversion values without labels or formatting.
+    /// Combine with --only to get specific format output.
+    #[arg(long, short = 'r')]
+    raw: bool,
+
+    /// Show only the highest-confidence interpretation
+    #[arg(long, short = '1')]
+    first: bool,
+
+    /// Force input to be interpreted as a specific format
+    ///
+    /// Skip auto-detection and treat input as the specified format.
+    /// Use --formats to see available format IDs.
+    #[arg(long, short = 'f', value_name = "FORMAT")]
+    from: Option<String>,
+
+    /// Output conversion graph in Graphviz DOT format
+    #[arg(long)]
+    dot: bool,
+
+    /// Output conversion graph in Mermaid format
+    #[arg(long)]
+    mermaid: bool,
 }
 
 fn print_formats() {
@@ -279,16 +305,20 @@ fn main() {
         compact: cli.compact,
     };
 
-    // Apply format filter if specified
+    // Get results - either forced format or auto-detect
     let format_filter = cli.only.unwrap_or_default();
-    let results = forb.convert_all_filtered(&input, &format_filter);
-
-    if cli.json {
-        println!("{}", serde_json::to_string_pretty(&results).unwrap());
-        return;
-    }
+    let results = if let Some(ref from_format) = cli.from {
+        // Force specific format interpretation
+        forb.convert_all_filtered(&input, &[from_format.clone()])
+    } else {
+        forb.convert_all_filtered(&input, &format_filter)
+    };
 
     if results.is_empty() {
+        if cli.raw {
+            // Silent failure for raw mode
+            std::process::exit(1);
+        }
         println!("No interpretations found for: {input}");
         return;
     }
@@ -299,12 +329,57 @@ fn main() {
         .filter(|r| r.interpretation.confidence > 0.2)
         .collect();
 
-    let results_to_show = if meaningful_results.is_empty() {
+    let results_to_show: Vec<_> = if meaningful_results.is_empty() {
         results.iter().collect()
     } else {
         meaningful_results
     };
 
+    // Apply --first flag
+    let results_to_show: Vec<_> = if cli.first {
+        results_to_show.into_iter().take(1).collect()
+    } else {
+        results_to_show
+    };
+
+    // Handle --dot output
+    if cli.dot {
+        print_dot_graph(&input, &results_to_show);
+        return;
+    }
+
+    // Handle --mermaid output
+    if cli.mermaid {
+        print_mermaid_graph(&input, &results_to_show);
+        return;
+    }
+
+    // Handle --json output
+    if cli.json {
+        let output: Vec<_> = results_to_show.iter().map(|r| (*r).clone()).collect();
+        println!("{}", serde_json::to_string_pretty(&output).unwrap());
+        return;
+    }
+
+    // Handle --raw output
+    if cli.raw {
+        for result in &results_to_show {
+            // Print conversion values only
+            let conversions_to_show: Vec<_> = if cli.limit == 0 {
+                result.conversions.iter().collect()
+            } else {
+                result.conversions.iter().take(cli.limit).collect()
+            };
+
+            for conv in conversions_to_show {
+                let display = format_conversion_display(&conv.value, &conv.display, &pretty_config);
+                println!("{}", display);
+            }
+        }
+        return;
+    }
+
+    // Standard human-readable output
     for result in results_to_show {
         let conf = (result.interpretation.confidence * 100.0) as u32;
         println!(
@@ -386,4 +461,128 @@ fn format_conversion_display(value: &CoreValue, original_display: &str, config: 
             original_display.to_string()
         }
     }
+}
+
+/// Output conversion graph in Graphviz DOT format.
+fn print_dot_graph(input: &str, results: &[&formatorbit_core::ConversionResult]) {
+    println!("digraph conversions {{");
+    println!("  rankdir=LR;");
+    println!("  node [shape=box, fontname=\"Helvetica\"];");
+    println!("  edge [fontname=\"Helvetica\", fontsize=10];");
+    println!();
+
+    // Input node
+    let input_label = escape_dot_label(input);
+    println!("  input [label=\"{}\", shape=ellipse, style=filled, fillcolor=\"#e8e8e8\"];", input_label);
+    println!();
+
+    let mut node_id = 0;
+    for result in results {
+        let interp = &result.interpretation;
+        let conf = (interp.confidence * 100.0) as u32;
+        let interp_node = format!("interp_{}", node_id);
+        node_id += 1;
+
+        // Interpretation node
+        let interp_label = format!("{}\\n({}%)", interp.source_format, conf);
+        println!("  {} [label=\"{}\", style=filled, fillcolor=\"#c8e6c9\"];", interp_node, interp_label);
+        println!("  input -> {} [label=\"{}%\"];", interp_node, conf);
+
+        // Conversion nodes
+        for conv in &result.conversions {
+            let conv_node = format!("conv_{}", node_id);
+            node_id += 1;
+
+            // Truncate long display values
+            let display = if conv.display.len() > 30 {
+                format!("{}...", &conv.display[..27])
+            } else {
+                conv.display.clone()
+            };
+            let display = escape_dot_label(&display);
+
+            let conv_label = format!("{}\\n{}", conv.target_format, display);
+            println!("  {} [label=\"{}\"];", conv_node, conv_label);
+
+            let edge_label = if conv.path.len() > 1 {
+                conv.path[..conv.path.len() - 1].join(" → ")
+            } else {
+                String::new()
+            };
+
+            if edge_label.is_empty() {
+                println!("  {} -> {};", interp_node, conv_node);
+            } else {
+                println!("  {} -> {} [label=\"{}\"];", interp_node, conv_node, escape_dot_label(&edge_label));
+            }
+        }
+        println!();
+    }
+
+    println!("}}");
+}
+
+/// Output conversion graph in Mermaid format.
+fn print_mermaid_graph(input: &str, results: &[&formatorbit_core::ConversionResult]) {
+    println!("```mermaid");
+    println!("graph LR");
+
+    // Input node
+    let input_label = escape_mermaid_label(input);
+    println!("  input([\"{}\"]);", input_label);
+
+    let mut node_id = 0;
+    for result in results {
+        let interp = &result.interpretation;
+        let conf = (interp.confidence * 100.0) as u32;
+        let interp_node = format!("interp_{}", node_id);
+        node_id += 1;
+
+        // Interpretation node
+        let interp_label = format!("{} ({}%)", interp.source_format, conf);
+        println!("  {}[\"{}\"];", interp_node, escape_mermaid_label(&interp_label));
+        println!("  input -->|{}%| {};", conf, interp_node);
+
+        // Conversion nodes
+        for conv in &result.conversions {
+            let conv_node = format!("conv_{}", node_id);
+            node_id += 1;
+
+            // Truncate long display values
+            let display = if conv.display.len() > 25 {
+                format!("{}...", &conv.display[..22])
+            } else {
+                conv.display.clone()
+            };
+
+            let conv_label = format!("{}: {}", conv.target_format, display);
+            println!("  {}[\"{}\"];", conv_node, escape_mermaid_label(&conv_label));
+
+            if conv.path.len() > 1 {
+                let edge_label = conv.path[..conv.path.len() - 1].join(" → ");
+                println!("  {} -->|{}| {};", interp_node, escape_mermaid_label(&edge_label), conv_node);
+            } else {
+                println!("  {} --> {};", interp_node, conv_node);
+            }
+        }
+    }
+
+    println!("```");
+}
+
+/// Escape special characters for DOT labels.
+fn escape_dot_label(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "")
+}
+
+/// Escape special characters for Mermaid labels.
+fn escape_mermaid_label(s: &str) -> String {
+    s.replace('"', "'")
+        .replace('\n', " ")
+        .replace('\r', "")
+        .replace('[', "(")
+        .replace(']', ")")
 }
