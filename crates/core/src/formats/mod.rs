@@ -1,6 +1,7 @@
 //! Built-in format implementations.
 
 mod base64;
+mod binary;
 mod color;
 mod datetime;
 mod hex;
@@ -13,6 +14,7 @@ mod utf8;
 mod uuid;
 
 pub use base64::Base64Format;
+pub use binary::BinaryFormat;
 pub use color::ColorFormat;
 pub use datetime::DateTimeFormat;
 pub use hex::HexFormat;
