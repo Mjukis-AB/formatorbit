@@ -34,7 +34,10 @@ impl HexFormat {
         let trimmed = input.trim();
 
         // 1. Try 0x prefix (single value)
-        if let Some(hex) = trimmed.strip_prefix("0x").or_else(|| trimmed.strip_prefix("0X")) {
+        if let Some(hex) = trimmed
+            .strip_prefix("0x")
+            .or_else(|| trimmed.strip_prefix("0X"))
+        {
             if Self::is_valid_hex(hex) && hex.len().is_multiple_of(2) {
                 return Some(NormalizedHex {
                     hex: hex.to_uppercase(),

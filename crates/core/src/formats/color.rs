@@ -41,7 +41,15 @@ impl ColorFormat {
                 let b2 = u8::from_str_radix(&hex[4..6], 16).ok()?;
                 let b3 = u8::from_str_radix(&hex[6..8], 16).ok()?;
                 // Return as RGBA, conversions will show ARGB alternative
-                Some((Rgba { r: b0, g: b1, b: b2, a: Some(b3) }, "RGBA"))
+                Some((
+                    Rgba {
+                        r: b0,
+                        g: b1,
+                        b: b2,
+                        a: Some(b3),
+                    },
+                    "RGBA",
+                ))
             }
             _ => None,
         }
@@ -64,7 +72,15 @@ impl ColorFormat {
                 let r = u8::from_str_radix(&hex[2..4], 16).ok()?;
                 let g = u8::from_str_radix(&hex[4..6], 16).ok()?;
                 let b = u8::from_str_radix(&hex[6..8], 16).ok()?;
-                Some((Rgba { r, g, b, a: Some(a) }, "0xAARRGGBB"))
+                Some((
+                    Rgba {
+                        r,
+                        g,
+                        b,
+                        a: Some(a),
+                    },
+                    "0xAARRGGBB",
+                ))
             }
             _ => None,
         }
@@ -142,19 +158,18 @@ impl Format for ColorFormat {
             name: self.name(),
             category: "Colors",
             description: "Color parsing (hex, RGB, ARGB) with HSL conversion",
-            examples: &[
-                "#FF5733",
-                "#F00",
-                "#FF573380",
-                "0x80FF5733",
-            ],
+            examples: &["#FF5733", "#F00", "#FF573380", "0x80FF5733"],
         }
     }
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
         // Try #RGB / #RRGGBB / #RRGGBBAA
         if let Some((rgba, format_hint)) = Self::parse_hex_color(input) {
-            return vec![Self::make_interpretation(rgba, format_hint, input.starts_with('#'))];
+            return vec![Self::make_interpretation(
+                rgba,
+                format_hint,
+                input.starts_with('#'),
+            )];
         }
 
         // Try 0xRRGGBB / 0xAARRGGBB (Android style)
@@ -177,12 +192,10 @@ impl Format for ColorFormat {
             CoreValue::Bytes(bytes) if bytes.len() == 3 => {
                 Some(format!("#{:02X}{:02X}{:02X}", bytes[0], bytes[1], bytes[2]))
             }
-            CoreValue::Bytes(bytes) if bytes.len() == 4 => {
-                Some(format!(
-                    "#{:02X}{:02X}{:02X}{:02X}",
-                    bytes[0], bytes[1], bytes[2], bytes[3]
-                ))
-            }
+            CoreValue::Bytes(bytes) if bytes.len() == 4 => Some(format!(
+                "#{:02X}{:02X}{:02X}{:02X}",
+                bytes[0], bytes[1], bytes[2], bytes[3]
+            )),
             _ => None,
         }
     }
@@ -236,7 +249,12 @@ impl Format for ColorFormat {
         };
         conversions.push(Conversion {
             value: CoreValue::String(hex_int.clone()),
-            target_format: if a.is_some() { "color-argb" } else { "color-0x" }.to_string(),
+            target_format: if a.is_some() {
+                "color-argb"
+            } else {
+                "color-0x"
+            }
+            .to_string(),
             display: hex_int,
             path: vec!["color-argb".to_string()],
             is_lossy: false,
@@ -383,6 +401,8 @@ mod tests {
         assert_eq!(argb.display, "0x80FF5733");
 
         // Should also show alternative ARGB interpretation
-        assert!(conversions.iter().any(|c| c.target_format == "color-as-argb"));
+        assert!(conversions
+            .iter()
+            .any(|c| c.target_format == "color-as-argb"));
     }
 }

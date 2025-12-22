@@ -196,8 +196,7 @@ pub fn is_interesting_candidate(token: &str) -> bool {
         || token.contains('.');
 
     // Check if it looks hex-like (letters a-f plus digits)
-    let is_hex_like = (4..=64).contains(&len)
-        && token.chars().all(|c| c.is_ascii_hexdigit());
+    let is_hex_like = (4..=64).contains(&len) && token.chars().all(|c| c.is_ascii_hexdigit());
 
     has_digits || has_format_marker || is_hex_like
 }
@@ -254,7 +253,9 @@ mod tests {
 
     #[test]
     fn test_is_interesting() {
-        assert!(is_interesting_candidate("550e8400-e29b-41d4-a716-446655440000"));
+        assert!(is_interesting_candidate(
+            "550e8400-e29b-41d4-a716-446655440000"
+        ));
         assert!(is_interesting_candidate("192.168.1.1"));
         assert!(is_interesting_candidate("0x691E01B8"));
         assert!(is_interesting_candidate("#FF5733"));
