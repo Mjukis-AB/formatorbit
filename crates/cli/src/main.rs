@@ -377,9 +377,12 @@ fn format_conversion_display(value: &CoreValue, original_display: &str, config: 
             // Pretty-print JSON with colors
             pretty::pretty_json(json, config)
         }
+        CoreValue::Protobuf(fields) => {
+            // Pretty-print protobuf with colors
+            pretty::pretty_protobuf(fields, config)
+        }
         _ => {
             // For other types, use the original display
-            // But we could enhance protobuf here too if we stored structured data
             original_display.to_string()
         }
     }
