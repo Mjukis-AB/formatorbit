@@ -25,7 +25,7 @@ tap = "mjukis-ab/formatorbit"
 publish-jobs = ["homebrew"]
 
 [workspace.dependencies]
-formatorbit-core = { path = "crates/core" }
+formatorbit-core = { version = "0.2.0", path = "crates/core" }
 formatorbit-plugin-api = { path = "crates/plugin-api" }
 formatorbit-ffi = { path = "crates/ffi" }
 

@@ -319,7 +319,10 @@ fn main() {
             }
 
             // Show how many more are hidden
-            let hidden = result.conversions.len().saturating_sub(conversions_to_show.len());
+            let hidden = result
+                .conversions
+                .len()
+                .saturating_sub(conversions_to_show.len());
             if hidden > 0 {
                 println!(
                     "  {} {}",
