@@ -1,11 +1,14 @@
 mod pipe;
+mod pretty;
 mod tokenizer;
 
 use std::io::IsTerminal;
 
 use clap::Parser;
-use colored::Colorize;
-use formatorbit_core::Formatorbit;
+use colored::{control::set_override, Colorize};
+use formatorbit_core::{CoreValue, Formatorbit};
+
+use crate::pretty::PrettyConfig;
 
 const LONG_ABOUT: &str = r##"
 Formatorbit automatically detects and converts data between formats.
@@ -117,6 +120,14 @@ struct Cli {
     /// Maximum tokens to analyze per line in pipe mode
     #[arg(long, default_value = "50", hide = true)]
     max_tokens: usize,
+
+    /// Disable colored output
+    #[arg(long, short = 'C')]
+    no_color: bool,
+
+    /// Compact output for structured data (single line)
+    #[arg(long, short = 'c')]
+    compact: bool,
 }
 
 fn print_formats() {
@@ -256,6 +267,18 @@ fn main() {
         std::process::exit(1);
     };
 
+    // Handle --no-color flag
+    if cli.no_color {
+        set_override(false);
+    }
+
+    // Build pretty config
+    let pretty_config = PrettyConfig {
+        color: !cli.no_color,
+        indent: "  ",
+        compact: cli.compact,
+    };
+
     // Apply format filter if specified
     let format_filter = cli.only.unwrap_or_default();
     let results = forb.convert_all_filtered(&input, &format_filter);
@@ -309,13 +332,25 @@ fn main() {
                     String::new()
                 };
 
-                println!(
-                    "  {} {}: {}{}",
-                    "→".cyan(),
-                    conv.target_format.yellow(),
-                    conv.display,
-                    path_str.dimmed()
-                );
+                // Pretty-print JSON values
+                let display = format_conversion_display(&conv.value, &conv.display, &pretty_config);
+
+                // Indent multi-line output
+                let display_lines: Vec<&str> = display.lines().collect();
+                if display_lines.len() > 1 {
+                    println!("  {} {}:{}", "→".cyan(), conv.target_format.yellow(), path_str.dimmed());
+                    for line in display_lines {
+                        println!("    {}", line);
+                    }
+                } else {
+                    println!(
+                        "  {} {}: {}{}",
+                        "→".cyan(),
+                        conv.target_format.yellow(),
+                        display,
+                        path_str.dimmed()
+                    );
+                }
             }
 
             // Show how many more are hidden
@@ -332,5 +367,20 @@ fn main() {
             }
         }
         println!();
+    }
+}
+
+/// Format a conversion's display string, applying pretty-printing for structured data.
+fn format_conversion_display(value: &CoreValue, original_display: &str, config: &PrettyConfig) -> String {
+    match value {
+        CoreValue::Json(json) => {
+            // Pretty-print JSON with colors
+            pretty::pretty_json(json, config)
+        }
+        _ => {
+            // For other types, use the original display
+            // But we could enhance protobuf here too if we stored structured data
+            original_display.to_string()
+        }
     }
 }
