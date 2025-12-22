@@ -22,6 +22,36 @@ pub enum CoreValue {
     Bool(bool),
     DateTime(DateTime<Utc>),
     Json(JsonValue),
+    /// Decoded protobuf message (schema-less).
+    Protobuf(Vec<ProtoField>),
+}
+
+/// A decoded protobuf field.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProtoField {
+    /// Field number from the protobuf tag.
+    pub field_number: u32,
+    /// Wire type (0=varint, 1=i64, 2=len, 5=i32).
+    pub wire_type: u8,
+    /// The decoded value.
+    pub value: ProtoValue,
+}
+
+/// A decoded protobuf value.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ProtoValue {
+    /// Variable-length integer (wire type 0).
+    Varint(u64),
+    /// Fixed 64-bit value (wire type 1).
+    Fixed64(u64),
+    /// Fixed 32-bit value (wire type 5).
+    Fixed32(u32),
+    /// Length-delimited bytes (wire type 2) - could be string, bytes, or nested message.
+    Bytes(Vec<u8>),
+    /// UTF-8 string (decoded from length-delimited).
+    String(String),
+    /// Nested protobuf message (decoded from length-delimited).
+    Message(Vec<ProtoField>),
 }
 
 impl CoreValue {
@@ -36,6 +66,7 @@ impl CoreValue {
             Self::Bool(_) => "bool",
             Self::DateTime(_) => "datetime",
             Self::Json(_) => "json",
+            Self::Protobuf(_) => "protobuf",
         }
     }
 }

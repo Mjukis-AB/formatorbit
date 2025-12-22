@@ -12,11 +12,14 @@
 //! - 5: I32 (fixed32, sfixed32, float)
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue};
+use crate::types::{
+    Conversion, ConversionPriority, CoreValue, ProtoField as PublicProtoField,
+    ProtoValue as PublicProtoValue,
+};
 
 pub struct ProtobufFormat;
 
-/// A decoded protobuf field.
+/// Internal decoded protobuf value (before conversion to public types).
 #[derive(Debug, Clone)]
 enum ProtoValue {
     Varint(u64),
@@ -27,7 +30,7 @@ enum ProtoValue {
     Message(Vec<ProtoField>),
 }
 
-/// A field with its number and value.
+/// Internal field with its number and value.
 #[derive(Debug, Clone)]
 struct ProtoField {
     field_number: u32,
@@ -292,6 +295,41 @@ impl ProtobufFormat {
 
         score.clamp(0.3, 0.95)
     }
+
+    /// Convert internal ProtoField to public ProtoField.
+    fn to_public_field(field: &ProtoField) -> PublicProtoField {
+        PublicProtoField {
+            field_number: field.field_number,
+            wire_type: field.wire_type,
+            value: Self::to_public_value(&field.value),
+        }
+    }
+
+    /// Convert internal ProtoValue to public ProtoValue.
+    fn to_public_value(value: &ProtoValue) -> PublicProtoValue {
+        match value {
+            ProtoValue::Varint(v) => PublicProtoValue::Varint(*v),
+            ProtoValue::Fixed64(v) => PublicProtoValue::Fixed64(*v),
+            ProtoValue::Fixed32(v) => PublicProtoValue::Fixed32(*v),
+            ProtoValue::LengthDelimited(data) => {
+                // Try to interpret as UTF-8 string
+                if let Ok(s) = std::str::from_utf8(data) {
+                    if s.chars().all(|c| !c.is_control() || c == '\n' || c == '\t') {
+                        return PublicProtoValue::String(s.to_string());
+                    }
+                }
+                PublicProtoValue::Bytes(data.clone())
+            }
+            ProtoValue::Message(fields) => {
+                PublicProtoValue::Message(fields.iter().map(Self::to_public_field).collect())
+            }
+        }
+    }
+
+    /// Convert internal fields to public fields.
+    fn to_public_fields(fields: &[ProtoField]) -> Vec<PublicProtoField> {
+        fields.iter().map(Self::to_public_field).collect()
+    }
 }
 
 impl Format for ProtobufFormat {
@@ -352,8 +390,11 @@ impl Format for ProtobufFormat {
             return vec![];
         }
 
-        // Format for display
-        let mut display = String::from("(protobuf) {\n");
+        // Convert to public types
+        let public_fields = Self::to_public_fields(&fields);
+
+        // Format for display (fallback for non-colorized output)
+        let mut display = String::from("{\n");
         for field in &fields {
             let wire_name = match field.wire_type {
                 0 => "varint",
@@ -374,7 +415,7 @@ impl Format for ProtobufFormat {
         };
 
         vec![Conversion {
-            value: CoreValue::String(display.clone()),
+            value: CoreValue::Protobuf(public_fields),
             target_format: "protobuf".to_string(),
             display,
             path: vec!["protobuf".to_string()],
@@ -479,9 +520,15 @@ mod tests {
         let conversions = format.conversions(&value);
 
         assert_eq!(conversions.len(), 1);
-        assert!(conversions[0].display.contains("protobuf"));
-        assert!(conversions[0].display.contains("150"));
-        assert!(conversions[0].display.contains("testing"));
+        assert_eq!(conversions[0].target_format, "protobuf");
+        // Value should be CoreValue::Protobuf with the decoded fields
+        if let CoreValue::Protobuf(fields) = &conversions[0].value {
+            assert_eq!(fields.len(), 2);
+            assert_eq!(fields[0].field_number, 1);
+            assert_eq!(fields[1].field_number, 2);
+        } else {
+            panic!("Expected CoreValue::Protobuf");
+        }
     }
 
     #[test]
