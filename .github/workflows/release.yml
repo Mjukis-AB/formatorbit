@@ -138,7 +138,7 @@ jobs:
           API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         with:
           source_file: 'forb.rb'
-          destination_repo: 'mjukis-ab/formatorbit'
+          destination_repo: 'mjukis-ab/homebrew-tap'
           destination_folder: 'Formula'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           user_name: 'github-actions[bot]'

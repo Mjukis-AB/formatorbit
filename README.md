@@ -25,18 +25,31 @@ Ever paste a blob of hex into a dozen different tools trying to figure out what 
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap mjukis-ab/tap
+brew install forb
+```
+
+### Cargo (Rust)
+
 ```bash
 cargo install formatorbit-cli
 ```
 
-Or build from source:
+### From Source
 
 ```bash
-git clone https://github.com/formatorbit/formatorbit
+git clone https://github.com/mjukis-ab/formatorbit
 cd formatorbit
 cargo build --release
 # Binary is at target/release/forb
 ```
+
+### Pre-built Binaries
+
+Download from [GitHub Releases](https://github.com/mjukis-ab/formatorbit/releases).
 
 ## Usage
 
