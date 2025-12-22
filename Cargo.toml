@@ -8,7 +8,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 authors = ["David Everlof"]
@@ -25,7 +25,7 @@ tap = "mjukis-ab/formatorbit"
 publish-jobs = ["homebrew"]
 
 [workspace.dependencies]
-formatorbit-core = { version = "0.2.1", path = "crates/core" }
+formatorbit-core = { version = "0.3.0", path = "crates/core" }
 formatorbit-plugin-api = { path = "crates/plugin-api" }
 formatorbit-ffi = { path = "crates/ffi" }
 

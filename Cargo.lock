@@ -206,7 +206,7 @@ checksum = "3a3076410a55c90011c298b04d0cfa770b00fa04e1e3c97d3f6c9de105a03844"
 
 [[package]]
 name = "formatorbit-cli"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "clap",
  "colored",
@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "formatorbit-core"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "base64",
  "chrono",
@@ -236,7 +236,7 @@ dependencies = [
 
 [[package]]
 name = "formatorbit-ffi"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "formatorbit-core",
  "serde_json",
@@ -244,7 +244,7 @@ dependencies = [
 
 [[package]]
 name = "formatorbit-plugin-api"
-version = "0.2.1"
+version = "0.3.0"
 
 [[package]]
 name = "getrandom"
