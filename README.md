@@ -35,10 +35,25 @@ brew tap mjukis-ab/tap
 brew install forb
 ```
 
+### Scoop (Windows)
+
+```powershell
+scoop bucket add mjukis https://github.com/mjukis-ab/scoop-bucket
+scoop install forb
+```
+
 ### Cargo (Rust)
 
 ```bash
 cargo install formatorbit-cli
+```
+
+### Debian/Ubuntu
+
+Download the `.deb` from [GitHub Releases](https://github.com/mjukis-ab/formatorbit/releases), then:
+
+```bash
+sudo dpkg -i forb_*.deb
 ```
 
 ### From Source

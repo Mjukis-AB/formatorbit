@@ -79,6 +79,30 @@ jobs:
         with:
           files: forb-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive }}
 
+  deb:
+    name: Build .deb package
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+
+      - name: Build release
+        run: cargo build --release -p formatorbit-cli
+
+      - name: Build .deb
+        run: cargo deb -p formatorbit-cli --no-build
+
+      - name: Upload .deb
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/debian/*.deb
+
   homebrew:
     name: Update Homebrew
     needs: build
@@ -140,6 +164,57 @@ jobs:
           source_file: 'forb.rb'
           destination_repo: 'mjukis-ab/homebrew-tap'
           destination_folder: 'Formula'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          user_name: 'github-actions[bot]'
+          commit_message: 'Update forb to ${{ github.ref_name }}'
+
+  scoop:
+    name: Update Scoop
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate Scoop manifest
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+
+          curl -sL "https://github.com/mjukis-ab/formatorbit/releases/download/${{ github.ref_name }}/forb-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip" -o windows.zip
+          SHA_WINDOWS=$(sha256sum windows.zip | cut -d' ' -f1)
+
+          cat > forb.json << EOF
+          {
+              "version": "${VERSION}",
+              "description": "CLI tool that shows all possible interpretations of any data input",
+              "homepage": "https://github.com/mjukis-ab/formatorbit",
+              "license": "MIT",
+              "architecture": {
+                  "64bit": {
+                      "url": "https://github.com/mjukis-ab/formatorbit/releases/download/${{ github.ref_name }}/forb-${{ github.ref_name }}-x86_64-pc-windows-msvc.zip",
+                      "hash": "${SHA_WINDOWS}"
+                  }
+              },
+              "bin": "forb.exe",
+              "checkver": "github",
+              "autoupdate": {
+                  "architecture": {
+                      "64bit": {
+                          "url": "https://github.com/mjukis-ab/formatorbit/releases/download/v\$version/forb-v\$version-x86_64-pc-windows-msvc.zip"
+                      }
+                  }
+              }
+          }
+          EOF
+
+      - name: Push to Scoop bucket
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        with:
+          source_file: 'forb.json'
+          destination_repo: 'mjukis-ab/scoop-bucket'
+          destination_folder: 'bucket'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           user_name: 'github-actions[bot]'
           commit_message: 'Update forb to ${{ github.ref_name }}'
