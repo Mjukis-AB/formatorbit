@@ -80,8 +80,8 @@ impl ColorFormat {
 
         let (h, s, l) = Self::rgb_to_hsl(r, g, b);
 
-        let description = if a.is_some() {
-            format!("{format_hint}: RGBA({r}, {g}, {b}, {}) / HSL({h}°, {s}%, {l}%)", a.unwrap())
+        let description = if let Some(alpha) = a {
+            format!("{format_hint}: RGBA({r}, {g}, {b}, {alpha}) / HSL({h}°, {s}%, {l}%)")
         } else {
             format!("{format_hint}: RGB({r}, {g}, {b}) / HSL({h}°, {s}%, {l}%)")
         };

@@ -5,7 +5,6 @@
 Formatorbit is a cross-platform data format converter. Users input data (e.g., `691E01B8`) and the tool shows all possible interpretations and conversions automatically.
 
 **Core idea:** Separate parsing (input → internal type) from conversion (internal type → internal type) from formatting (internal type → output string). This enables a graph-based approach where we can find all reachable conversions via BFS.
-
 ## Architecture
 
 ```

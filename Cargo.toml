@@ -11,7 +11,18 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-authors = ["David"]
+authors = ["David Everlof"]
+repository = "https://github.com/mjukis-ab/formatorbit"
+homepage = "https://github.com/mjukis-ab/formatorbit"
+readme = "README.md"
+
+[workspace.metadata.dist]
+cargo-dist-version = "0.27.0"
+ci = "github"
+installers = ["shell", "powershell", "homebrew"]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+tap = "mjukis-ab/formatorbit"
+publish-jobs = ["homebrew"]
 
 [workspace.dependencies]
 formatorbit-core = { path = "crates/core" }
