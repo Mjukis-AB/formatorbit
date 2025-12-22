@@ -1,0 +1,14 @@
+[package]
+name = "formatorbit-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "forb"
+path = "src/main.rs"
+
+[dependencies]
+formatorbit-core = { workspace = true }
+clap = { workspace = true }
+colored = { workspace = true }
+serde_json = { workspace = true }
