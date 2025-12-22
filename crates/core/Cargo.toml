@@ -24,6 +24,7 @@ libloading = { workspace = true }
 uuid = { version = "1", features = ["v4", "serde"] }
 rmp-serde = "1"
 percent-encoding = "2"
+plist = "1"
 
 [dependencies.pyo3]
 version = "0.23"
