@@ -48,7 +48,7 @@ A collection of format ideas organized by developer domain.
 ## Data Formats
 
 - [x] **MessagePack** - Binary JSON-like format (implemented)
-- [ ] **Protobuf** - Wire format decode (without schema, show field numbers)
+- [x] **Protobuf** - Wire format decode (without schema, show field numbers) (implemented)
 - [ ] **BSON** - MongoDB binary JSON
 - [ ] **CBOR** - Concise Binary Object Representation (IoT common)
 - [ ] **Bencode** - BitTorrent encoding
