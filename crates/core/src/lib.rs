@@ -13,7 +13,8 @@ pub use types::*;
 
 use formats::{
     Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, DateTimeFormat, DecimalFormat,
-    HexFormat, IpAddrFormat, JsonFormat, MsgPackFormat, UrlEncodingFormat, Utf8Format, UuidFormat,
+    HexFormat, IpAddrFormat, JsonFormat, MsgPackFormat, PlistFormat, UrlEncodingFormat, Utf8Format,
+    UuidFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -43,6 +44,7 @@ impl Formatorbit {
                 // Conversion-only formats (don't parse strings directly)
                 Box::new(BytesToIntFormat),
                 Box::new(MsgPackFormat),
+                Box::new(PlistFormat),
             ],
         }
     }

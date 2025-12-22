@@ -15,7 +15,8 @@ A collection of format ideas organized by developer domain.
 ## iOS/macOS Developers
 
 - [x] **Apple/Cocoa timestamp** - Seconds since 2001-01-01 (implemented)
-- [ ] **Binary plist** - Decode Apple property list format
+- [x] **Binary plist** - Decode Apple property list format (implemented)
+- [x] **XML plist** - Decode Apple XML property list (implemented)
 - [ ] **CFAbsoluteTime** - Core Foundation time
 - [ ] **UTI** - Uniform Type Identifiers (`public.jpeg` → MIME type)
 - [ ] **Bundle IDs** - Validate/parse reverse-DNS format
@@ -29,7 +30,7 @@ A collection of format ideas organized by developer domain.
 ## Hardware/Firmware/Embedded
 
 - [ ] **IEEE 754 float** - Show bit layout (sign|exponent|mantissa)
-- [ ] **Binary literals** - `0b10101010` parsing and display
+- [x] **Binary literals** - `0b10101010` parsing and display (implemented)
 - [ ] **Endian visualization** - Show BE/LE side by side
 - [ ] **CRC detection** - Identify CRC-16, CRC-32 by length
 - [ ] **MAC address OUI** - Vendor lookup from first 3 bytes
@@ -89,6 +90,8 @@ A collection of format ideas organized by developer domain.
 - [x] URL encoding
 - [x] MessagePack
 - [x] Apple/Cocoa timestamps
+- [x] Binary literals (0b prefix, % prefix, space-separated)
+- [x] Apple plist (XML and binary formats)
 
 ## Priority Suggestions
 

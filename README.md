@@ -159,7 +159,7 @@ forb --formats
 | **Identifiers** | UUID (v1-v8 detection) |
 | **Network** | IPv4, IPv6 |
 | **Colors** | #RGB, #RRGGBB, #RRGGBBAA, 0xAARRGGBB (Android) |
-| **Data** | JSON, MessagePack, UTF-8 |
+| **Data** | JSON, MessagePack, plist (XML/binary), UTF-8 |
 
 ### Hex Input Styles
 
@@ -201,6 +201,7 @@ For quick filtering with `--only`, formats have short aliases:
 | ip | ipv4, ipv6 |
 | color | col, rgb, argb |
 | json | j |
+| plist | pl |
 | url-encoded | url, percent |
 | msgpack | mp, mpack |
 
