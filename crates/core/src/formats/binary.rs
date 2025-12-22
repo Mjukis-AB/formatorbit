@@ -26,7 +26,10 @@ impl BinaryFormat {
         let trimmed = input.trim();
 
         // Try 0b/0B prefix (highest confidence)
-        if let Some(rest) = trimmed.strip_prefix("0b").or_else(|| trimmed.strip_prefix("0B")) {
+        if let Some(rest) = trimmed
+            .strip_prefix("0b")
+            .or_else(|| trimmed.strip_prefix("0B"))
+        {
             // Remove underscores (Rust/Python style separators)
             let clean: String = rest.chars().filter(|c| *c != '_').collect();
             if Self::is_valid_binary(&clean) {

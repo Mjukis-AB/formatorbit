@@ -216,7 +216,9 @@ mod tests {
         assert!(format.parse("aGVsbG8.d29ybGQ.dGVzdA").is_empty());
 
         // JSON but no alg field
-        assert!(format.parse("eyJ0eXAiOiJKV1QifQ.eyJzdWIiOiJ0ZXN0In0.sig").is_empty());
+        assert!(format
+            .parse("eyJ0eXAiOiJKV1QifQ.eyJzdWIiOiJ0ZXN0In0.sig")
+            .is_empty());
     }
 
     #[test]
@@ -224,7 +226,8 @@ mod tests {
         let format = JwtFormat;
         // JWT with exp claim (expired: 2018-01-18)
         // {"alg":"HS256","typ":"JWT"}.{"sub":"test","exp":1516239022}
-        let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjoxNTE2MjM5MDIyfQ.sig";
+        let jwt =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0IiwiZXhwIjoxNTE2MjM5MDIyfQ.sig";
         let results = format.parse(jwt);
 
         assert_eq!(results.len(), 1);

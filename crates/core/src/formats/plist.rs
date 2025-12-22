@@ -24,11 +24,13 @@ impl PlistFormat {
                 // Encode binary data as base64 string
                 use base64::Engine;
                 let encoded = base64::engine::general_purpose::STANDARD.encode(data);
-                serde_json::Value::String(format!("<data: {} bytes, base64: {}>", data.len(), encoded))
+                serde_json::Value::String(format!(
+                    "<data: {} bytes, base64: {}>",
+                    data.len(),
+                    encoded
+                ))
             }
-            plist::Value::Date(date) => {
-                serde_json::Value::String(date.to_xml_format())
-            }
+            plist::Value::Date(date) => serde_json::Value::String(date.to_xml_format()),
             plist::Value::Integer(i) => {
                 if let Some(n) = i.as_signed() {
                     serde_json::Value::Number(n.into())
@@ -38,15 +40,11 @@ impl PlistFormat {
                     serde_json::Value::Null
                 }
             }
-            plist::Value::Real(f) => {
-                serde_json::Number::from_f64(*f)
-                    .map(serde_json::Value::Number)
-                    .unwrap_or(serde_json::Value::Null)
-            }
+            plist::Value::Real(f) => serde_json::Number::from_f64(*f)
+                .map(serde_json::Value::Number)
+                .unwrap_or(serde_json::Value::Null),
             plist::Value::String(s) => serde_json::Value::String(s.clone()),
-            plist::Value::Uid(uid) => {
-                serde_json::Value::String(format!("<UID: {}>", uid.get()))
-            }
+            plist::Value::Uid(uid) => serde_json::Value::String(format!("<UID: {}>", uid.get())),
             _ => serde_json::Value::Null,
         }
     }

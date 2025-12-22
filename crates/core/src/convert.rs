@@ -8,6 +8,33 @@ use std::collections::VecDeque;
 use crate::format::Format;
 use crate::types::{Conversion, ConversionPriority, CoreValue};
 
+/// Nonsensical source→target combinations to filter out.
+/// These are conversions that technically work but are never useful.
+const BLOCKED_PATHS: &[(&str, &str)] = &[
+    // IP addresses aren't msgpack-encoded data
+    ("ipv4", "msgpack"),
+    ("ipv6", "msgpack"),
+    // UUIDs aren't msgpack-encoded data
+    ("uuid", "msgpack"),
+    // IP addresses aren't timestamps
+    ("ipv4", "epoch-seconds"),
+    ("ipv4", "epoch-millis"),
+    ("ipv4", "apple-cocoa"),
+    ("ipv4", "filetime"),
+    // UUIDs aren't timestamps (except v1, but that's handled separately)
+    ("uuid", "epoch-seconds"),
+    ("uuid", "epoch-millis"),
+    ("uuid", "apple-cocoa"),
+    ("uuid", "filetime"),
+];
+
+/// Check if a source→target conversion should be blocked.
+fn is_blocked_path(source_format: &str, target_format: &str) -> bool {
+    BLOCKED_PATHS
+        .iter()
+        .any(|(src, tgt)| source_format == *src && target_format == *tgt)
+}
+
 /// Find all possible conversions from a value using BFS.
 ///
 /// This traverses the conversion graph, collecting all reachable formats.
@@ -91,6 +118,11 @@ pub fn find_all_conversions(
         }
 
         depth += 1;
+    }
+
+    // Filter out blocked source→target combinations
+    if let Some(source) = exclude_format {
+        results.retain(|conv| !is_blocked_path(source, &conv.target_format));
     }
 
     // Sort by priority (Structured first), then by path length (shorter = more direct)
