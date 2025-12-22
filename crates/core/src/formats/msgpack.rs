@@ -1,7 +1,7 @@
 //! MessagePack format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct MsgPackFormat;
 
@@ -67,6 +67,7 @@ impl Format for MsgPackFormat {
             display: format!("(decoded) {}", display),
             path: vec!["msgpack".to_string()],
             is_lossy: false,
+            priority: ConversionPriority::Structured,
         }]
     }
 

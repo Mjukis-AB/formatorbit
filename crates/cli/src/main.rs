@@ -46,8 +46,20 @@ EXAMPLES:
 
 OUTPUT:
   Shows all possible interpretations ranked by confidence.
-  Each interpretation shows available conversions (hex, base64, int, etc.)
-  Use --json for machine-readable output."##;
+  Conversions are sorted by usefulness:
+    1. Structured data (JSON, MessagePack) - decoded content shown first
+    2. Semantic types (datetime, UUID, IP, color)
+    3. Encodings (hex, base64)
+    4. Raw values (integers)
+  Use -l to change how many conversions are shown (default: 5, use -l 0 for all).
+  Use --json for machine-readable output.
+
+PIPE MODE:
+  Pipe logs through forb to annotate interesting values:
+    cat server.log | forb              Annotate log lines
+    cat server.log | forb -t 0.5       Lower confidence threshold
+    cat server.log | forb -H           Highlight matches inline
+    cat server.log | forb -o uuid,hex  Only look for specific formats"##;
 
 #[derive(Parser)]
 #[command(name = "forb")]
@@ -91,6 +103,12 @@ struct Cli {
     /// Use --formats to see available format IDs and aliases.
     #[arg(long, short = 'o', value_delimiter = ',')]
     only: Option<Vec<String>>,
+
+    /// Maximum conversions to show per interpretation (0 = unlimited)
+    ///
+    /// With priority sorting, the most valuable conversions come first.
+    #[arg(long, short = 'l', default_value = "5")]
+    limit: usize,
 
     /// Force pipe mode even when stdin is a TTY (for testing)
     #[arg(long, hide = true)]
@@ -200,8 +218,9 @@ fn main() {
     let forb = Formatorbit::new();
 
     // Check if we should run in pipe mode
+    // Only use pipe mode if stdin is not a terminal AND no direct input was given
     let stdin_is_pipe = !std::io::stdin().is_terminal();
-    if stdin_is_pipe || cli.force_pipe {
+    if (stdin_is_pipe && cli.input.is_none()) || cli.force_pipe {
         let config = pipe::PipeModeConfig {
             threshold: cli.threshold,
             highlight: cli.highlight,
@@ -276,7 +295,14 @@ fn main() {
         if result.conversions.is_empty() {
             println!("  {}", "(no conversions available)".dimmed());
         } else {
-            for conv in &result.conversions {
+            // Apply limit (0 = unlimited)
+            let conversions_to_show: Vec<_> = if cli.limit == 0 {
+                result.conversions.iter().collect()
+            } else {
+                result.conversions.iter().take(cli.limit).collect()
+            };
+
+            for conv in &conversions_to_show {
                 let path_str = if conv.path.len() > 1 {
                     format!(" (via {})", conv.path.join(" → "))
                 } else {
@@ -289,6 +315,16 @@ fn main() {
                     conv.target_format.yellow(),
                     conv.display,
                     path_str.dimmed()
+                );
+            }
+
+            // Show how many more are hidden
+            let hidden = result.conversions.len().saturating_sub(conversions_to_show.len());
+            if hidden > 0 {
+                println!(
+                    "  {} {}",
+                    "…".dimmed(),
+                    format!("({} more, use -l 0 to show all)", hidden).dimmed()
                 );
             }
         }

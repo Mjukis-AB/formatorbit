@@ -1,7 +1,7 @@
 //! Integer formats (decimal, with endianness handling).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct DecimalFormat;
 
@@ -132,6 +132,7 @@ impl Format for BytesToIntFormat {
             display: be_value.to_string(),
             path: vec!["int-be".to_string()],
             is_lossy: false,
+            priority: ConversionPriority::Raw,
         }];
 
         // Only add little-endian if it's different
@@ -145,6 +146,7 @@ impl Format for BytesToIntFormat {
                 display: le_value.to_string(),
                 path: vec!["int-le".to_string()],
                 is_lossy: false,
+                priority: ConversionPriority::Raw,
             });
         }
 

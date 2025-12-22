@@ -7,12 +7,15 @@ $ forb 691E01B8
 
 ▶ hex (92% confidence)
   4 bytes
-  → int-be: 1763574200
-  → int-le: 3087081065
+  → msgpack: (decoded) 105
+  → ipv4: 105.30.1.184
+  → color-rgb: rgba(105, 30, 1, 184)
   → epoch-seconds: 2025-11-19T17:43:20+00:00
-  → base64: aR4BuA==
-  → ip: 105.30.1.184
+  → hex: 691E01B8
+  … (13 more, use -l 0 to show all)
 ```
+
+Conversions are sorted by usefulness - structured data (JSON, MessagePack) first, then semantic types (datetime, UUID, IP), then encodings.
 
 ## Why forb?
 
@@ -114,11 +117,15 @@ cat logs.txt | forb -o uuid,hex,ts
 cat logs.txt | forb -j
 ```
 
-### Output Formats
+### Output Options
 
 ```bash
-# Human-readable (default)
+# Human-readable (default, shows top 5 conversions)
 forb 691E01B8
+
+# Show more/fewer conversions
+forb 691E01B8 -l 10    # Show top 10
+forb 691E01B8 -l 0     # Show all
 
 # JSON for scripting
 forb 691E01B8 --json
@@ -179,12 +186,12 @@ $ forb "69 1E 01 B8"
 
 ▶ hex (92% confidence)
   4 bytes (space-separated)
-  → int-be: 1763574200
-  → int-le: 3087081065
+  → msgpack: (decoded) 105
+  → ipv4: 105.30.1.184
+  → color-rgb: rgba(105, 30, 1, 184)
   → epoch-seconds: 2025-11-19T17:43:20+00:00
-  → base64: aR4BuA==
-  → ip: 105.30.1.184
-  → color: #691E01B8
+  → hex: 691E01B8
+  … (13 more, use -l 0 to show all)
 ```
 
 ### Identifying UUIDs
@@ -195,8 +202,10 @@ $ forb 550e8400-e29b-41d4-a716-446655440000
 ▶ uuid (95% confidence)
   UUID v4 (random)
   → uuid: 550e8400-e29b-41d4-a716-446655440000
+  → ipv6: 550e:8400:e29b:41d4:a716:4466:5544:0
   → hex: 550E8400E29B41D4A716446655440000
   → base64: VQ6EAOKbQdSnFkRmVUQAAA==
+  … (1 more, use -l 0 to show all)
 ```
 
 ### Decoding Timestamps
@@ -208,6 +217,8 @@ $ forb 1703456789
   Integer: 1703456789
   → epoch-seconds: 2023-12-24T23:06:29+00:00
   → epoch-millis: 1970-01-20T17:17:36.789+00:00
+  → apple-cocoa: 2054-12-24T23:06:29+00:00
+  → msgpack: CE6588C555
   → hex: 6588C555
 ```
 
@@ -238,12 +249,21 @@ $ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655
 1. **Parse**: Try all format parsers on the input
 2. **Rank**: Sort interpretations by confidence score
 3. **Convert**: For each interpretation, find all possible conversions via graph traversal
-4. **Display**: Show results with the most likely interpretation first
+4. **Prioritize**: Sort conversions by usefulness (structured data first, then semantic types, then encodings)
+5. **Display**: Show results with the most likely interpretation first, limited to top 5 conversions by default
 
-The confidence score (0-100%) indicates how likely each interpretation is:
+**Confidence score** (0-100%) indicates how likely each interpretation is:
 - **90%+**: Strong indicators (0x prefix, UUID dashes, base64 padding)
 - **70-90%**: Plausible match (valid hex chars, reasonable timestamp range)
 - **<70%**: Possible but less certain
+
+**Conversion priority** - most useful conversions shown first:
+1. Structured data (JSON, MessagePack decoded content)
+2. Semantic types (datetime, UUID, IP address, color)
+3. Encodings (hex, base64, url-encoded)
+4. Raw values (integers, bytes)
+
+Use `-l 0` to show all conversions, or `-l N` to show top N.
 
 ## License
 

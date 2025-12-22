@@ -3,7 +3,7 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct IpAddrFormat;
 
@@ -88,6 +88,7 @@ impl Format for IpAddrFormat {
                     display: addr.to_string(),
                     path: vec!["ipv4".to_string()],
                     is_lossy: false,
+                    priority: ConversionPriority::Semantic,
                 }]
             }
             16 => {
@@ -103,6 +104,7 @@ impl Format for IpAddrFormat {
                     display: addr.to_string(),
                     path: vec!["ipv6".to_string()],
                     is_lossy: false,
+                    priority: ConversionPriority::Semantic,
                 }];
 
                 // Also try as UUID since both are 16 bytes

@@ -6,7 +6,7 @@
 use std::collections::VecDeque;
 
 use crate::format::Format;
-use crate::types::{Conversion, CoreValue};
+use crate::types::{Conversion, ConversionPriority, CoreValue};
 
 /// Find all possible conversions from a value using BFS.
 ///
@@ -32,6 +32,7 @@ pub fn find_all_conversions(formats: &[Box<dyn Format>], initial: &CoreValue) ->
                         display,
                         path: vec![format_id],
                         is_lossy: false,
+                        priority: ConversionPriority::default(),
                     });
                 }
             }
@@ -70,6 +71,7 @@ pub fn find_all_conversions(formats: &[Box<dyn Format>], initial: &CoreValue) ->
                         display: conv.display,
                         path: full_path.clone(),
                         is_lossy: conv.is_lossy,
+                        priority: conv.priority,
                     });
 
                     // Add to queue for further exploration
@@ -80,6 +82,13 @@ pub fn find_all_conversions(formats: &[Box<dyn Format>], initial: &CoreValue) ->
 
         depth += 1;
     }
+
+    // Sort by priority (Structured first), then by path length (shorter = more direct)
+    results.sort_by(|a, b| {
+        a.priority
+            .cmp(&b.priority)
+            .then_with(|| a.path.len().cmp(&b.path.len()))
+    });
 
     results
 }
