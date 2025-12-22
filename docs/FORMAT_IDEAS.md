@@ -4,7 +4,7 @@ A collection of format ideas organized by developer domain.
 
 ## Web/Backend Developers
 
-- [ ] **JWT tokens** - Decode header.payload (without verification), show claims, expiry
+- [x] **JWT tokens** - Decode header.payload (without verification), show claims, expiry (implemented)
 - [ ] **Unix permissions** - `755` → `rwxr-xr-x`
 - [ ] **HTTP status codes** - `404` → "Not Found"
 - [ ] **Cron expressions** - `*/5 * * * *` → "every 5 minutes"
@@ -92,6 +92,7 @@ A collection of format ideas organized by developer domain.
 - [x] Apple/Cocoa timestamps
 - [x] Binary literals (0b prefix, % prefix, space-separated)
 - [x] Apple plist (XML and binary formats)
+- [x] JWT tokens (header/payload decode, claims display)
 
 ## Priority Suggestions
 

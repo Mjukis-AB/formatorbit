@@ -156,7 +156,7 @@ forb --formats
 | **Encoding** | hex, base64, binary, url-encoding |
 | **Numbers** | decimal, binary, big-endian int, little-endian int |
 | **Timestamps** | Unix epoch (sec/ms), Apple/Cocoa epoch, ISO 8601, RFC 2822 |
-| **Identifiers** | UUID (v1-v8 detection) |
+| **Identifiers** | UUID (v1-v8 detection), JWT |
 | **Network** | IPv4, IPv6 |
 | **Colors** | #RGB, #RRGGBB, #RRGGBBAA, 0xAARRGGBB (Android) |
 | **Data** | JSON, MessagePack, plist (XML/binary), UTF-8 |
@@ -198,6 +198,7 @@ For quick filtering with `--only`, formats have short aliases:
 | datetime | ts, time, date |
 | decimal | dec, int, num |
 | uuid | guid |
+| jwt | token |
 | ip | ipv4, ipv6 |
 | color | col, rgb, argb |
 | json | j |
