@@ -153,8 +153,8 @@ forb --formats
 
 | Category | Formats |
 |----------|---------|
-| **Encoding** | hex, base64, url-encoding |
-| **Numbers** | decimal, big-endian int, little-endian int |
+| **Encoding** | hex, base64, binary, url-encoding |
+| **Numbers** | decimal, binary, big-endian int, little-endian int |
 | **Timestamps** | Unix epoch (sec/ms), Apple/Cocoa epoch, ISO 8601, RFC 2822 |
 | **Identifiers** | UUID (v1-v8 detection) |
 | **Network** | IPv4, IPv6 |
@@ -175,6 +175,17 @@ forb --formats
 {0x69, 0x1E, 0x01, 0xB8}    C/C++ array style
 ```
 
+### Binary Input Styles
+
+`forb` accepts binary in these formats:
+
+```
+0b10101010                  With 0b prefix (standard)
+0b1010_1010                 With underscores for readability
+%10101010                   Assembly-style % prefix
+1010 1010                   Space-separated groups
+```
+
 ### Format Aliases
 
 For quick filtering with `--only`, formats have short aliases:
@@ -182,6 +193,7 @@ For quick filtering with `--only`, formats have short aliases:
 | Format | Aliases |
 |--------|---------|
 | hex | h, x |
+| binary | bin, b |
 | base64 | b64 |
 | datetime | ts, time, date |
 | decimal | dec, int, num |
