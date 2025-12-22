@@ -7,15 +7,15 @@ $ forb 691E01B8
 
 ▶ hex (92% confidence)
   4 bytes
-  → msgpack: (decoded) 105
   → ipv4: 105.30.1.184
-  → color-rgb: rgba(105, 30, 1, 184)
   → epoch-seconds: 2025-11-19T17:43:20+00:00
-  → hex: 691E01B8
-  … (13 more, use -l 0 to show all)
+  → binary: 01101001 00011110 00000001 10111000
+  → base64: aR4BuA==
+  → int-be: 1763574200
+  … (8 more, use -l 0 to show all)
 ```
 
-Conversions are sorted by usefulness - structured data (JSON, MessagePack) first, then semantic types (datetime, UUID, IP), then encodings.
+Conversions are sorted by usefulness - structured data (JSON, MessagePack, Protobuf) first, then semantic types (datetime, UUID, IP), then encodings. Structured data is pretty-printed with syntax highlighting.
 
 ## Why forb?
 
@@ -142,6 +142,12 @@ forb 691E01B8
 forb 691E01B8 -l 10    # Show top 10
 forb 691E01B8 -l 0     # Show all
 
+# Compact output (single-line JSON/protobuf)
+forb 691E01B8 -c
+
+# Disable colors (for piping to files)
+forb 691E01B8 -C
+
 # JSON for scripting
 forb 691E01B8 --json
 
@@ -160,7 +166,7 @@ forb --formats
 | **Identifiers** | UUID (v1-v8 detection), ULID (with timestamp), NanoID, CUID2, JWT |
 | **Network** | IPv4, IPv6 |
 | **Colors** | #RGB, #RRGGBB, #RRGGBBAA, 0xAARRGGBB (Android) |
-| **Data** | JSON, MessagePack, plist (XML/binary), UTF-8 |
+| **Data** | JSON, MessagePack, Protobuf (schema-less), plist (XML/binary), UTF-8 |
 
 ### Hex Input Styles
 
@@ -199,16 +205,46 @@ For quick filtering with `--only`, formats have short aliases:
 | datetime | ts, time, date |
 | decimal | dec, int, num |
 | uuid | guid |
+| ulid | - |
 | jwt | token |
 | hash | md5, sha1, sha256, sha512 |
 | ip | ipv4, ipv6 |
 | color | col, rgb, argb |
 | json | j |
+| protobuf | proto, pb |
 | plist | pl |
 | url-encoded | url, percent |
 | msgpack | mp, mpack |
 
 ## Examples
+
+### Decoding Structured Data
+
+```bash
+$ forb "089601120774657374696e67"
+
+▶ hex (92% confidence)
+  12 bytes
+  → protobuf:
+    {
+      1: 150 [varint],
+      2: "testing" [len]
+    }
+  → base64: CJYBEgd0ZXN0aW5n
+  → binary: 00001000 10010110 00000001 ...
+```
+
+```bash
+$ forb '{"name": "John", "age": 30}'
+
+▶ json (95% confidence)
+  JSON object
+  → msgpack:
+    {
+      "age": 30,
+      "name": "John"
+    }
+```
 
 ### Debugging Binary Data
 
@@ -217,12 +253,11 @@ $ forb "69 1E 01 B8"
 
 ▶ hex (92% confidence)
   4 bytes (space-separated)
-  → msgpack: (decoded) 105
   → ipv4: 105.30.1.184
-  → color-rgb: rgba(105, 30, 1, 184)
   → epoch-seconds: 2025-11-19T17:43:20+00:00
-  → hex: 691E01B8
-  … (13 more, use -l 0 to show all)
+  → binary: 01101001 00011110 00000001 10111000
+  → base64: aR4BuA==
+  … (8 more, use -l 0 to show all)
 ```
 
 ### Identifying UUIDs
@@ -232,11 +267,9 @@ $ forb 550e8400-e29b-41d4-a716-446655440000
 
 ▶ uuid (95% confidence)
   UUID v4 (random)
-  → uuid: 550e8400-e29b-41d4-a716-446655440000
   → ipv6: 550e:8400:e29b:41d4:a716:4466:5544:0
   → hex: 550E8400E29B41D4A716446655440000
   → base64: VQ6EAOKbQdSnFkRmVUQAAA==
-  … (1 more, use -l 0 to show all)
 ```
 
 ### Decoding Timestamps
@@ -247,10 +280,8 @@ $ forb 1703456789
 ▶ decimal (85% confidence)
   Integer: 1703456789
   → epoch-seconds: 2023-12-24T23:06:29+00:00
-  → epoch-millis: 1970-01-20T17:17:36.789+00:00
-  → apple-cocoa: 2054-12-24T23:06:29+00:00
-  → msgpack: CE6588C555
   → hex: 6588C555
+  → binary: 01100101 10001000 11000101 01010101
 ```
 
 ### Analyzing Colors
@@ -260,9 +291,6 @@ $ forb '#FF5733'
 
 ▶ color-hex (95% confidence)
   RGB: RGB(255, 87, 51) / HSL(11°, 100%, 60%)
-  → color-rgb: rgb(255, 87, 51)
-  → color-hsl: hsl(11°, 100%, 60%)
-  → color-0x: 0xFF5733
 ```
 
 ### Processing Logs
@@ -289,7 +317,7 @@ $ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655
 - **<70%**: Possible but less certain
 
 **Conversion priority** - most useful conversions shown first:
-1. Structured data (JSON, MessagePack decoded content)
+1. Structured data (JSON, MessagePack, Protobuf - pretty-printed with colors)
 2. Semantic types (datetime, UUID, IP address, color)
 3. Encodings (hex, base64, url-encoded)
 4. Raw values (integers, bytes)
