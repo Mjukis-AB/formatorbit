@@ -1,7 +1,7 @@
 //! MessagePack format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct MsgPackFormat;
 
@@ -48,10 +48,50 @@ impl Format for MsgPackFormat {
         Some(bytes.iter().map(|b| format!("{b:02X}")).collect())
     }
 
-    // Note: No conversions() - msgpack decoding is too noisy in conversion paths.
-    // Almost any bytes decode to "valid" msgpack (small integers, etc.).
-    // If we add msgpack parsing from string input (e.g., hex-encoded msgpack),
-    // the parsed result will show the decoded content in the description.
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        let CoreValue::Bytes(bytes) = value else {
+            return vec![];
+        };
+
+        // Try to decode MessagePack
+        let Ok(decoded): Result<serde_json::Value, _> = rmp_serde::from_slice(bytes) else {
+            return vec![];
+        };
+
+        // Rate the conversion based on how likely this is intentional msgpack
+        // vs random bytes that happen to be valid msgpack.
+        let dominated_score = Self::msgpack_likelihood(&decoded, bytes.len());
+
+        // Skip if too unlikely to be intentional
+        if dominated_score < 0.3 {
+            return vec![];
+        }
+
+        // Format as JSON for display
+        let display = match &decoded {
+            serde_json::Value::String(s) => format!("(decoded) \"{}\"", s),
+            serde_json::Value::Number(n) => format!("(decoded) {}", n),
+            serde_json::Value::Bool(b) => format!("(decoded) {}", b),
+            serde_json::Value::Null => "(decoded) null".to_string(),
+            _ => format!("(decoded) {}", serde_json::to_string(&decoded).unwrap_or_default()),
+        };
+
+        // Use the likelihood score to set priority
+        let priority = if dominated_score >= 0.7 {
+            ConversionPriority::Structured
+        } else {
+            ConversionPriority::Raw
+        };
+
+        vec![Conversion {
+            value: CoreValue::Json(decoded),
+            target_format: "msgpack".to_string(),
+            display,
+            path: vec!["msgpack".to_string()],
+            is_lossy: false,
+            priority,
+        }]
+    }
 
     fn aliases(&self) -> &'static [&'static str] {
         &["mp", "mpack"]
@@ -59,6 +99,37 @@ impl Format for MsgPackFormat {
 }
 
 impl MsgPackFormat {
+    /// Score how likely bytes are to be intentional msgpack vs random bytes.
+    /// Returns 0.0-1.0 where higher = more likely intentional.
+    fn msgpack_likelihood(decoded: &serde_json::Value, byte_len: usize) -> f32 {
+        match decoded {
+            // Objects and arrays are very unlikely to be accidental
+            serde_json::Value::Object(_) => 0.90,
+            serde_json::Value::Array(arr) if !arr.is_empty() => 0.85,
+            serde_json::Value::Array(_) => 0.60, // empty array
+
+            // Strings are unlikely accidental (need valid UTF-8 + length prefix)
+            serde_json::Value::String(s) if s.len() > 3 => 0.85,
+            serde_json::Value::String(s) if !s.is_empty() => 0.70,
+            serde_json::Value::String(_) => 0.40, // empty string
+
+            // Booleans and null: could be accidental (single byte)
+            serde_json::Value::Bool(_) => 0.50,
+            serde_json::Value::Null => 0.40,
+
+            // Integers: depends on byte length
+            // 1-2 bytes: could be intentional small value
+            // 3-8 bytes: probably random bytes from UUID/hash/etc
+            // 9+ bytes: definitely random
+            serde_json::Value::Number(_) => match byte_len {
+                1..=2 => 0.55,   // Small values like 0x34 → 52
+                3..=4 => 0.25,   // 4 bytes often from IPs, small hex
+                5..=8 => 0.15,   // Likely random
+                _ => 0.0,        // Skip entirely
+            },
+        }
+    }
+
     fn to_msgpack_bytes(&self, value: &CoreValue) -> Option<Vec<u8>> {
         match value {
             CoreValue::Json(json) => rmp_serde::to_vec(json).ok(),
