@@ -1,0 +1,5 @@
+#!/bin/sh
+# Auto-format Rust code before commit
+
+cargo fmt --all
+git add -u

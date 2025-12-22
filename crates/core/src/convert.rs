@@ -153,6 +153,6 @@ mod tests {
         );
         let dt = datetime_conv.unwrap();
         assert!(dt.display.contains("2025"));
-        assert!(dt.path.len() >= 1); // Has a path
+        assert!(!dt.path.is_empty()); // Has a path
     }
 }
