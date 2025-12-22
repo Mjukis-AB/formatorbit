@@ -14,6 +14,23 @@ categories = ["command-line-utilities", "encoding"]
 name = "forb"
 path = "src/main.rs"
 
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/forb-v{ version }-{ target }.{ archive-format }"
+bin-dir = "forb{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
+
+[package.metadata.deb]
+maintainer = "David Everlof"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/forb", "usr/bin/", "755"],
+]
+extended-description = "A CLI tool that automatically detects and converts data between formats. Paste hex, base64, timestamps, UUIDs, IPs, colors, and more - forb shows all possible interpretations."
+
 [dependencies]
 formatorbit-core = { workspace = true }
 clap = { workspace = true }
