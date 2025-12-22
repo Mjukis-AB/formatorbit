@@ -1,7 +1,7 @@
 //! UTF-8 string format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct Utf8Format;
 
@@ -58,6 +58,7 @@ impl Format for Utf8Format {
                         display: s,
                         path: vec!["utf8".to_string()],
                         is_lossy: false,
+                        priority: ConversionPriority::Encoding,
                     }]
                 } else {
                     vec![]
@@ -71,6 +72,7 @@ impl Format for Utf8Format {
                     display: format!("{} bytes", s.len()),
                     path: vec!["bytes".to_string()],
                     is_lossy: false,
+                    priority: ConversionPriority::Raw,
                 }]
             }
             _ => vec![],

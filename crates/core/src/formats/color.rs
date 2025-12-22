@@ -1,7 +1,7 @@
 //! Color format (hex RGB/RGBA/ARGB).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 /// Represents a parsed color with RGBA components.
 #[derive(Debug, Clone, Copy)]
@@ -229,6 +229,7 @@ impl Format for ColorFormat {
             display: rgb_str,
             path: vec!["color-rgb".to_string()],
             is_lossy: false,
+            priority: ConversionPriority::Semantic,
         });
 
         // HSL format
@@ -239,6 +240,7 @@ impl Format for ColorFormat {
             display: hsl_str,
             path: vec!["color-hsl".to_string()],
             is_lossy: false,
+            priority: ConversionPriority::Semantic,
         });
 
         // 0xRRGGBB or 0xAARRGGBB (Android/code style)
@@ -258,6 +260,7 @@ impl Format for ColorFormat {
             display: hex_int,
             path: vec!["color-argb".to_string()],
             is_lossy: false,
+            priority: ConversionPriority::Semantic,
         });
 
         // If we have alpha, also show the ARGB interpretation
@@ -276,6 +279,7 @@ impl Format for ColorFormat {
                 display: argb_str,
                 path: vec!["color-as-argb".to_string()],
                 is_lossy: false,
+                priority: ConversionPriority::Semantic,
             });
         }
 

@@ -49,6 +49,25 @@ pub struct Interpretation {
     pub description: String,
 }
 
+/// Priority level for conversion results.
+///
+/// Higher priority conversions appear first in output.
+/// Structured data (JSON, MessagePack) is most valuable,
+/// followed by semantic interpretations (datetime, UUID),
+/// then encodings (hex, base64), then raw representations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
+pub enum ConversionPriority {
+    /// Structured data (json, msgpack) - most valuable
+    Structured = 0,
+    /// Semantic formats (datetime, uuid, ip, color) - meaningful interpretation
+    Semantic = 1,
+    /// Encoding formats (hex, base64, url) - different representations
+    #[default]
+    Encoding = 2,
+    /// Raw formats (bytes, int) - low-level
+    Raw = 3,
+}
+
 /// A possible conversion from a value.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversion {
@@ -57,6 +76,9 @@ pub struct Conversion {
     pub display: String,
     pub path: Vec<String>,
     pub is_lossy: bool,
+    /// Priority for sorting results (lower = shown first)
+    #[serde(default)]
+    pub priority: ConversionPriority,
 }
 
 /// Complete result for an input.

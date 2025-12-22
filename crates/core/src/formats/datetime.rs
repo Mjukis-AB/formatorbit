@@ -3,7 +3,7 @@
 use chrono::{DateTime, TimeZone, Utc};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 /// Reasonable epoch range: 1970-01-01 to 2100-01-01
 const MIN_EPOCH_SECONDS: i64 = 0;
@@ -111,6 +111,7 @@ impl Format for DateTimeFormat {
                         display: dt.to_rfc3339(),
                         path: vec!["epoch-seconds".to_string()],
                         is_lossy: false,
+                        priority: ConversionPriority::Semantic,
                     });
                 }
             }
@@ -126,6 +127,7 @@ impl Format for DateTimeFormat {
                         display: dt.to_rfc3339(),
                         path: vec!["epoch-millis".to_string()],
                         is_lossy: false,
+                        priority: ConversionPriority::Semantic,
                     });
                 }
             }
@@ -140,6 +142,7 @@ impl Format for DateTimeFormat {
                         display: dt.to_rfc3339(),
                         path: vec!["apple-cocoa".to_string()],
                         is_lossy: false,
+                        priority: ConversionPriority::Semantic,
                     });
                 }
             }
