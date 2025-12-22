@@ -277,7 +277,9 @@ impl Format for HexFormat {
         let description = match (normalized.format_hint, hash_hint) {
             ("hex", Some(hash)) => format!("{} bytes — possible {} hash", bytes.len(), hash),
             ("hex", None) => format!("{} bytes", bytes.len()),
-            (fmt, Some(hash)) => format!("{} bytes ({}) — possible {} hash", bytes.len(), fmt, hash),
+            (fmt, Some(hash)) => {
+                format!("{} bytes ({}) — possible {} hash", bytes.len(), fmt, hash)
+            }
             (fmt, None) => format!("{} bytes ({})", bytes.len(), fmt),
         };
 

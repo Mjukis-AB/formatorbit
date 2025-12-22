@@ -26,8 +26,8 @@ impl NanoIdFormat {
 
         // Length heuristics
         let length_score = match len {
-            21 => 0.85,  // Default NanoID length
-            10..=32 => 0.60,  // Common custom lengths
+            21 => 0.85,      // Default NanoID length
+            10..=32 => 0.60, // Common custom lengths
             _ => 0.30,
         };
 
@@ -151,6 +151,8 @@ mod tests {
         // Too short
         assert!(format.parse("abc").is_empty());
         // Too long
-        assert!(format.parse("V1StGXR8_Z5jdHi6B-myTV1StGXR8_Z5jdHi6B-myT").is_empty());
+        assert!(format
+            .parse("V1StGXR8_Z5jdHi6B-myTV1StGXR8_Z5jdHi6B-myT")
+            .is_empty());
     }
 }

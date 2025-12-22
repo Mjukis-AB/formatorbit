@@ -34,9 +34,9 @@ impl CuidFormat {
 
         // Length heuristics
         match len {
-            24 => 0.85,  // Default CUID2 length
-            25 => 0.80,  // Original CUID length
-            20..=32 => 0.65,  // Common custom lengths
+            24 => 0.85,      // Default CUID2 length
+            25 => 0.80,      // Original CUID length
+            20..=32 => 0.65, // Common custom lengths
             10..=19 => 0.50,
             _ => 0.30,
         }

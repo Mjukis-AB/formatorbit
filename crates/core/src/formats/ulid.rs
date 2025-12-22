@@ -26,14 +26,12 @@ impl UlidFormat {
     fn normalize_char(c: char) -> Option<u8> {
         let c = c.to_ascii_uppercase();
         match c {
-            'O' => Some(0),  // O -> 0
-            'I' | 'L' => Some(1),  // I, L -> 1
-            _ => {
-                CROCKFORD_ALPHABET
-                    .iter()
-                    .position(|&x| x == c as u8)
-                    .map(|p| p as u8)
-            }
+            'O' => Some(0),       // O -> 0
+            'I' | 'L' => Some(1), // I, L -> 1
+            _ => CROCKFORD_ALPHABET
+                .iter()
+                .position(|&x| x == c as u8)
+                .map(|p| p as u8),
         }
     }
 
@@ -141,13 +139,14 @@ impl Format for UlidFormat {
         // High confidence if timestamp is reasonable (after 2000, before 2100)
         let year_2000_millis: u64 = 946684800000;
         let year_2100_millis: u64 = 4102444800000;
-        let confidence = if timestamp_millis >= year_2000_millis && timestamp_millis <= year_2100_millis {
-            0.92
-        } else if timestamp_millis > 0 {
-            0.70
-        } else {
-            0.50
-        };
+        let confidence =
+            if timestamp_millis >= year_2000_millis && timestamp_millis <= year_2100_millis {
+                0.92
+            } else if timestamp_millis > 0 {
+                0.70
+            } else {
+                0.50
+            };
 
         let description = format!("ULID (created: {})", timestamp_str);
 

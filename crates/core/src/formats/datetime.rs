@@ -60,7 +60,8 @@ impl DateTimeFormat {
     /// Convert FILETIME to Unix timestamp.
     fn filetime_to_unix(filetime: i128) -> Option<(i64, u32)> {
         // FILETIME is in 100-nanosecond intervals since 1601-01-01
-        let unix_ticks = filetime - (FILETIME_EPOCH_DIFF as i128 * FILETIME_TICKS_PER_SECOND as i128);
+        let unix_ticks =
+            filetime - (FILETIME_EPOCH_DIFF as i128 * FILETIME_TICKS_PER_SECOND as i128);
         let secs = unix_ticks / FILETIME_TICKS_PER_SECOND as i128;
         let nanos = ((unix_ticks % FILETIME_TICKS_PER_SECOND as i128) * 100) as u32;
 

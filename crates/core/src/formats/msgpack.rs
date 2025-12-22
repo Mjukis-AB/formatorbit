@@ -73,7 +73,10 @@ impl Format for MsgPackFormat {
             serde_json::Value::Number(n) => format!("(decoded) {}", n),
             serde_json::Value::Bool(b) => format!("(decoded) {}", b),
             serde_json::Value::Null => "(decoded) null".to_string(),
-            _ => format!("(decoded) {}", serde_json::to_string(&decoded).unwrap_or_default()),
+            _ => format!(
+                "(decoded) {}",
+                serde_json::to_string(&decoded).unwrap_or_default()
+            ),
         };
 
         // Use the likelihood score to set priority
@@ -117,15 +120,14 @@ impl MsgPackFormat {
             serde_json::Value::Bool(_) => 0.50,
             serde_json::Value::Null => 0.40,
 
-            // Integers: depends on byte length
-            // 1-2 bytes: could be intentional small value
-            // 3-8 bytes: probably random bytes from UUID/hash/etc
-            // 9+ bytes: definitely random
+            // Integers: show for small-medium sizes, skip for very large
+            // Path-based filtering handles IP/UUID cases separately
             serde_json::Value::Number(_) => match byte_len {
-                1..=2 => 0.55,   // Small values like 0x34 → 52
-                3..=4 => 0.25,   // 4 bytes often from IPs, small hex
-                5..=8 => 0.15,   // Likely random
-                _ => 0.0,        // Skip entirely
+                1..=2 => 0.60,  // Small values like 0x34 → 52
+                3..=4 => 0.50,  // Could be intentional 32-bit value
+                5..=8 => 0.40,  // 64-bit values
+                9..=16 => 0.30, // Borderline (UUIDs filtered by path)
+                _ => 0.0,       // Skip very large
             },
         }
     }
