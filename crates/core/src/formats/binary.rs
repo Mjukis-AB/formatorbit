@@ -86,7 +86,7 @@ impl BinaryFormat {
     /// Convert a binary string to bytes (pads to multiple of 8 bits).
     fn bits_to_bytes(bits: &str) -> Vec<u8> {
         // Pad to multiple of 8
-        let padded_len = ((bits.len() + 7) / 8) * 8;
+        let padded_len = bits.len().div_ceil(8) * 8;
         let padded = format!("{:0>width$}", bits, width = padded_len);
 
         padded
@@ -131,6 +131,7 @@ impl Format for BinaryFormat {
             category: "Numbers",
             description: "Binary literals (0b prefix, space-separated)",
             examples: &["0b10101010", "1010 1010", "0b1111_0000", "%10101010"],
+            aliases: self.aliases(),
         }
     }
 
@@ -184,6 +185,7 @@ impl Format for BinaryFormat {
                 display: Self::bytes_to_binary_grouped(bytes),
                 path: vec!["binary".to_string()],
                 is_lossy: false,
+                steps: vec![],
                 priority: ConversionPriority::Encoding,
             },
             Conversion {
@@ -192,6 +194,7 @@ impl Format for BinaryFormat {
                 display: Self::bytes_to_binary_0b(bytes),
                 path: vec!["binary-0b".to_string()],
                 is_lossy: false,
+                steps: vec![],
                 priority: ConversionPriority::Encoding,
             },
         ]

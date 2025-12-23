@@ -43,6 +43,7 @@ impl Format for UrlEncodingFormat {
             category: "Encoding",
             description: "URL percent-encoding (%20, +, etc.)",
             examples: &["Hello%20World", "foo+bar", "a%3Db"],
+            aliases: self.aliases(),
         }
     }
 
@@ -101,6 +102,7 @@ impl Format for UrlEncodingFormat {
             display: encoded,
             path: vec!["url-encoded".to_string()],
             is_lossy: false,
+            steps: vec![],
             priority: ConversionPriority::Encoding,
         }]
     }

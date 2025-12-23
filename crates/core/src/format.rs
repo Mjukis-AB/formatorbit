@@ -1,9 +1,10 @@
 //! Format trait definition.
 
 use crate::types::{Conversion, CoreValue, Interpretation};
+use serde::{Serialize, Serializer};
 
 /// Metadata about a format for help/documentation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FormatInfo {
     /// Unique identifier (e.g., "hex")
     pub id: &'static str,
@@ -14,7 +15,21 @@ pub struct FormatInfo {
     /// Short description
     pub description: &'static str,
     /// Example input strings
+    #[serde(serialize_with = "serialize_static_slice")]
     pub examples: &'static [&'static str],
+    /// Short aliases (e.g., ["h", "x"] for "hex")
+    #[serde(serialize_with = "serialize_static_slice")]
+    pub aliases: &'static [&'static str],
+}
+
+fn serialize_static_slice<S>(
+    slice: &&'static [&'static str],
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    slice.serialize(serializer)
 }
 
 /// Trait for built-in formats and Rust plugins.
@@ -36,6 +51,7 @@ pub trait Format: Send + Sync {
             category: "Other",
             description: "",
             examples: &[],
+            aliases: self.aliases(),
         }
     }
 

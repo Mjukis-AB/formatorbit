@@ -21,6 +21,7 @@ impl Format for MsgPackFormat {
             category: "Data",
             description: "MessagePack binary serialization (decoded from bytes)",
             examples: &[],
+            aliases: self.aliases(),
         }
     }
 
@@ -92,6 +93,7 @@ impl Format for MsgPackFormat {
             display,
             path: vec!["msgpack".to_string()],
             is_lossy: false,
+            steps: vec![],
             priority,
         }]
     }

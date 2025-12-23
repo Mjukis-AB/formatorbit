@@ -85,6 +85,7 @@ impl Format for DateTimeFormat {
             category: "Timestamps",
             description: "Date/time parsing (ISO 8601, RFC 2822/3339) and epoch conversions",
             examples: &["2025-11-19T17:43:20Z", "1763574200", "1763574200000"],
+            aliases: self.aliases(),
         }
     }
 
@@ -140,6 +141,7 @@ impl Format for DateTimeFormat {
                         display: dt.to_rfc3339(),
                         path: vec!["epoch-seconds".to_string()],
                         is_lossy: false,
+                        steps: vec![],
                         priority: ConversionPriority::Semantic,
                     });
                 }
@@ -156,6 +158,7 @@ impl Format for DateTimeFormat {
                         display: dt.to_rfc3339(),
                         path: vec!["epoch-millis".to_string()],
                         is_lossy: false,
+                        steps: vec![],
                         priority: ConversionPriority::Semantic,
                     });
                 }
@@ -171,6 +174,7 @@ impl Format for DateTimeFormat {
                         display: dt.to_rfc3339(),
                         path: vec!["apple-cocoa".to_string()],
                         is_lossy: false,
+                        steps: vec![],
                         priority: ConversionPriority::Semantic,
                     });
                 }
@@ -188,6 +192,7 @@ impl Format for DateTimeFormat {
                         display: dt.to_rfc3339(),
                         path: vec!["filetime".to_string()],
                         is_lossy: false,
+                        steps: vec![],
                         priority: ConversionPriority::Semantic,
                     });
                 }
@@ -319,9 +324,6 @@ mod tests {
         let conversions = format.conversions(&value);
 
         // Should not have filetime (too small)
-        assert!(conversions
-            .iter()
-            .find(|c| c.target_format == "filetime")
-            .is_none());
+        assert!(!conversions.iter().any(|c| c.target_format == "filetime"));
     }
 }

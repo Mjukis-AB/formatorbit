@@ -1,5 +1,15 @@
 #!/bin/sh
-# Auto-format Rust code before commit
+# Auto-format and lint Rust code before commit
 
-cargo fmt --all
+# Use full path to cargo to ensure it works in git hooks
+CARGO="${HOME}/.cargo/bin/cargo"
+
+$CARGO fmt --all
 git add -u
+
+# Run clippy and fail if there are warnings
+$CARGO clippy --all-targets -- -D warnings
+if [ $? -ne 0 ]; then
+    echo "Clippy found warnings. Please fix them before committing."
+    exit 1
+fi

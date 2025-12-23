@@ -57,6 +57,7 @@ impl Format for NanoIdFormat {
             category: "Identifiers",
             description: "Tiny, secure, URL-friendly unique string ID",
             examples: &["V1StGXR8_Z5jdHi6B-myT", "FwKo-QKdZ3Lg_8cCrH9kJ"],
+            aliases: self.aliases(),
         }
     }
 

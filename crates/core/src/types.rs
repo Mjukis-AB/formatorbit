@@ -99,13 +99,30 @@ pub enum ConversionPriority {
     Raw = 3,
 }
 
+/// A single step in a conversion path.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversionStep {
+    /// The format ID at this step.
+    pub format: String,
+    /// The value at this step.
+    pub value: CoreValue,
+    /// Human-readable display of the value.
+    pub display: String,
+}
+
 /// A possible conversion from a value.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversion {
     pub value: CoreValue,
     pub target_format: String,
     pub display: String,
+    /// Legacy path field - just format IDs for backwards compatibility.
+    #[serde(default)]
     pub path: Vec<String>,
+    /// Full conversion path with intermediate values.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<ConversionStep>,
+    #[serde(default)]
     pub is_lossy: bool,
     /// Priority for sorting results (lower = shown first)
     #[serde(default)]

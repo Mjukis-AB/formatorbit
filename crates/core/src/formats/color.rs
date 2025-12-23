@@ -159,6 +159,7 @@ impl Format for ColorFormat {
             category: "Colors",
             description: "Color parsing (hex, RGB, ARGB) with HSL conversion",
             examples: &["#FF5733", "#F00", "#FF573380", "0x80FF5733"],
+            aliases: self.aliases(),
         }
     }
 

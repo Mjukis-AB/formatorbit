@@ -311,7 +311,7 @@ fn main() {
     let format_filter = cli.only.unwrap_or_default();
     let results = if let Some(ref from_format) = cli.from {
         // Force specific format interpretation
-        forb.convert_all_filtered(&input, &[from_format.clone()])
+        forb.convert_all_filtered(&input, std::slice::from_ref(from_format))
     } else {
         forb.convert_all_filtered(&input, &format_filter)
     };

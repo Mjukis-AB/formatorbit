@@ -80,6 +80,7 @@ impl Format for PlistFormat {
             category: "Data",
             description: "Apple property list (XML and binary formats)",
             examples: &["<?xml...<plist>...</plist>", "bplist00..."],
+            aliases: self.aliases(),
         }
     }
 
@@ -156,6 +157,7 @@ impl Format for PlistFormat {
             display: format!("(decoded) {}", display),
             path: vec!["plist".to_string()],
             is_lossy: false,
+            steps: vec![],
             priority: ConversionPriority::Structured,
         }]
     }
