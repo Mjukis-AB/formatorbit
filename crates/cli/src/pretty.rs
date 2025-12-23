@@ -32,7 +32,6 @@ impl Default for PrettyConfig {
     }
 }
 
-
 /// Pretty-print a JSON value with colors.
 pub fn pretty_json(value: &serde_json::Value, config: &PrettyConfig) -> String {
     let mut output = String::new();
@@ -59,7 +58,11 @@ fn format_json_value(
         }
         serde_json::Value::String(s) => {
             let escaped = escape_json_string(s);
-            output.push_str(&colorize(&format!("\"{}\"", escaped), Color::Green, config.color));
+            output.push_str(&colorize(
+                &format!("\"{}\"", escaped),
+                Color::Green,
+                config.color,
+            ));
         }
         serde_json::Value::Array(arr) => {
             format_json_array(arr, config, depth, output);
@@ -135,7 +138,11 @@ fn format_json_object(
             if i > 0 {
                 output.push_str(", ");
             }
-            output.push_str(&colorize(&format!("\"{}\"", key), Color::Blue, config.color));
+            output.push_str(&colorize(
+                &format!("\"{}\"", key),
+                Color::Blue,
+                config.color,
+            ));
             output.push_str(": ");
             format_json_value(value, config, depth + 1, output);
         }
@@ -145,7 +152,11 @@ fn format_json_object(
         let entries: Vec<_> = obj.iter().collect();
         for (i, (key, value)) in entries.iter().enumerate() {
             output.push_str(&config.indent.repeat(depth + 1));
-            output.push_str(&colorize(&format!("\"{}\"", key), Color::Blue, config.color));
+            output.push_str(&colorize(
+                &format!("\"{}\"", key),
+                Color::Blue,
+                config.color,
+            ));
             output.push_str(": ");
             format_json_value(value, config, depth + 1, output);
             if i < entries.len() - 1 {
@@ -162,7 +173,13 @@ fn estimate_array_len(arr: &[serde_json::Value]) -> usize {
     arr.iter()
         .map(|v| match v {
             serde_json::Value::Null => 4,
-            serde_json::Value::Bool(b) => if *b { 4 } else { 5 },
+            serde_json::Value::Bool(b) => {
+                if *b {
+                    4
+                } else {
+                    5
+                }
+            }
             serde_json::Value::Number(n) => n.to_string().len(),
             serde_json::Value::String(s) => s.len() + 2,
             _ => 20, // Nested structures get high estimate
@@ -204,27 +221,48 @@ pub fn pretty_protobuf(fields: &[ProtoField], config: &PrettyConfig) -> String {
     output
 }
 
-fn format_proto_fields(fields: &[ProtoField], config: &PrettyConfig, depth: usize, output: &mut String) {
+fn format_proto_fields(
+    fields: &[ProtoField],
+    config: &PrettyConfig,
+    depth: usize,
+    output: &mut String,
+) {
     if config.compact {
         output.push('{');
         for (i, field) in fields.iter().enumerate() {
             if i > 0 {
                 output.push_str(", ");
             }
-            output.push_str(&colorize(&field.field_number.to_string(), Color::Blue, config.color));
+            output.push_str(&colorize(
+                &field.field_number.to_string(),
+                Color::Blue,
+                config.color,
+            ));
             output.push_str(": ");
             format_proto_value(&field.value, config, depth + 1, output);
-            output.push_str(&colorize(&format!(" [{}]", wire_type_name(field.wire_type)), Color::BrightBlack, config.color));
+            output.push_str(&colorize(
+                &format!(" [{}]", wire_type_name(field.wire_type)),
+                Color::BrightBlack,
+                config.color,
+            ));
         }
         output.push('}');
     } else {
         output.push_str("{\n");
         for (i, field) in fields.iter().enumerate() {
             output.push_str(&config.indent.repeat(depth + 1));
-            output.push_str(&colorize(&field.field_number.to_string(), Color::Blue, config.color));
+            output.push_str(&colorize(
+                &field.field_number.to_string(),
+                Color::Blue,
+                config.color,
+            ));
             output.push_str(": ");
             format_proto_value(&field.value, config, depth + 1, output);
-            output.push_str(&colorize(&format!(" [{}]", wire_type_name(field.wire_type)), Color::BrightBlack, config.color));
+            output.push_str(&colorize(
+                &format!(" [{}]", wire_type_name(field.wire_type)),
+                Color::BrightBlack,
+                config.color,
+            ));
             if i < fields.len() - 1 {
                 output.push(',');
             }
@@ -235,19 +273,32 @@ fn format_proto_fields(fields: &[ProtoField], config: &PrettyConfig, depth: usiz
     }
 }
 
-fn format_proto_value(value: &ProtoValue, config: &PrettyConfig, depth: usize, output: &mut String) {
+fn format_proto_value(
+    value: &ProtoValue,
+    config: &PrettyConfig,
+    depth: usize,
+    output: &mut String,
+) {
     match value {
         ProtoValue::Varint(v) => {
             output.push_str(&colorize(&v.to_string(), Color::Cyan, config.color));
             // Show bool hint for 0/1
             if *v <= 1 {
                 let bool_str = if *v != 0 { "true" } else { "false" };
-                output.push_str(&colorize(&format!(" ({})", bool_str), Color::Yellow, config.color));
+                output.push_str(&colorize(
+                    &format!(" ({})", bool_str),
+                    Color::Yellow,
+                    config.color,
+                ));
             } else {
                 // Show signed interpretation if it would be smaller
                 let signed = decode_zigzag(*v);
                 if signed.abs() < (*v as i64).abs() / 2 {
-                    output.push_str(&colorize(&format!(" (signed: {})", signed), Color::BrightBlack, config.color));
+                    output.push_str(&colorize(
+                        &format!(" (signed: {})", signed),
+                        Color::BrightBlack,
+                        config.color,
+                    ));
                 }
             }
         }
@@ -256,7 +307,11 @@ fn format_proto_value(value: &ProtoValue, config: &PrettyConfig, depth: usize, o
             // Show double hint if reasonable
             let as_double = f64::from_bits(*v);
             if as_double.is_finite() && as_double.abs() > 1e-100 && as_double.abs() < 1e100 {
-                output.push_str(&colorize(&format!(" (double: {})", as_double), Color::BrightBlack, config.color));
+                output.push_str(&colorize(
+                    &format!(" (double: {})", as_double),
+                    Color::BrightBlack,
+                    config.color,
+                ));
             }
         }
         ProtoValue::Fixed32(v) => {
@@ -264,7 +319,11 @@ fn format_proto_value(value: &ProtoValue, config: &PrettyConfig, depth: usize, o
             // Show float hint if reasonable
             let as_float = f32::from_bits(*v);
             if as_float.is_finite() && as_float.abs() > 1e-30 && as_float.abs() < 1e30 {
-                output.push_str(&colorize(&format!(" (float: {})", as_float), Color::BrightBlack, config.color));
+                output.push_str(&colorize(
+                    &format!(" (float: {})", as_float),
+                    Color::BrightBlack,
+                    config.color,
+                ));
             }
         }
         ProtoValue::String(s) => {
@@ -273,9 +332,17 @@ fn format_proto_value(value: &ProtoValue, config: &PrettyConfig, depth: usize, o
         ProtoValue::Bytes(data) => {
             if data.len() <= 32 {
                 let hex: String = data.iter().map(|b| format!("{:02x}", b)).collect();
-                output.push_str(&colorize(&format!("<{}>", hex), Color::Magenta, config.color));
+                output.push_str(&colorize(
+                    &format!("<{}>", hex),
+                    Color::Magenta,
+                    config.color,
+                ));
             } else {
-                output.push_str(&colorize(&format!("<{} bytes>", data.len()), Color::Magenta, config.color));
+                output.push_str(&colorize(
+                    &format!("<{} bytes>", data.len()),
+                    Color::Magenta,
+                    config.color,
+                ));
             }
         }
         ProtoValue::Message(fields) => {

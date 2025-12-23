@@ -415,7 +415,12 @@ fn main() {
                 // Indent multi-line output
                 let display_lines: Vec<&str> = display.lines().collect();
                 if display_lines.len() > 1 {
-                    println!("  {} {}:{}", "→".cyan(), conv.target_format.yellow(), path_str.dimmed());
+                    println!(
+                        "  {} {}:{}",
+                        "→".cyan(),
+                        conv.target_format.yellow(),
+                        path_str.dimmed()
+                    );
                     for line in display_lines {
                         println!("    {}", line);
                     }
@@ -448,7 +453,11 @@ fn main() {
 }
 
 /// Format a conversion's display string, applying pretty-printing for structured data.
-fn format_conversion_display(value: &CoreValue, original_display: &str, config: &PrettyConfig) -> String {
+fn format_conversion_display(
+    value: &CoreValue,
+    original_display: &str,
+    config: &PrettyConfig,
+) -> String {
     match value {
         CoreValue::Json(json) => {
             // Pretty-print JSON with colors
@@ -475,7 +484,10 @@ fn print_dot_graph(input: &str, results: &[&formatorbit_core::ConversionResult])
 
     // Input node
     let input_label = escape_dot_label(input);
-    println!("  input [label=\"{}\", shape=ellipse, style=filled, fillcolor=\"#e8e8e8\"];", input_label);
+    println!(
+        "  input [label=\"{}\", shape=ellipse, style=filled, fillcolor=\"#e8e8e8\"];",
+        input_label
+    );
     println!();
 
     let mut node_id = 0;
@@ -487,7 +499,10 @@ fn print_dot_graph(input: &str, results: &[&formatorbit_core::ConversionResult])
 
         // Interpretation node
         let interp_label = format!("{}\\n({}%)", interp.source_format, conf);
-        println!("  {} [label=\"{}\", style=filled, fillcolor=\"#c8e6c9\"];", interp_node, interp_label);
+        println!(
+            "  {} [label=\"{}\", style=filled, fillcolor=\"#c8e6c9\"];",
+            interp_node, interp_label
+        );
         println!("  input -> {} [label=\"{}%\"];", interp_node, conf);
 
         // Conversion nodes
@@ -515,7 +530,12 @@ fn print_dot_graph(input: &str, results: &[&formatorbit_core::ConversionResult])
             if edge_label.is_empty() {
                 println!("  {} -> {};", interp_node, conv_node);
             } else {
-                println!("  {} -> {} [label=\"{}\"];", interp_node, conv_node, escape_dot_label(&edge_label));
+                println!(
+                    "  {} -> {} [label=\"{}\"];",
+                    interp_node,
+                    conv_node,
+                    escape_dot_label(&edge_label)
+                );
             }
         }
         println!();
@@ -542,7 +562,11 @@ fn print_mermaid_graph(input: &str, results: &[&formatorbit_core::ConversionResu
 
         // Interpretation node
         let interp_label = format!("{} ({}%)", interp.source_format, conf);
-        println!("  {}[\"{}\"];", interp_node, escape_mermaid_label(&interp_label));
+        println!(
+            "  {}[\"{}\"];",
+            interp_node,
+            escape_mermaid_label(&interp_label)
+        );
         println!("  input -->|{}%| {};", conf, interp_node);
 
         // Conversion nodes
@@ -558,11 +582,20 @@ fn print_mermaid_graph(input: &str, results: &[&formatorbit_core::ConversionResu
             };
 
             let conv_label = format!("{}: {}", conv.target_format, display);
-            println!("  {}[\"{}\"];", conv_node, escape_mermaid_label(&conv_label));
+            println!(
+                "  {}[\"{}\"];",
+                conv_node,
+                escape_mermaid_label(&conv_label)
+            );
 
             if conv.path.len() > 1 {
                 let edge_label = conv.path[..conv.path.len() - 1].join(" → ");
-                println!("  {} -->|{}| {};", interp_node, escape_mermaid_label(&edge_label), conv_node);
+                println!(
+                    "  {} -->|{}| {};",
+                    interp_node,
+                    escape_mermaid_label(&edge_label),
+                    conv_node
+                );
             } else {
                 println!("  {} --> {};", interp_node, conv_node);
             }
