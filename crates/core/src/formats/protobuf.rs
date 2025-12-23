@@ -404,7 +404,10 @@ impl Format for ProtobufFormat {
                 _ => "?",
             };
             let val = Self::format_value(&field.value, 0);
-            display.push_str(&format!("  {}: {} [{}]\n", field.field_number, val, wire_name));
+            display.push_str(&format!(
+                "  {}: {} [{}]\n",
+                field.field_number, val, wire_name
+            ));
         }
         display.push('}');
 
