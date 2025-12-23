@@ -251,6 +251,7 @@ impl Format for HexFormat {
                 "69:1E:01:B8",
                 "{0x69, 0x1E}",
             ],
+            aliases: self.aliases(),
         }
     }
 

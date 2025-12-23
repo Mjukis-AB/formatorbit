@@ -1,7 +1,7 @@
 //! Integer formats (decimal, with endianness handling).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
 
 pub struct DecimalFormat;
 
@@ -21,6 +21,7 @@ impl Format for DecimalFormat {
             category: "Numbers",
             description: "Decimal integer parsing",
             examples: &["1763574200", "-42", "255"],
+            aliases: self.aliases(),
         }
     }
 
@@ -123,28 +124,44 @@ impl Format for BytesToIntFormat {
         let be_value = Self::bytes_to_int_be(bytes);
         let le_value = Self::bytes_to_int_le(bytes);
 
+        let be_int = CoreValue::Int {
+            value: be_value,
+            original_bytes: Some(bytes.clone()),
+        };
+        let be_display = be_value.to_string();
+
         let mut conversions = vec![Conversion {
-            value: CoreValue::Int {
-                value: be_value,
-                original_bytes: Some(bytes.clone()),
-            },
+            value: be_int.clone(),
             target_format: "int-be".to_string(),
-            display: be_value.to_string(),
+            display: be_display.clone(),
             path: vec!["int-be".to_string()],
+            steps: vec![ConversionStep {
+                format: "int-be".to_string(),
+                value: be_int,
+                display: be_display,
+            }],
             is_lossy: false,
             priority: ConversionPriority::Raw,
         }];
 
         // Only add little-endian if it's different
         if le_value != be_value {
+            let le_int = CoreValue::Int {
+                value: le_value,
+                original_bytes: Some(bytes.clone()),
+            };
+            let le_display = le_value.to_string();
+
             conversions.push(Conversion {
-                value: CoreValue::Int {
-                    value: le_value,
-                    original_bytes: Some(bytes.clone()),
-                },
+                value: le_int.clone(),
                 target_format: "int-le".to_string(),
-                display: le_value.to_string(),
+                display: le_display.clone(),
                 path: vec!["int-le".to_string()],
+                steps: vec![ConversionStep {
+                    format: "int-le".to_string(),
+                    value: le_int,
+                    display: le_display,
+                }],
                 is_lossy: false,
                 priority: ConversionPriority::Raw,
             });

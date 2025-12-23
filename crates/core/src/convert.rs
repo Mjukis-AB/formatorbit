@@ -6,7 +6,7 @@
 use std::collections::VecDeque;
 
 use crate::format::Format;
-use crate::types::{Conversion, ConversionPriority, CoreValue};
+use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue};
 
 /// Nonsensical source→target combinations to filter out.
 /// These are conversions that technically work but are never useful.
@@ -53,9 +53,9 @@ pub fn find_all_conversions(
         seen_formats.insert(excluded.to_string());
     }
 
-    // Queue holds (value, path_so_far)
-    let mut queue: VecDeque<(CoreValue, Vec<String>)> = VecDeque::new();
-    queue.push_back((initial.clone(), vec![]));
+    // Queue holds (value, path_so_far, steps_so_far)
+    let mut queue: VecDeque<(CoreValue, Vec<String>, Vec<ConversionStep>)> = VecDeque::new();
+    queue.push_back((initial.clone(), vec![], vec![]));
 
     // Also format the initial value with all applicable formats
     for format in formats {
@@ -66,8 +66,13 @@ pub fn find_all_conversions(
                     results.push(Conversion {
                         value: initial.clone(),
                         target_format: format_id.clone(),
-                        display,
-                        path: vec![format_id],
+                        display: display.clone(),
+                        path: vec![format_id.clone()],
+                        steps: vec![ConversionStep {
+                            format: format_id,
+                            value: initial.clone(),
+                            display,
+                        }],
                         is_lossy: false,
                         priority: ConversionPriority::default(),
                     });
@@ -84,7 +89,7 @@ pub fn find_all_conversions(
         let level_size = queue.len();
 
         for _ in 0..level_size {
-            let Some((current_value, current_path)) = queue.pop_front() else {
+            let Some((current_value, current_path, current_steps)) = queue.pop_front() else {
                 break;
             };
 
@@ -98,21 +103,39 @@ pub fn find_all_conversions(
 
                     seen_formats.insert(conv.target_format.clone());
 
-                    // Build the full path
+                    // Build the full path (format IDs only, for backwards compat)
                     let mut full_path = current_path.clone();
                     full_path.extend(conv.path.clone());
+
+                    // Build the full steps (with values)
+                    let mut full_steps = current_steps.clone();
+                    // Add any intermediate steps from this conversion
+                    for step in &conv.steps {
+                        full_steps.push(step.clone());
+                    }
+                    // Add the final step if not already included
+                    if full_steps.is_empty()
+                        || full_steps.last().map(|s| &s.format) != Some(&conv.target_format)
+                    {
+                        full_steps.push(ConversionStep {
+                            format: conv.target_format.clone(),
+                            value: conv.value.clone(),
+                            display: conv.display.clone(),
+                        });
+                    }
 
                     results.push(Conversion {
                         value: conv.value.clone(),
                         target_format: conv.target_format.clone(),
                         display: conv.display,
                         path: full_path.clone(),
+                        steps: full_steps.clone(),
                         is_lossy: conv.is_lossy,
                         priority: conv.priority,
                     });
 
                     // Add to queue for further exploration
-                    queue.push_back((conv.value, full_path));
+                    queue.push_back((conv.value, full_path, full_steps));
                 }
             }
         }

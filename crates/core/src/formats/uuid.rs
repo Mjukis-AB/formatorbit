@@ -26,6 +26,7 @@ impl Format for UuidFormat {
                 "550e8400-e29b-41d4-a716-446655440000",
                 "550e8400e29b41d4a716446655440000",
             ],
+            aliases: self.aliases(),
         }
     }
 
@@ -92,6 +93,7 @@ impl Format for UuidFormat {
             display: uuid.to_string(),
             path: vec!["uuid".to_string()],
             is_lossy: false,
+            steps: vec![],
             priority: ConversionPriority::Semantic,
         }]
     }

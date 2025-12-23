@@ -32,6 +32,7 @@ impl Format for Base64Format {
             category: "Encoding",
             description: "Base64 encoded binary data",
             examples: &["SGVsbG8gV29ybGQ=", "aR4BuA=="],
+            aliases: self.aliases(),
         }
     }
 

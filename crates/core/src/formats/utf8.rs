@@ -21,6 +21,7 @@ impl Format for Utf8Format {
             category: "Data",
             description: "UTF-8 text (fallback interpretation)",
             examples: &[],
+            aliases: self.aliases(),
         }
     }
 
@@ -58,6 +59,7 @@ impl Format for Utf8Format {
                         display: s,
                         path: vec!["utf8".to_string()],
                         is_lossy: false,
+                        steps: vec![],
                         priority: ConversionPriority::Encoding,
                     }]
                 } else {
@@ -72,6 +74,7 @@ impl Format for Utf8Format {
                     display: format!("{} bytes", s.len()),
                     path: vec!["bytes".to_string()],
                     is_lossy: false,
+                    steps: vec![],
                     priority: ConversionPriority::Raw,
                 }]
             }

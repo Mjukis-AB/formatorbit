@@ -21,6 +21,7 @@ impl Format for JsonFormat {
             category: "Data",
             description: "JSON objects and arrays",
             examples: &[r#"{"key": "value"}"#, "[1, 2, 3]"],
+            aliases: self.aliases(),
         }
     }
 

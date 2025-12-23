@@ -348,6 +348,7 @@ impl Format for ProtobufFormat {
             category: "Data",
             description: "Protocol Buffers wire format (schema-less decode)",
             examples: &[],
+            aliases: self.aliases(),
         }
     }
 
@@ -423,6 +424,7 @@ impl Format for ProtobufFormat {
             display,
             path: vec!["protobuf".to_string()],
             is_lossy: false,
+            steps: vec![],
             priority,
         }]
     }

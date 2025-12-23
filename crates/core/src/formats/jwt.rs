@@ -47,9 +47,7 @@ impl JwtFormat {
         let header: serde_json::Value = serde_json::from_slice(&header_bytes).ok()?;
 
         // Verify it looks like a JWT header (must have "alg")
-        if !header.get("alg").is_some() {
-            return None;
-        }
+        header.get("alg")?;
 
         // Decode payload
         let payload_bytes = Self::base64url_decode(parts[1])?;
@@ -108,6 +106,7 @@ impl Format for JwtFormat {
             category: "Identifiers",
             description: "JSON Web Token (decoded header and payload)",
             examples: &["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.xxx"],
+            aliases: self.aliases(),
         }
     }
 

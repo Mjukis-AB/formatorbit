@@ -23,6 +23,7 @@ impl Format for IpAddrFormat {
             category: "Network",
             description: "IPv4 and IPv6 address parsing",
             examples: &["192.168.1.1", "::1", "2001:db8::1"],
+            aliases: self.aliases(),
         }
     }
 
@@ -88,6 +89,7 @@ impl Format for IpAddrFormat {
                     display: addr.to_string(),
                     path: vec!["ipv4".to_string()],
                     is_lossy: false,
+                    steps: vec![],
                     priority: ConversionPriority::Semantic,
                 }]
             }
@@ -104,6 +106,7 @@ impl Format for IpAddrFormat {
                     display: addr.to_string(),
                     path: vec!["ipv6".to_string()],
                     is_lossy: false,
+                    steps: vec![],
                     priority: ConversionPriority::Semantic,
                 }];
 
