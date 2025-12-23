@@ -1,6 +1,10 @@
+<p align="center">
+  <img src=".github/banner.png" alt="forb - Binary to human, instantly" width="800">
+</p>
+
 # forb
 
-**Paste data, see what it is.** A CLI tool that automatically detects and converts data between formats.
+**Binary to human, instantly.** A CLI tool that automatically detects and converts data between formats.
 
 ```
 $ forb 691E01B8
