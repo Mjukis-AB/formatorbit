@@ -114,23 +114,15 @@ impl Format for PlistFormat {
         }]
     }
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::Json(_))
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        // Plist only decodes TO Json, it doesn't encode FROM Json
+        // (Json is a terminal format)
+        false
     }
 
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        // Format JSON as XML plist string
-        let CoreValue::Json(json) = value else {
-            return None;
-        };
-
-        // Convert JSON to plist Value
-        let plist_value = json_to_plist(json)?;
-
-        // Serialize to XML string
-        let mut buf = Vec::new();
-        plist::to_writer_xml(&mut buf, &plist_value).ok()?;
-        String::from_utf8(buf).ok()
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        // We don't format to plist - only decode from plist bytes
+        None
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
@@ -165,37 +157,6 @@ impl Format for PlistFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["pl"]
     }
-}
-
-/// Convert serde_json::Value to plist::Value.
-fn json_to_plist(json: &serde_json::Value) -> Option<plist::Value> {
-    Some(match json {
-        serde_json::Value::Null => return None,
-        serde_json::Value::Bool(b) => plist::Value::Boolean(*b),
-        serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                plist::Value::Integer(i.into())
-            } else if let Some(f) = n.as_f64() {
-                plist::Value::Real(f)
-            } else {
-                return None;
-            }
-        }
-        serde_json::Value::String(s) => plist::Value::String(s.clone()),
-        serde_json::Value::Array(arr) => {
-            let items: Option<Vec<_>> = arr.iter().map(json_to_plist).collect();
-            plist::Value::Array(items?)
-        }
-        serde_json::Value::Object(obj) => {
-            let mut dict = plist::Dictionary::new();
-            for (k, v) in obj {
-                if let Some(pv) = json_to_plist(v) {
-                    dict.insert(k.clone(), pv);
-                }
-            }
-            plist::Value::Dictionary(dict)
-        }
-    })
 }
 
 #[cfg(test)]
@@ -324,14 +285,14 @@ mod tests {
     }
 
     #[test]
-    fn test_format_json_to_xml_plist() {
+    fn test_plist_does_not_format_json() {
+        // Plist is decode-only - it doesn't encode JSON to plist
         let format = PlistFormat;
         let json = serde_json::json!({"name": "test", "count": 42});
         let value = CoreValue::Json(json);
 
-        let xml = format.format(&value).unwrap();
-        assert!(xml.contains("<plist"));
-        assert!(xml.contains("<key>name</key>"));
-        assert!(xml.contains("<string>test</string>"));
+        // format() should return None since we disabled JSON→plist encoding
+        assert!(format.format(&value).is_none());
+        assert!(!format.can_format(&value));
     }
 }

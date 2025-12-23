@@ -32,14 +32,11 @@ impl Format for MsgPackFormat {
     }
 
     fn can_format(&self, value: &CoreValue) -> bool {
-        // We can serialize most types to MessagePack
+        // We can serialize most types to MessagePack, but NOT Json
+        // (Json is a terminal format - we decode TO Json, not encode FROM Json)
         matches!(
             value,
-            CoreValue::Json(_)
-                | CoreValue::String(_)
-                | CoreValue::Int { .. }
-                | CoreValue::Float(_)
-                | CoreValue::Bool(_)
+            CoreValue::String(_) | CoreValue::Int { .. } | CoreValue::Float(_) | CoreValue::Bool(_)
         )
     }
 

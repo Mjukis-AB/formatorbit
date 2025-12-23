@@ -13,9 +13,9 @@ pub use types::*;
 
 use formats::{
     Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat, DateTimeFormat,
-    DecimalFormat, HashFormat, HexFormat, IpAddrFormat, JsonFormat, JwtFormat, MsgPackFormat,
-    NanoIdFormat, PlistFormat, ProtobufFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
-    UuidFormat,
+    DecimalFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat,
+    MsgPackFormat, NanoIdFormat, PlistFormat, ProtobufFormat, UlidFormat, UrlEncodingFormat,
+    Utf8Format, UuidFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -50,6 +50,7 @@ impl Formatorbit {
                 Box::new(Utf8Format),
                 // Conversion-only formats (don't parse strings directly)
                 Box::new(BytesToIntFormat),
+                Box::new(HexdumpFormat),
                 Box::new(MsgPackFormat),
                 Box::new(PlistFormat),
                 Box::new(ProtobufFormat),
