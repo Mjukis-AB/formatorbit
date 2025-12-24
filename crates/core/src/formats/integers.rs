@@ -61,6 +61,72 @@ impl Format for DecimalFormat {
         }
     }
 
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        let CoreValue::Int { value: int_val, .. } = value else {
+            return vec![];
+        };
+
+        let mut conversions = Vec::new();
+
+        // Only show base conversions for non-negative values that fit in u64
+        // (negative numbers and huge numbers have less useful hex/binary representations)
+        if *int_val >= 0 && *int_val <= u64::MAX as i128 {
+            let val = *int_val as u64;
+
+            // Hex representation - Semantic priority since it's a meaningful representation
+            let hex_display = format!("0x{:X}", val);
+            conversions.push(Conversion {
+                value: CoreValue::String(hex_display.clone()),
+                target_format: "hex-int".to_string(),
+                display: hex_display.clone(),
+                path: vec!["hex-int".to_string()],
+                steps: vec![ConversionStep {
+                    format: "hex-int".to_string(),
+                    value: CoreValue::String(hex_display.clone()),
+                    display: hex_display,
+                }],
+                is_lossy: false,
+                priority: ConversionPriority::Semantic,
+            });
+
+            // Binary representation (only for reasonably small numbers)
+            if val <= 0xFFFF_FFFF {
+                let bin_display = format!("0b{:b}", val);
+                conversions.push(Conversion {
+                    value: CoreValue::String(bin_display.clone()),
+                    target_format: "binary-int".to_string(),
+                    display: bin_display.clone(),
+                    path: vec!["binary-int".to_string()],
+                    steps: vec![ConversionStep {
+                        format: "binary-int".to_string(),
+                        value: CoreValue::String(bin_display.clone()),
+                        display: bin_display,
+                    }],
+                    is_lossy: false,
+                    priority: ConversionPriority::Semantic,
+                });
+            }
+
+            // Octal representation
+            let oct_display = format!("0o{:o}", val);
+            conversions.push(Conversion {
+                value: CoreValue::String(oct_display.clone()),
+                target_format: "octal-int".to_string(),
+                display: oct_display.clone(),
+                path: vec!["octal-int".to_string()],
+                steps: vec![ConversionStep {
+                    format: "octal-int".to_string(),
+                    value: CoreValue::String(oct_display.clone()),
+                    display: oct_display,
+                }],
+                is_lossy: false,
+                priority: ConversionPriority::Semantic,
+            });
+        }
+
+        conversions
+    }
+
     fn aliases(&self) -> &'static [&'static str] {
         &["dec", "int", "num"]
     }
