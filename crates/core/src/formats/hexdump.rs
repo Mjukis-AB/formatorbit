@@ -125,6 +125,7 @@ impl Format for HexdumpFormat {
             is_lossy: false,
             // Priority between Encoding and Raw - shows when no structured data found
             priority: ConversionPriority::Encoding,
+            terminal: false,
         }]
     }
 

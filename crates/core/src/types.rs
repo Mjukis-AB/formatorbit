@@ -7,9 +7,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 /// Internal value types that everything converts between.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(tag = "type", content = "value")]
 pub enum CoreValue {
+    #[default]
+    #[serde(skip)]
+    Empty, // Default variant, should not be serialized
     Bytes(Vec<u8>),
     String(String),
     Int {
@@ -59,6 +62,7 @@ impl CoreValue {
     #[must_use]
     pub fn type_name(&self) -> &'static str {
         match self {
+            Self::Empty => "empty",
             Self::Bytes(_) => "bytes",
             Self::String(_) => "string",
             Self::Int { .. } => "int",
@@ -111,7 +115,7 @@ pub struct ConversionStep {
 }
 
 /// A possible conversion from a value.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Conversion {
     pub value: CoreValue,
     pub target_format: String,
@@ -127,6 +131,11 @@ pub struct Conversion {
     /// Priority for sorting results (lower = shown first)
     #[serde(default)]
     pub priority: ConversionPriority,
+    /// If true, don't explore further conversions from this value.
+    /// Used for display-only representations like hex-int, binary-int.
+    /// Defaults to false.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub terminal: bool,
 }
 
 /// Complete result for an input.

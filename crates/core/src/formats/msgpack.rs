@@ -92,6 +92,7 @@ impl Format for MsgPackFormat {
             is_lossy: false,
             steps: vec![],
             priority,
+            terminal: false,
         }]
     }
 

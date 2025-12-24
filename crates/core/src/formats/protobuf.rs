@@ -426,6 +426,7 @@ impl Format for ProtobufFormat {
             is_lossy: false,
             steps: vec![],
             priority,
+            terminal: false,
         }]
     }
 
