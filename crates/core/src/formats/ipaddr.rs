@@ -91,7 +91,7 @@ impl Format for IpAddrFormat {
                     is_lossy: false,
                     steps: vec![],
                     priority: ConversionPriority::Semantic,
-                    terminal: false,
+                    display_only: false,
                 }]
             }
             16 => {
@@ -109,7 +109,7 @@ impl Format for IpAddrFormat {
                     is_lossy: false,
                     steps: vec![],
                     priority: ConversionPriority::Semantic,
-                    terminal: false,
+                    display_only: false,
                 }];
 
                 // Also try as UUID since both are 16 bytes

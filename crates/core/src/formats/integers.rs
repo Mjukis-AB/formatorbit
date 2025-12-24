@@ -86,7 +86,7 @@ impl Format for DecimalFormat {
                     display: hex_display,
                 }],
                 priority: ConversionPriority::Semantic,
-                terminal: true, // Display-only, don't convert further
+                display_only: true, // Display-only, don't convert further
                 ..Default::default()
             });
 
@@ -104,7 +104,7 @@ impl Format for DecimalFormat {
                         display: bin_display,
                     }],
                     priority: ConversionPriority::Semantic,
-                    terminal: true, // Display-only, don't convert further
+                    display_only: true, // Display-only, don't convert further
                     ..Default::default()
                 });
             }
@@ -122,7 +122,7 @@ impl Format for DecimalFormat {
                     display: oct_display,
                 }],
                 priority: ConversionPriority::Semantic,
-                terminal: true, // Display-only, don't convert further
+                display_only: true, // Display-only, don't convert further
                 ..Default::default()
             });
         }
@@ -211,7 +211,7 @@ impl Format for BytesToIntFormat {
             }],
             is_lossy: false,
             priority: ConversionPriority::Raw,
-            terminal: false,
+            display_only: false,
         }];
 
         // Only add little-endian if it's different
@@ -234,7 +234,7 @@ impl Format for BytesToIntFormat {
                 }],
                 is_lossy: false,
                 priority: ConversionPriority::Raw,
-                terminal: false,
+                display_only: false,
             });
         }
 

@@ -104,7 +104,7 @@ impl Format for UrlEncodingFormat {
             is_lossy: false,
             steps: vec![],
             priority: ConversionPriority::Encoding,
-            terminal: false,
+            display_only: false,
         }]
     }
 
