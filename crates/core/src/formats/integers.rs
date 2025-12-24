@@ -85,8 +85,9 @@ impl Format for DecimalFormat {
                     value: CoreValue::String(hex_display.clone()),
                     display: hex_display,
                 }],
-                is_lossy: false,
                 priority: ConversionPriority::Semantic,
+                terminal: true, // Display-only, don't convert further
+                ..Default::default()
             });
 
             // Binary representation (only for reasonably small numbers)
@@ -102,8 +103,9 @@ impl Format for DecimalFormat {
                         value: CoreValue::String(bin_display.clone()),
                         display: bin_display,
                     }],
-                    is_lossy: false,
                     priority: ConversionPriority::Semantic,
+                    terminal: true, // Display-only, don't convert further
+                    ..Default::default()
                 });
             }
 
@@ -119,8 +121,9 @@ impl Format for DecimalFormat {
                     value: CoreValue::String(oct_display.clone()),
                     display: oct_display,
                 }],
-                is_lossy: false,
                 priority: ConversionPriority::Semantic,
+                terminal: true, // Display-only, don't convert further
+                ..Default::default()
             });
         }
 
@@ -208,6 +211,7 @@ impl Format for BytesToIntFormat {
             }],
             is_lossy: false,
             priority: ConversionPriority::Raw,
+            terminal: false,
         }];
 
         // Only add little-endian if it's different
@@ -230,6 +234,7 @@ impl Format for BytesToIntFormat {
                 }],
                 is_lossy: false,
                 priority: ConversionPriority::Raw,
+                terminal: false,
             });
         }
 

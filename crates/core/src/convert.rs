@@ -75,6 +75,7 @@ pub fn find_all_conversions(
                         }],
                         is_lossy: false,
                         priority: ConversionPriority::default(),
+                        terminal: false,
                     });
                 }
             }
@@ -132,10 +133,13 @@ pub fn find_all_conversions(
                         steps: full_steps.clone(),
                         is_lossy: conv.is_lossy,
                         priority: conv.priority,
+                        terminal: conv.terminal,
                     });
 
-                    // Add to queue for further exploration
-                    queue.push_back((conv.value, full_path, full_steps));
+                    // Add to queue for further exploration (unless terminal)
+                    if !conv.terminal {
+                        queue.push_back((conv.value, full_path, full_steps));
+                    }
                 }
             }
         }

@@ -95,6 +95,7 @@ impl Format for UuidFormat {
             is_lossy: false,
             steps: vec![],
             priority: ConversionPriority::Semantic,
+            terminal: false,
         }]
     }
 

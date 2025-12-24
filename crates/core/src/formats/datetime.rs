@@ -143,6 +143,7 @@ impl Format for DateTimeFormat {
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
+                        terminal: false,
                     });
                 }
             }
@@ -160,6 +161,7 @@ impl Format for DateTimeFormat {
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
+                        terminal: false,
                     });
                 }
             }
@@ -176,6 +178,7 @@ impl Format for DateTimeFormat {
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
+                        terminal: false,
                     });
                 }
             }
@@ -194,6 +197,7 @@ impl Format for DateTimeFormat {
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
+                        terminal: false,
                     });
                 }
             }
