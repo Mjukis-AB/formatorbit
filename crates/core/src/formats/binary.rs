@@ -187,7 +187,7 @@ impl Format for BinaryFormat {
                 is_lossy: false,
                 steps: vec![],
                 priority: ConversionPriority::Encoding,
-                terminal: false,
+                display_only: false,
             },
             Conversion {
                 value: CoreValue::String(Self::bytes_to_binary_0b(bytes)),
@@ -197,7 +197,7 @@ impl Format for BinaryFormat {
                 is_lossy: false,
                 steps: vec![],
                 priority: ConversionPriority::Encoding,
-                terminal: false,
+                display_only: false,
             },
         ]
     }

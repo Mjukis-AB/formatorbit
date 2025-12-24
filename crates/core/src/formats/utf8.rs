@@ -61,7 +61,7 @@ impl Format for Utf8Format {
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Encoding,
-                        terminal: false,
+                        display_only: false,
                     }]
                 } else {
                     vec![]
@@ -77,7 +77,7 @@ impl Format for Utf8Format {
                     is_lossy: false,
                     steps: vec![],
                     priority: ConversionPriority::Raw,
-                    terminal: false,
+                    display_only: false,
                 }]
             }
             _ => vec![],

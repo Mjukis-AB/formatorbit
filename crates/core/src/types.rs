@@ -26,6 +26,15 @@ pub enum CoreValue {
     DateTime(DateTime<Utc>),
     Json(JsonValue),
     /// Decoded protobuf message (schema-less).
+    ///
+    /// Unlike msgpack/plist which decode to Json, protobuf has its own variant
+    /// because schema-less protobuf has semantically different structure:
+    /// - Field numbers (integers) instead of field names (strings)
+    /// - Wire type metadata (varint, fixed64, etc.)
+    /// - No inherent key ordering
+    ///
+    /// This allows UI apps to render protobuf with field number annotations
+    /// and wire type information.
     Protobuf(Vec<ProtoField>),
 }
 
@@ -131,11 +140,17 @@ pub struct Conversion {
     /// Priority for sorting results (lower = shown first)
     #[serde(default)]
     pub priority: ConversionPriority,
-    /// If true, don't explore further conversions from this value.
-    /// Used for display-only representations like hex-int, binary-int.
-    /// Defaults to false.
+    /// If true, this is a display-only format - don't explore further conversions.
+    ///
+    /// Use this for representations that are meant for human viewing, not as
+    /// intermediate values for further conversion. Examples:
+    /// - `hex-int` (0xC82) - showing an integer in hex notation
+    /// - `binary-int` (0b110010) - showing an integer in binary notation
+    ///
+    /// Without this flag, the BFS would convert "0xC82" string to bytes and
+    /// produce nonsense like "binary of ASCII bytes of hex string".
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub terminal: bool,
+    pub display_only: bool,
 }
 
 /// Complete result for an input.
