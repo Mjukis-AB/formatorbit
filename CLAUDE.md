@@ -20,14 +20,12 @@ Formatorbit is a cross-platform data format converter. Users input data (e.g., `
                      ▼
               ┌──────────────┐
               │  Rust Core   │
-              │  + Plugins   │
               └──────────────┘
 ```
 
 ### Crate Structure
 
 - `crates/core` - Main logic: types, parsing, conversion graph, formatting
-- `crates/plugin-api` - Stable C ABI for external plugins
 - `crates/ffi` - C bindings for Swift/other languages
 - `crates/cli` - Command-line interface (`forb`)
 
@@ -189,19 +187,7 @@ Conversion {
 }
 ```
 
-### 4. Plugin Architecture
-
-Three tiers with different tradeoffs:
-
-| Type | Language | Overhead | When to use |
-|------|----------|----------|-------------|
-| Native | Rust | Zero | Built-in formats, performance-critical |
-| Dylib | Rust/Swift/C | Minimal | Third-party, platform-specific |
-| Script | Python | Higher | Prototyping, simple formats |
-
-All external plugins use C ABI. Rust plugins can use the `Format` trait directly.
-
-### 5. Epoch Heuristics
+### 4. Epoch Heuristics
 
 Only interpret integers as epoch timestamps if they're in a reasonable range:
 
@@ -224,20 +210,14 @@ crates/core/src/
 ├── format.rs        # Coordination of formatting
 ├── error.rs         # Error types
 │
-├── formats/         # Built-in format implementations
-│   ├── mod.rs       # Format trait, format list
-│   ├── hex.rs
-│   ├── base64.rs
-│   ├── integers.rs
-│   ├── datetime.rs
-│   ├── json.rs
-│   └── utf8.rs
-│
-└── plugin/          # Plugin loading
-    ├── mod.rs
-    ├── native.rs    # Rust trait-based plugins
-    ├── dylib.rs     # Dynamic library loading
-    └── python.rs    # Python support (feature-gated)
+└── formats/         # Built-in format implementations
+    ├── mod.rs       # Format trait, format list
+    ├── hex.rs
+    ├── base64.rs
+    ├── integers.rs
+    ├── datetime.rs
+    ├── json.rs
+    └── utf8.rs
 ```
 
 ## Common Patterns
@@ -312,9 +292,8 @@ impl Format for IntegerFormat {
 1. **Don't use `unwrap()` in library code** - use `?` or return `Option`/`Result`
 2. **Don't allocate in hot paths** - reuse buffers where possible
 3. **Don't add dependencies without consideration** - keep core lean
-4. **Don't break the C ABI** - plugin API stability is critical
-5. **Don't forget endianness** - always consider both BE and LE
-6. **Don't hardcode format strings** - use constants or the format's `id()`
+4. **Don't forget endianness** - always consider both BE and LE
+5. **Don't hardcode format strings** - use constants or the format's `id()`
 
 ## Performance Considerations
 
@@ -371,9 +350,8 @@ cargo build --release --profile=release-lto
 
 When implementing a feature:
 
-1. Does this belong in core, or should it be a plugin?
-2. What's the confidence score for this interpretation?
-3. Is this conversion lossy? Mark it if so.
-4. Did I handle both endianness options?
-5. Is the path tracking correct?
-6. Are there tests for edge cases (empty input, huge numbers, invalid UTF-8)?~
+1. What's the confidence score for this interpretation?
+2. Is this conversion lossy? Mark it if so.
+3. Did I handle both endianness options?
+4. Is the path tracking correct?
+5. Are there tests for edge cases (empty input, huge numbers, invalid UTF-8)?
