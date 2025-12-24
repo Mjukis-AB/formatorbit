@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "crates/core",
-    "crates/plugin-api",
     "crates/ffi",
     "crates/cli",
 ]
@@ -26,7 +25,6 @@ publish-jobs = ["homebrew"]
 
 [workspace.dependencies]
 formatorbit-core = { version = "0.3.0", path = "crates/core" }
-formatorbit-plugin-api = { path = "crates/plugin-api" }
 formatorbit-ffi = { path = "crates/ffi" }
 
 chrono = { version = "0.4", features = ["serde"] }
