@@ -40,10 +40,12 @@ fn is_blocked_path(source_format: &str, target_format: &str) -> bool {
 /// This traverses the conversion graph, collecting all reachable formats.
 /// The path is tracked to show how we got from the source to each target.
 /// If `exclude_format` is provided, skip conversions to that format (to avoid hex→hex etc.)
+/// If `source_format` is provided, it's included as the first element in the path.
 pub fn find_all_conversions(
     formats: &[Box<dyn Format>],
     initial: &CoreValue,
     exclude_format: Option<&str>,
+    source_format: Option<&str>,
 ) -> Vec<Conversion> {
     let mut results = Vec::new();
     let mut seen_formats: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -55,7 +57,12 @@ pub fn find_all_conversions(
 
     // Queue holds (value, path_so_far, steps_so_far)
     let mut queue: VecDeque<(CoreValue, Vec<String>, Vec<ConversionStep>)> = VecDeque::new();
-    queue.push_back((initial.clone(), vec![], vec![]));
+
+    // Initialize with source format if provided, so paths show the full chain
+    let initial_path = source_format
+        .map(|s| vec![s.to_string()])
+        .unwrap_or_default();
+    queue.push_back((initial.clone(), initial_path, vec![]));
 
     // Also format the initial value with all applicable formats
     for format in formats {
@@ -63,11 +70,17 @@ pub fn find_all_conversions(
             if let Some(display) = format.format(initial) {
                 let format_id = format.id().to_string();
                 if seen_formats.insert(format_id.clone()) {
+                    // Build path including source format if provided
+                    let mut path = source_format
+                        .map(|s| vec![s.to_string()])
+                        .unwrap_or_default();
+                    path.push(format_id.clone());
+
                     results.push(Conversion {
                         value: initial.clone(),
                         target_format: format_id.clone(),
                         display: display.clone(),
-                        path: vec![format_id.clone()],
+                        path,
                         steps: vec![ConversionStep {
                             format: format_id,
                             value: initial.clone(),
@@ -178,7 +191,7 @@ mod tests {
         ];
 
         let bytes = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        let conversions = find_all_conversions(&formats, &bytes, None);
+        let conversions = find_all_conversions(&formats, &bytes, None, None);
 
         // Should have hex, base64, int-be, int-le
         let format_ids: Vec<_> = conversions
@@ -201,7 +214,7 @@ mod tests {
             original_bytes: None,
         };
 
-        let conversions = find_all_conversions(&formats, &value, None);
+        let conversions = find_all_conversions(&formats, &value, None, None);
 
         let datetime_conv = conversions
             .iter()
@@ -220,7 +233,7 @@ mod tests {
 
         // Start with bytes that represent epoch 1763574200
         let bytes = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        let conversions = find_all_conversions(&formats, &bytes, None);
+        let conversions = find_all_conversions(&formats, &bytes, None, None);
 
         // Should find datetime via bytes -> int-be -> epoch-seconds
         let datetime_conv = conversions

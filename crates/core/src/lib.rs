@@ -76,12 +76,18 @@ impl Formatorbit {
 
     /// Find all possible conversions from a value.
     pub fn convert(&self, value: &CoreValue) -> Vec<Conversion> {
-        convert::find_all_conversions(&self.formats, value, None)
+        convert::find_all_conversions(&self.formats, value, None, None)
     }
 
     /// Find all possible conversions, excluding the source format (to avoid hex→hex etc.)
+    /// The source_format is also included in the path to show the full conversion chain.
     pub fn convert_excluding(&self, value: &CoreValue, source_format: &str) -> Vec<Conversion> {
-        convert::find_all_conversions(&self.formats, value, Some(source_format))
+        convert::find_all_conversions(
+            &self.formats,
+            value,
+            Some(source_format),
+            Some(source_format),
+        )
     }
 
     /// Combined: interpret input and find all conversions.
