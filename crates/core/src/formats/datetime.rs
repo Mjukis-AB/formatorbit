@@ -37,6 +37,44 @@ const MAX_FILETIME: i64 = (MAX_EPOCH_SECONDS + FILETIME_EPOCH_DIFF) * FILETIME_T
 pub struct DateTimeFormat;
 
 impl DateTimeFormat {
+    /// Format a datetime relative to now (e.g., "2 hours ago", "in 3 days").
+    fn format_relative(dt: DateTime<Utc>) -> String {
+        let now = Utc::now();
+        let diff = dt.signed_duration_since(now);
+        let secs = diff.num_seconds();
+        let abs_secs = secs.abs();
+
+        let (value, unit) = if abs_secs < 60 {
+            (abs_secs, if abs_secs == 1 { "second" } else { "seconds" })
+        } else if abs_secs < 3600 {
+            let mins = abs_secs / 60;
+            (mins, if mins == 1 { "minute" } else { "minutes" })
+        } else if abs_secs < 86400 {
+            let hours = abs_secs / 3600;
+            (hours, if hours == 1 { "hour" } else { "hours" })
+        } else if abs_secs < 604800 {
+            let days = abs_secs / 86400;
+            (days, if days == 1 { "day" } else { "days" })
+        } else if abs_secs < 2592000 {
+            let weeks = abs_secs / 604800;
+            (weeks, if weeks == 1 { "week" } else { "weeks" })
+        } else if abs_secs < 31536000 {
+            let months = abs_secs / 2592000;
+            (months, if months == 1 { "month" } else { "months" })
+        } else {
+            let years = abs_secs / 31536000;
+            (years, if years == 1 { "year" } else { "years" })
+        };
+
+        if secs < 0 {
+            format!("{} {} ago", value, unit)
+        } else if secs > 0 {
+            format!("in {} {}", value, unit)
+        } else {
+            "now".to_string()
+        }
+    }
+
     /// Check if a value is a reasonable epoch in seconds.
     fn is_valid_epoch_seconds(value: i64) -> bool {
         (MIN_EPOCH_SECONDS..=MAX_EPOCH_SECONDS).contains(&value)
@@ -135,10 +173,11 @@ impl Format for DateTimeFormat {
         if let Ok(secs) = i64::try_from(*int_val) {
             if Self::is_valid_epoch_seconds(secs) {
                 if let Some(dt) = Utc.timestamp_opt(secs, 0).single() {
+                    let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "epoch-seconds".to_string(),
-                        display: dt.to_rfc3339(),
+                        display: format!("{} ({})", dt.to_rfc3339(), relative),
                         path: vec!["epoch-seconds".to_string()],
                         is_lossy: false,
                         steps: vec![],
@@ -153,10 +192,11 @@ impl Format for DateTimeFormat {
                 let epoch_secs = secs / 1000;
                 let nanos = ((secs % 1000) * 1_000_000) as u32;
                 if let Some(dt) = Utc.timestamp_opt(epoch_secs, nanos).single() {
+                    let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "epoch-millis".to_string(),
-                        display: dt.to_rfc3339(),
+                        display: format!("{} ({})", dt.to_rfc3339(), relative),
                         path: vec!["epoch-millis".to_string()],
                         is_lossy: false,
                         steps: vec![],
@@ -170,10 +210,11 @@ impl Format for DateTimeFormat {
             if Self::is_valid_apple_timestamp(secs) {
                 let unix_secs = secs + APPLE_REFERENCE_DATE;
                 if let Some(dt) = Utc.timestamp_opt(unix_secs, 0).single() {
+                    let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "apple-cocoa".to_string(),
-                        display: dt.to_rfc3339(),
+                        display: format!("{} ({})", dt.to_rfc3339(), relative),
                         path: vec!["apple-cocoa".to_string()],
                         is_lossy: false,
                         steps: vec![],
@@ -189,10 +230,11 @@ impl Format for DateTimeFormat {
         if Self::is_valid_filetime(*int_val) {
             if let Some((unix_secs, nanos)) = Self::filetime_to_unix(*int_val) {
                 if let Some(dt) = Utc.timestamp_opt(unix_secs, nanos).single() {
+                    let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "filetime".to_string(),
-                        display: dt.to_rfc3339(),
+                        display: format!("{} ({})", dt.to_rfc3339(), relative),
                         path: vec!["filetime".to_string()],
                         is_lossy: false,
                         steps: vec![],
