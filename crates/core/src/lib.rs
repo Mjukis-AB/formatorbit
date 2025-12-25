@@ -13,8 +13,8 @@ pub use types::*;
 
 use formats::{
     Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat, DateTimeFormat,
-    DecimalFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat,
-    MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, ProtobufFormat, UlidFormat,
+    DecimalFormat, ExprFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat, JsonFormat,
+    JwtFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, ProtobufFormat, UlidFormat,
     UrlEncodingFormat, Utf8Format, UuidFormat,
 };
 
@@ -46,6 +46,7 @@ impl Formatorbit {
                 Box::new(OctalFormat),
                 Box::new(Base64Format),
                 Box::new(DecimalFormat),
+                Box::new(ExprFormat),
                 Box::new(DateTimeFormat),
                 Box::new(JsonFormat),
                 Box::new(Utf8Format),
