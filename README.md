@@ -195,13 +195,14 @@ forb --mermaid 691E01B8
 
 | Category | Formats |
 |----------|---------|
-| **Encoding** | hex, base64, binary, url-encoding |
+| **Encoding** | hex, base64, binary, octal, url-encoding, escape sequences (`\x48`, `\u0048`) |
 | **Hashing** | MD5, SHA-1, SHA-256, SHA-512 (detection by length) |
-| **Numbers** | decimal, binary, big-endian int, little-endian int |
-| **Timestamps** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601 |
+| **Numbers** | decimal, binary, octal, data sizes (`1MB`, `1MiB`), power-of-2 detection |
+| **Math** | Expression evaluation (`2 + 2`, `0xFF + 1`, `1 << 8`, `0b1010 \| 0b0101`) |
+| **Time** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601, durations (`1h30m`) |
 | **Identifiers** | UUID (v1-v8 detection), ULID (with timestamp), NanoID, CUID2, JWT |
 | **Network** | IPv4, IPv6 |
-| **Colors** | #RGB, #RRGGBB, #RRGGBBAA, 0xAARRGGBB (Android) |
+| **Colors** | #RGB, #RRGGBB, rgb(), rgba(), hsl(), hsla(), 0xAARRGGBB (Android) |
 | **Data** | JSON, MessagePack, Protobuf (schema-less), plist (XML/binary), UTF-8 |
 
 ### Hex Input Styles
@@ -237,15 +238,20 @@ For quick filtering with `--only`, formats have short aliases:
 |--------|---------|
 | hex | h, x |
 | binary | bin, b |
+| octal | oct, o |
 | base64 | b64 |
 | datetime | ts, time, date |
+| duration | dur, interval |
 | decimal | dec, int, num |
+| datasize | size, bytes, filesize |
+| expr | expression, math, calc |
+| escape | esc, escaped, cstring |
 | uuid | guid |
 | ulid | - |
 | jwt | token |
 | hash | md5, sha1, sha256, sha512 |
 | ip | ipv4, ipv6 |
-| color | col, rgb, argb |
+| color | col, rgb, argb, hsl |
 | json | j |
 | protobuf | proto, pb |
 | plist | pl |
@@ -327,6 +333,57 @@ $ forb '#FF5733'
 
 ▶ color-hex (95% confidence)
   RGB: RGB(255, 87, 51) / HSL(11°, 100%, 60%)
+```
+
+```bash
+$ forb 'rgb(35, 50, 35)'
+
+▶ color-rgb (95% confidence)
+  rgb(): RGB(35, 50, 35) / HSL(120°, 17%, 16%)
+  → color-hex: #233223
+  → color-hsl: hsl(120, 17%, 16%)
+```
+
+### Math Expressions
+
+```bash
+$ forb '0xFF + 1'
+
+▶ expr (60% confidence)
+  0xFF + 1 = 256
+  → hex-int: 0x100
+  → binary-int: 0b100000000
+  → power-of-2: 2^8
+```
+
+### Durations & Data Sizes
+
+```bash
+$ forb '1h30m'
+
+▶ duration (90% confidence)
+  1h30m = 5400 seconds (2025-12-25T08:00:00Z)
+  → datasize-iec: 5.27 KiB
+```
+
+```bash
+$ forb '1MiB'
+
+▶ datasize (90% confidence)
+  1MiB = 1,048,576 bytes (binary)
+  → power-of-2: 2^20
+  → datasize-si: 1.05 MB
+```
+
+### Escape Sequences
+
+```bash
+$ forb '\x48\x65\x6c\x6c\x6f'
+
+▶ escape (90% confidence)
+  Decoded: "Hello"
+  → utf8: Hello
+  → hex: 48656C6C6F
 ```
 
 ### Processing Logs
