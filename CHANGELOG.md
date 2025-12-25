@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-12-25
+
+### Added
+- **Packet layout visualization** - byte-level structure display for protobuf and msgpack with `--packet/-p` flag
+  - Compact mode: `[08:tag₁][96 01:150][12:tag₂]...`
+  - Detailed mode: table with offset, length, field, type, and value columns
+- **Duration format** - parse `1h30m`, `2d`, `3y`, ISO 8601 durations (`PT1H30M`), and many more
+- **Data size format** - parse `1MB`, `1MiB`, `1.5GB` with IEC/SI unit conversions
+- **Expression evaluation** - evaluate math expressions like `0xFF + 1`, `1 << 8`, `0b1010 | 0b0101`
+- **Octal format** - parse `0o777`, `0755` (C-style), and convert integers to octal
+- **Escape sequences** - decode C-style escapes (`\x48\x65\x6c\x6c\x6f` → "Hello")
+- **CSS color functions** - parse `rgb()`, `rgba()`, `hsl()`, `hsla()`
+- **Hexdump format** - traditional hex dump output for binary data
+- **Hex/binary/octal integer conversions** - decimal 255 now shows `0xFF`, `0b11111111`, `0o377`
+- **Structured metadata** for conversions - enables richer UI rendering (DataSize, Duration, Color, PacketLayout)
+- **Conversion path tracking** - path now includes source format for full chain visibility
+
+### Changed
+- Removed UTF-8 as input parser (kept only for bytes→string conversion)
+- JSON is now a terminal format (doesn't chain to further conversions)
+- Removed plugin system (simplifies codebase)
+- Improved duration parser with many more formats (spelled out units, decimals, weeks, years)
+
+### Fixed
+- Binary conversions no longer create nonsense chains
+- Duplicate escape format removed (kept escape-hex/escape-unicode)
+- Conversion paths now show full chain from source format
+
 ## [0.3.0] - 2024-12-22
 
 ### Added
