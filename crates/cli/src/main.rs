@@ -14,48 +14,33 @@ const LONG_ABOUT: &str = r##"
 Formatorbit automatically detects and converts data between formats.
 
 Paste in data and see all possible interpretations - hex, base64, timestamps,
-UUIDs, IP addresses, colors, MessagePack, and more.
+UUIDs, colors, math expressions, durations, escape sequences, and more.
 
 SUPPORTED FORMATS:
-  Encoding:     hex, base64, url-encoding
-  Numbers:      decimal, big-endian int, little-endian int
-  Time:         Unix epoch (sec/ms), Apple/Cocoa epoch, ISO 8601, RFC 2822
-  Identifiers:  UUID (v1-v8 detection)
+  Encoding:     hex, base64, binary, octal, url-encoding, escape sequences
+  Numbers:      decimal, data sizes (1MB, 1MiB), power-of-2 detection
+  Math:         expressions (2 + 2, 0xFF + 1, 1 << 8)
+  Time:         Unix epoch (sec/ms), durations (1h30m), ISO 8601, RFC 2822
+  Identifiers:  UUID (v1-v8), ULID, JWT
   Network:      IPv4, IPv6
-  Colors:       #RGB, #RRGGBB, #RRGGBBAA, 0xAARRGGBB (Android)
-  Data:         JSON, MessagePack, UTF-8
-
-HEX INPUT FORMATS:
-  forb supports multiple hex paste styles:
-
-    691E01B8                    Continuous hex
-    0x691E01B8                  With 0x prefix
-    69 1E 01 B8                 Space-separated (hex dump style)
-    69:1E:01:B8                 Colon-separated (MAC address style)
-    69-1E-01-B8                 Dash-separated
-    0x69, 0x1E, 0x01, 0xB8      Comma-separated
-    {0x69, 0x1E, 0x01, 0xB8}    C array style
-    [0x69, 0x1E, 0x01, 0xB8]    Bracket array style
+  Colors:       #RGB, rgb(), hsl(), 0xAARRGGBB (Android)
+  Data:         JSON, MessagePack, Protobuf, plist, UTF-8
 
 EXAMPLES:
   forb 691E01B8                 Interpret hex bytes
-  forb "87 A3 69 6E 74 01"      Parse space-separated hex (from hex dump)
   forb aR4BuA==                 Decode base64
-  forb 1703456789               Interpret as Unix timestamp
-  forb 192.168.1.1              Parse IP address
-  forb '#FF5733'                Parse color (use quotes for #)
-  forb 0x80FF5733               Android ARGB color
-  forb 550e8400-e29b-41d4-a716-446655440000   Parse UUID
+  forb 1703456789               Unix timestamp (shows relative time)
+  forb '0xFF + 1'               Evaluate expression
+  forb 1h30m                    Parse duration
+  forb 1MiB                     Parse data size
+  forb 'rgb(35, 50, 35)'        Parse CSS color
+  forb '\x48\x65\x6c\x6c\x6f'   Decode escape sequences
 
 OUTPUT:
   Shows all possible interpretations ranked by confidence.
-  Conversions are sorted by usefulness:
-    1. Structured data (JSON, MessagePack) - decoded content shown first
-    2. Semantic types (datetime, UUID, IP, color)
-    3. Encodings (hex, base64)
-    4. Raw values (integers)
+  Conversions sorted by usefulness (structured data first).
   Use -l to change how many conversions are shown (default: 5, use -l 0 for all).
-  Use --json for machine-readable output.
+  Use --formats to see all supported formats and aliases.
 
 PIPE MODE:
   Pipe logs through forb to annotate interesting values:
