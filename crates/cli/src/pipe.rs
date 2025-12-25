@@ -157,12 +157,13 @@ fn print_annotation(
     // Calculate indentation to align with token position
     let indent = " ".repeat(annotated.token.display_col);
 
-    // Build conversions summary (limit to 3)
+    // Build conversions summary (limit to 1 for cleaner pipe output)
+    // Conversions are already sorted by priority (Structured > Semantic > Encoding > Raw)
     let conv_summary: Vec<String> = annotated
         .result
         .conversions
         .iter()
-        .take(3)
+        .take(1)
         .map(|c| {
             // Check if we should use packet layout for this conversion
             let display = if config.packet_mode != PacketMode::None {
