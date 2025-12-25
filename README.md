@@ -175,6 +175,10 @@ forb 691E01B8 -1
 # Force specific format
 forb -f hex 1234
 
+# Packet layout for binary formats (protobuf, msgpack)
+forb "08 96 01" -p           # Compact inline: [08:tag₁][96 01:150]
+forb "08 96 01" -p detailed  # Table with offsets/lengths
+
 # List all supported formats
 forb --formats
 ```
@@ -274,6 +278,31 @@ $ forb "089601120774657374696e67"
     }
   → base64: CJYBEgd0ZXN0aW5n
   → binary: 00001000 10010110 00000001 ...
+```
+
+With `--packet` mode, see the byte-level structure:
+
+```bash
+$ forb "089601120774657374696e67" -p
+
+▶ hex (92% confidence)
+  12 bytes
+  → protobuf: [08:tag₁][96 01:field 1][12:tag₂][07:len=7][74 65 73 74 69 6e 67:field 2]
+```
+
+```bash
+$ forb "089601120774657374696e67" -p detailed
+
+▶ hex (92% confidence)
+  12 bytes
+  → protobuf:
+    Offset  Len  Field       Type     Value
+    ------  ---  ----------  ------   -----
+    0x0000    1  tag₁        tag      field 1, varint
+    0x0001    2  field 1     varint   150
+    0x0003    1  tag₂        tag      field 2, len
+    0x0004    1  len=7       len      "testing"
+    0x0005    7    field 2   string   "testing"
 ```
 
 ```bash
