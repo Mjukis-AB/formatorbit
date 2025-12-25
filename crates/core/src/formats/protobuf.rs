@@ -13,8 +13,8 @@
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionPriority, CoreValue, ProtoField as PublicProtoField,
-    ProtoValue as PublicProtoValue,
+    Conversion, ConversionMetadata, ConversionPriority, CoreValue, PacketSegment,
+    ProtoField as PublicProtoField, ProtoValue as PublicProtoValue,
 };
 
 pub struct ProtobufFormat;
@@ -30,12 +30,20 @@ enum ProtoValue {
     Message(Vec<ProtoField>),
 }
 
-/// Internal field with its number and value.
+/// Internal field with its number, value, and byte positions.
 #[derive(Debug, Clone)]
 struct ProtoField {
     field_number: u32,
     wire_type: u8,
     value: ProtoValue,
+    /// Byte offset where this field's tag starts.
+    tag_offset: usize,
+    /// Length of the tag in bytes.
+    tag_length: usize,
+    /// Byte offset where the value starts.
+    value_offset: usize,
+    /// Length of the value in bytes.
+    value_length: usize,
 }
 
 impl ProtobufFormat {
@@ -74,10 +82,18 @@ impl ProtobufFormat {
     /// Try to decode bytes as a protobuf message.
     /// Returns None if it doesn't look like valid protobuf.
     fn decode_message(bytes: &[u8]) -> Option<Vec<ProtoField>> {
+        Self::decode_message_at_offset(bytes, 0)
+    }
+
+    /// Decode protobuf message, tracking offsets relative to a base offset.
+    /// The base_offset is added to all positions for nested message tracking.
+    fn decode_message_at_offset(bytes: &[u8], base_offset: usize) -> Option<Vec<ProtoField>> {
         let mut fields = Vec::new();
         let mut pos = 0;
 
         while pos < bytes.len() {
+            let tag_offset = base_offset + pos;
+
             // Decode tag (field_number << 3 | wire_type)
             let (tag, tag_len) = Self::decode_varint(&bytes[pos..])?;
             pos += tag_len;
@@ -96,12 +112,14 @@ impl ProtobufFormat {
                 return None;
             }
 
-            let value = match wire_type {
+            let value_offset = base_offset + pos;
+
+            let (value, value_length) = match wire_type {
                 0 => {
                     // VARINT
                     let (v, len) = Self::decode_varint(&bytes[pos..])?;
                     pos += len;
-                    ProtoValue::Varint(v)
+                    (ProtoValue::Varint(v), len)
                 }
                 1 => {
                     // I64 (8 bytes, little-endian)
@@ -110,7 +128,7 @@ impl ProtobufFormat {
                     }
                     let v = u64::from_le_bytes(bytes[pos..pos + 8].try_into().ok()?);
                     pos += 8;
-                    ProtoValue::Fixed64(v)
+                    (ProtoValue::Fixed64(v), 8)
                 }
                 2 => {
                     // LEN (length-prefixed)
@@ -123,18 +141,22 @@ impl ProtobufFormat {
                     }
 
                     let data = bytes[pos..pos + len].to_vec();
+                    let data_start = base_offset + pos;
                     pos += len;
 
                     // Try to recursively decode as nested message
-                    if let Some(nested) = Self::decode_message(&data) {
-                        if !nested.is_empty() {
-                            ProtoValue::Message(nested)
+                    let value =
+                        if let Some(nested) = Self::decode_message_at_offset(&data, data_start) {
+                            if !nested.is_empty() {
+                                ProtoValue::Message(nested)
+                            } else {
+                                ProtoValue::LengthDelimited(data)
+                            }
                         } else {
                             ProtoValue::LengthDelimited(data)
-                        }
-                    } else {
-                        ProtoValue::LengthDelimited(data)
-                    }
+                        };
+                    // Value length includes the length prefix + data
+                    (value, len_bytes + len)
                 }
                 3 | 4 => {
                     // SGROUP/EGROUP (deprecated, rarely used)
@@ -147,7 +169,7 @@ impl ProtobufFormat {
                     }
                     let v = u32::from_le_bytes(bytes[pos..pos + 4].try_into().ok()?);
                     pos += 4;
-                    ProtoValue::Fixed32(v)
+                    (ProtoValue::Fixed32(v), 4)
                 }
                 _ => {
                     // Unknown wire type
@@ -159,6 +181,10 @@ impl ProtobufFormat {
                 field_number,
                 wire_type,
                 value,
+                tag_offset,
+                tag_length: tag_len,
+                value_offset,
+                value_length,
             });
         }
 
@@ -296,6 +322,283 @@ impl ProtobufFormat {
         score.clamp(0.3, 0.95)
     }
 
+    /// Get wire type name for display.
+    fn wire_type_name(wire_type: u8) -> &'static str {
+        match wire_type {
+            0 => "varint",
+            1 => "i64",
+            2 => "len",
+            5 => "i32",
+            _ => "?",
+        }
+    }
+
+    /// Build packet segments from decoded fields.
+    fn build_segments(bytes: &[u8], fields: &[ProtoField]) -> Vec<PacketSegment> {
+        let mut segments = Vec::new();
+
+        for field in fields {
+            // Tag segment
+            let tag_bytes = bytes
+                .get(field.tag_offset..field.tag_offset + field.tag_length)
+                .map(|b| b.to_vec())
+                .unwrap_or_default();
+            segments.push(PacketSegment {
+                offset: field.tag_offset,
+                length: field.tag_length,
+                bytes: tag_bytes,
+                segment_type: "tag".to_string(),
+                label: format!("tag{}", Self::subscript(field.field_number)),
+                decoded: format!(
+                    "field {}, {}",
+                    field.field_number,
+                    Self::wire_type_name(field.wire_type)
+                ),
+                children: vec![],
+            });
+
+            // Value segment
+            let value_segment = Self::build_value_segment(bytes, field);
+            segments.push(value_segment);
+        }
+
+        segments
+    }
+
+    /// Build a segment for a field's value.
+    fn build_value_segment(bytes: &[u8], field: &ProtoField) -> PacketSegment {
+        let value_bytes = bytes
+            .get(field.value_offset..field.value_offset + field.value_length)
+            .map(|b| b.to_vec())
+            .unwrap_or_default();
+
+        match &field.value {
+            ProtoValue::Varint(v) => {
+                let signed = Self::decode_zigzag(*v);
+                let decoded = if *v <= 1 {
+                    format!("{} (bool: {})", v, *v != 0)
+                } else if signed.abs() < (*v as i64).abs() / 2 {
+                    format!("{} (signed: {})", v, signed)
+                } else {
+                    v.to_string()
+                };
+                PacketSegment {
+                    offset: field.value_offset,
+                    length: field.value_length,
+                    bytes: value_bytes,
+                    segment_type: "varint".to_string(),
+                    label: format!("field {}", field.field_number),
+                    decoded,
+                    children: vec![],
+                }
+            }
+            ProtoValue::Fixed64(v) => {
+                let as_double = f64::from_bits(*v);
+                let decoded =
+                    if as_double.is_finite() && as_double.abs() > 1e-100 && as_double.abs() < 1e100
+                    {
+                        format!("{} (double: {})", v, as_double)
+                    } else {
+                        v.to_string()
+                    };
+                PacketSegment {
+                    offset: field.value_offset,
+                    length: field.value_length,
+                    bytes: value_bytes,
+                    segment_type: "i64".to_string(),
+                    label: format!("field {}", field.field_number),
+                    decoded,
+                    children: vec![],
+                }
+            }
+            ProtoValue::Fixed32(v) => {
+                let as_float = f32::from_bits(*v);
+                let decoded =
+                    if as_float.is_finite() && as_float.abs() > 1e-30 && as_float.abs() < 1e30 {
+                        format!("{} (float: {})", v, as_float)
+                    } else {
+                        v.to_string()
+                    };
+                PacketSegment {
+                    offset: field.value_offset,
+                    length: field.value_length,
+                    bytes: value_bytes,
+                    segment_type: "i32".to_string(),
+                    label: format!("field {}", field.field_number),
+                    decoded,
+                    children: vec![],
+                }
+            }
+            ProtoValue::LengthDelimited(data) => {
+                // For length-delimited, we need to show length prefix separately
+                // The value_bytes includes length prefix + data
+                let (len_val, len_bytes_count) =
+                    Self::decode_varint(&value_bytes).unwrap_or((data.len() as u64, 1));
+
+                let decoded = if let Ok(s) = std::str::from_utf8(data) {
+                    if s.chars().all(|c| !c.is_control() || c == '\n' || c == '\t') {
+                        format!("\"{}\"", s)
+                    } else if data.len() <= 16 {
+                        let hex: String = data.iter().map(|b| format!("{:02x}", b)).collect();
+                        format!("bytes[{}]: {}", data.len(), hex)
+                    } else {
+                        format!("bytes[{}]", data.len())
+                    }
+                } else if data.len() <= 16 {
+                    let hex: String = data.iter().map(|b| format!("{:02x}", b)).collect();
+                    format!("bytes[{}]: {}", data.len(), hex)
+                } else {
+                    format!("bytes[{}]", data.len())
+                };
+
+                PacketSegment {
+                    offset: field.value_offset,
+                    length: len_bytes_count,
+                    bytes: value_bytes[..len_bytes_count].to_vec(),
+                    segment_type: "len".to_string(),
+                    label: format!("len={}", len_val),
+                    decoded: decoded.clone(),
+                    children: vec![PacketSegment {
+                        offset: field.value_offset + len_bytes_count,
+                        length: data.len(),
+                        bytes: data.clone(),
+                        segment_type: "string".to_string(),
+                        label: format!("field {}", field.field_number),
+                        decoded,
+                        children: vec![],
+                    }],
+                }
+            }
+            ProtoValue::Message(nested_fields) => {
+                // For nested messages, recursively build child segments
+                let (len_val, len_bytes_count) =
+                    Self::decode_varint(&value_bytes).unwrap_or((0, 1));
+                let data_len = field.value_length - len_bytes_count;
+
+                // Get the nested message bytes
+                let nested_bytes = bytes
+                    .get(
+                        field.value_offset + len_bytes_count
+                            ..field.value_offset + field.value_length,
+                    )
+                    .unwrap_or(&[]);
+
+                let children = Self::build_segments(nested_bytes, nested_fields);
+
+                PacketSegment {
+                    offset: field.value_offset,
+                    length: len_bytes_count,
+                    bytes: value_bytes[..len_bytes_count].to_vec(),
+                    segment_type: "len".to_string(),
+                    label: format!("len={}", len_val),
+                    decoded: format!("message[{}]", data_len),
+                    children,
+                }
+            }
+        }
+    }
+
+    /// Format segments in compact inline style.
+    fn format_compact(segments: &[PacketSegment]) -> String {
+        Self::format_compact_recursive(segments, false)
+    }
+
+    fn format_compact_recursive(segments: &[PacketSegment], _is_child: bool) -> String {
+        let mut parts = Vec::new();
+
+        for seg in segments {
+            let hex: String = seg
+                .bytes
+                .iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            // For tag/len segments, use subscript label; for value segments, use decoded value
+            let label = if seg.segment_type == "tag" || seg.segment_type == "len" {
+                seg.label.clone()
+            } else {
+                seg.decoded.clone()
+            };
+
+            parts.push(format!("[{}:{}]", hex, label));
+
+            // Add children (for nested structures)
+            if !seg.children.is_empty() {
+                parts.push(Self::format_compact_recursive(&seg.children, true));
+            }
+        }
+
+        parts.join("")
+    }
+
+    /// Format segments as detailed table.
+    fn format_detailed(segments: &[PacketSegment]) -> String {
+        let mut lines = vec![
+            "Offset  Len  Field       Type     Value".to_string(),
+            "------  ---  ----------  ------   -----".to_string(),
+        ];
+
+        Self::format_detailed_recursive(segments, &mut lines, 0);
+
+        lines.join("\n")
+    }
+
+    fn format_detailed_recursive(
+        segments: &[PacketSegment],
+        lines: &mut Vec<String>,
+        depth: usize,
+    ) {
+        let indent = "  ".repeat(depth);
+        let max_label_len = 10_usize.saturating_sub(depth * 2);
+
+        for seg in segments {
+            let decoded = if seg.decoded.len() > 30 {
+                format!("{}...", &seg.decoded[..27])
+            } else {
+                seg.decoded.clone()
+            };
+
+            // Truncate label to fit in column, accounting for indent
+            let label = if seg.label.len() > max_label_len {
+                format!("{}...", &seg.label[..max_label_len.saturating_sub(3)])
+            } else {
+                seg.label.clone()
+            };
+
+            lines.push(format!(
+                "0x{:04X}  {:3}  {}{:<width$}  {:6}   {}",
+                seg.offset,
+                seg.length,
+                indent,
+                label,
+                seg.segment_type,
+                decoded,
+                width = max_label_len
+            ));
+
+            // Recurse into children
+            if !seg.children.is_empty() {
+                Self::format_detailed_recursive(&seg.children, lines, depth + 1);
+            }
+        }
+    }
+
+    /// Convert a number to subscript unicode characters.
+    fn subscript(n: u32) -> String {
+        const SUBSCRIPTS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+        n.to_string()
+            .chars()
+            .map(|c| {
+                if let Some(d) = c.to_digit(10) {
+                    SUBSCRIPTS[d as usize]
+                } else {
+                    c
+                }
+            })
+            .collect()
+    }
+
     /// Convert internal ProtoField to public ProtoField.
     fn to_public_field(field: &ProtoField) -> PublicProtoField {
         PublicProtoField {
@@ -394,6 +697,11 @@ impl Format for ProtobufFormat {
         // Convert to public types
         let public_fields = Self::to_public_fields(&fields);
 
+        // Build packet layout segments
+        let segments = Self::build_segments(bytes, &fields);
+        let compact = Self::format_compact(&segments);
+        let detailed = Self::format_detailed(&segments);
+
         // Format for display (fallback for non-colorized output)
         let mut display = String::from("{\n");
         for field in &fields {
@@ -427,7 +735,11 @@ impl Format for ProtobufFormat {
             steps: vec![],
             priority,
             display_only: false,
-            metadata: None,
+            metadata: Some(ConversionMetadata::PacketLayout {
+                segments,
+                compact,
+                detailed,
+            }),
         }]
     }
 
@@ -550,5 +862,44 @@ mod tests {
         // Field number 0 is invalid
         let bytes = vec![0x00, 0x01]; // tag 0 = field 0, wire type 0
         assert!(ProtobufFormat::decode_message(&bytes).is_none());
+    }
+
+    #[test]
+    fn test_packet_layout_metadata() {
+        let format = ProtobufFormat;
+
+        // Field 1: varint 150, Field 2: string "testing"
+        let bytes = vec![
+            0x08, 0x96, 0x01, // field 1 = 150
+            0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6e, 0x67, // field 2 = "testing"
+        ];
+        let value = CoreValue::Bytes(bytes);
+        let conversions = format.conversions(&value);
+
+        assert_eq!(conversions.len(), 1);
+
+        // Check that metadata contains PacketLayout
+        let metadata = conversions[0].metadata.as_ref().unwrap();
+        if let ConversionMetadata::PacketLayout {
+            segments,
+            compact,
+            detailed,
+        } = metadata
+        {
+            // Should have 4 segments: tag1, field1, tag2, field2 (len + string)
+            assert_eq!(segments.len(), 4);
+
+            // Check compact format contains expected elements
+            assert!(compact.contains("tag₁"));
+            assert!(compact.contains("150"));
+            assert!(compact.contains("tag₂"));
+            assert!(compact.contains("testing"));
+
+            // Check detailed format has header
+            assert!(detailed.contains("Offset"));
+            assert!(detailed.contains("Len"));
+        } else {
+            panic!("Expected PacketLayout metadata");
+        }
     }
 }

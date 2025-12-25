@@ -1,9 +1,21 @@
 //! MessagePack format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionMetadata, ConversionPriority, CoreValue, Interpretation, PacketSegment,
+};
 
 pub struct MsgPackFormat;
+
+/// Result of decoding a MessagePack value with offset tracking.
+struct DecodedValue {
+    /// The decoded JSON value.
+    value: serde_json::Value,
+    /// Segments describing the byte layout.
+    segments: Vec<PacketSegment>,
+    /// Total bytes consumed.
+    bytes_consumed: usize,
+}
 
 impl Format for MsgPackFormat {
     fn id(&self) -> &'static str {
@@ -51,29 +63,38 @@ impl Format for MsgPackFormat {
             return vec![];
         };
 
-        // Try to decode MessagePack
-        let Ok(decoded): Result<serde_json::Value, _> = rmp_serde::from_slice(bytes) else {
+        // Try to decode MessagePack with offset tracking
+        let Some(decoded) = Self::decode_with_offsets(bytes) else {
             return vec![];
         };
 
+        // Make sure we consumed all bytes
+        if decoded.bytes_consumed != bytes.len() {
+            return vec![];
+        }
+
         // Rate the conversion based on how likely this is intentional msgpack
         // vs random bytes that happen to be valid msgpack.
-        let dominated_score = Self::msgpack_likelihood(&decoded, bytes.len());
+        let dominated_score = Self::msgpack_likelihood(&decoded.value, bytes.len());
 
         // Skip if too unlikely to be intentional
         if dominated_score < 0.3 {
             return vec![];
         }
 
+        // Build packet layout
+        let compact = Self::format_compact(&decoded.segments);
+        let detailed = Self::format_detailed(&decoded.segments);
+
         // Format as JSON for display
-        let display = match &decoded {
+        let display = match &decoded.value {
             serde_json::Value::String(s) => format!("(decoded) \"{}\"", s),
             serde_json::Value::Number(n) => format!("(decoded) {}", n),
             serde_json::Value::Bool(b) => format!("(decoded) {}", b),
             serde_json::Value::Null => "(decoded) null".to_string(),
             _ => format!(
                 "(decoded) {}",
-                serde_json::to_string(&decoded).unwrap_or_default()
+                serde_json::to_string(&decoded.value).unwrap_or_default()
             ),
         };
 
@@ -85,7 +106,7 @@ impl Format for MsgPackFormat {
         };
 
         vec![Conversion {
-            value: CoreValue::Json(decoded),
+            value: CoreValue::Json(decoded.value),
             target_format: "msgpack".to_string(),
             display,
             path: vec!["msgpack".to_string()],
@@ -93,7 +114,11 @@ impl Format for MsgPackFormat {
             steps: vec![],
             priority,
             display_only: false,
-            metadata: None,
+            metadata: Some(ConversionMetadata::PacketLayout {
+                segments: decoded.segments,
+                compact,
+                detailed,
+            }),
         }]
     }
 
@@ -150,6 +175,717 @@ impl MsgPackFormat {
             _ => None,
         }
     }
+
+    /// Decode MessagePack with offset tracking.
+    fn decode_with_offsets(bytes: &[u8]) -> Option<DecodedValue> {
+        Self::decode_value(bytes, 0)
+    }
+
+    /// Decode a single MessagePack value at the given offset.
+    fn decode_value(bytes: &[u8], offset: usize) -> Option<DecodedValue> {
+        if bytes.is_empty() {
+            return None;
+        }
+
+        let format_byte = bytes[0];
+
+        match format_byte {
+            // Positive fixint (0x00 - 0x7f)
+            0x00..=0x7f => {
+                let value = serde_json::Value::Number(format_byte.into());
+                Some(DecodedValue {
+                    value,
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 1,
+                        bytes: vec![format_byte],
+                        segment_type: "fixint".to_string(),
+                        label: format!("{}", format_byte),
+                        decoded: format!("{}", format_byte),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 1,
+                })
+            }
+
+            // Fixmap (0x80 - 0x8f)
+            0x80..=0x8f => {
+                let count = (format_byte & 0x0f) as usize;
+                Self::decode_map(bytes, offset, count, 1, "fixmap")
+            }
+
+            // Fixarray (0x90 - 0x9f)
+            0x90..=0x9f => {
+                let count = (format_byte & 0x0f) as usize;
+                Self::decode_array(bytes, offset, count, 1, "fixarray")
+            }
+
+            // Fixstr (0xa0 - 0xbf)
+            0xa0..=0xbf => {
+                let len = (format_byte & 0x1f) as usize;
+                Self::decode_string(bytes, offset, len, 1, "fixstr")
+            }
+
+            // nil
+            0xc0 => Some(DecodedValue {
+                value: serde_json::Value::Null,
+                segments: vec![PacketSegment {
+                    offset,
+                    length: 1,
+                    bytes: vec![0xc0],
+                    segment_type: "nil".to_string(),
+                    label: "nil".to_string(),
+                    decoded: "null".to_string(),
+                    children: vec![],
+                }],
+                bytes_consumed: 1,
+            }),
+
+            // (never used) 0xc1
+            0xc1 => None,
+
+            // false
+            0xc2 => Some(DecodedValue {
+                value: serde_json::Value::Bool(false),
+                segments: vec![PacketSegment {
+                    offset,
+                    length: 1,
+                    bytes: vec![0xc2],
+                    segment_type: "bool".to_string(),
+                    label: "false".to_string(),
+                    decoded: "false".to_string(),
+                    children: vec![],
+                }],
+                bytes_consumed: 1,
+            }),
+
+            // true
+            0xc3 => Some(DecodedValue {
+                value: serde_json::Value::Bool(true),
+                segments: vec![PacketSegment {
+                    offset,
+                    length: 1,
+                    bytes: vec![0xc3],
+                    segment_type: "bool".to_string(),
+                    label: "true".to_string(),
+                    decoded: "true".to_string(),
+                    children: vec![],
+                }],
+                bytes_consumed: 1,
+            }),
+
+            // bin8
+            0xc4 => {
+                if bytes.len() < 2 {
+                    return None;
+                }
+                let len = bytes[1] as usize;
+                Self::decode_binary(bytes, offset, len, 2, "bin8")
+            }
+
+            // bin16
+            0xc5 => {
+                if bytes.len() < 3 {
+                    return None;
+                }
+                let len = u16::from_be_bytes([bytes[1], bytes[2]]) as usize;
+                Self::decode_binary(bytes, offset, len, 3, "bin16")
+            }
+
+            // bin32
+            0xc6 => {
+                if bytes.len() < 5 {
+                    return None;
+                }
+                let len = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+                Self::decode_binary(bytes, offset, len, 5, "bin32")
+            }
+
+            // ext8, ext16, ext32 (0xc7-0xc9) - skip for now
+            0xc7..=0xc9 => None,
+
+            // float32
+            0xca => {
+                if bytes.len() < 5 {
+                    return None;
+                }
+                let v = f32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+                let value = serde_json::Number::from_f64(v as f64)
+                    .map(serde_json::Value::Number)
+                    .unwrap_or(serde_json::Value::Null);
+                Some(DecodedValue {
+                    value,
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 5,
+                        bytes: bytes[..5].to_vec(),
+                        segment_type: "float32".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 5,
+                })
+            }
+
+            // float64
+            0xcb => {
+                if bytes.len() < 9 {
+                    return None;
+                }
+                let v = f64::from_be_bytes([
+                    bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8],
+                ]);
+                let value = serde_json::Number::from_f64(v)
+                    .map(serde_json::Value::Number)
+                    .unwrap_or(serde_json::Value::Null);
+                Some(DecodedValue {
+                    value,
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 9,
+                        bytes: bytes[..9].to_vec(),
+                        segment_type: "float64".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 9,
+                })
+            }
+
+            // uint8
+            0xcc => {
+                if bytes.len() < 2 {
+                    return None;
+                }
+                let v = bytes[1];
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 2,
+                        bytes: bytes[..2].to_vec(),
+                        segment_type: "uint8".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 2,
+                })
+            }
+
+            // uint16
+            0xcd => {
+                if bytes.len() < 3 {
+                    return None;
+                }
+                let v = u16::from_be_bytes([bytes[1], bytes[2]]);
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 3,
+                        bytes: bytes[..3].to_vec(),
+                        segment_type: "uint16".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 3,
+                })
+            }
+
+            // uint32
+            0xce => {
+                if bytes.len() < 5 {
+                    return None;
+                }
+                let v = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 5,
+                        bytes: bytes[..5].to_vec(),
+                        segment_type: "uint32".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 5,
+                })
+            }
+
+            // uint64
+            0xcf => {
+                if bytes.len() < 9 {
+                    return None;
+                }
+                let v = u64::from_be_bytes([
+                    bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8],
+                ]);
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 9,
+                        bytes: bytes[..9].to_vec(),
+                        segment_type: "uint64".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 9,
+                })
+            }
+
+            // int8
+            0xd0 => {
+                if bytes.len() < 2 {
+                    return None;
+                }
+                let v = bytes[1] as i8;
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 2,
+                        bytes: bytes[..2].to_vec(),
+                        segment_type: "int8".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 2,
+                })
+            }
+
+            // int16
+            0xd1 => {
+                if bytes.len() < 3 {
+                    return None;
+                }
+                let v = i16::from_be_bytes([bytes[1], bytes[2]]);
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 3,
+                        bytes: bytes[..3].to_vec(),
+                        segment_type: "int16".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 3,
+                })
+            }
+
+            // int32
+            0xd2 => {
+                if bytes.len() < 5 {
+                    return None;
+                }
+                let v = i32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]);
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 5,
+                        bytes: bytes[..5].to_vec(),
+                        segment_type: "int32".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 5,
+                })
+            }
+
+            // int64
+            0xd3 => {
+                if bytes.len() < 9 {
+                    return None;
+                }
+                let v = i64::from_be_bytes([
+                    bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8],
+                ]);
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 9,
+                        bytes: bytes[..9].to_vec(),
+                        segment_type: "int64".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 9,
+                })
+            }
+
+            // fixext1-fixext16 (0xd4-0xd8) - skip for now
+            0xd4..=0xd8 => None,
+
+            // str8
+            0xd9 => {
+                if bytes.len() < 2 {
+                    return None;
+                }
+                let len = bytes[1] as usize;
+                Self::decode_string(bytes, offset, len, 2, "str8")
+            }
+
+            // str16
+            0xda => {
+                if bytes.len() < 3 {
+                    return None;
+                }
+                let len = u16::from_be_bytes([bytes[1], bytes[2]]) as usize;
+                Self::decode_string(bytes, offset, len, 3, "str16")
+            }
+
+            // str32
+            0xdb => {
+                if bytes.len() < 5 {
+                    return None;
+                }
+                let len = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+                Self::decode_string(bytes, offset, len, 5, "str32")
+            }
+
+            // array16
+            0xdc => {
+                if bytes.len() < 3 {
+                    return None;
+                }
+                let count = u16::from_be_bytes([bytes[1], bytes[2]]) as usize;
+                Self::decode_array(bytes, offset, count, 3, "array16")
+            }
+
+            // array32
+            0xdd => {
+                if bytes.len() < 5 {
+                    return None;
+                }
+                let count = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+                Self::decode_array(bytes, offset, count, 5, "array32")
+            }
+
+            // map16
+            0xde => {
+                if bytes.len() < 3 {
+                    return None;
+                }
+                let count = u16::from_be_bytes([bytes[1], bytes[2]]) as usize;
+                Self::decode_map(bytes, offset, count, 3, "map16")
+            }
+
+            // map32
+            0xdf => {
+                if bytes.len() < 5 {
+                    return None;
+                }
+                let count = u32::from_be_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+                Self::decode_map(bytes, offset, count, 5, "map32")
+            }
+
+            // Negative fixint (0xe0 - 0xff)
+            0xe0..=0xff => {
+                let v = format_byte as i8;
+                Some(DecodedValue {
+                    value: serde_json::Value::Number(v.into()),
+                    segments: vec![PacketSegment {
+                        offset,
+                        length: 1,
+                        bytes: vec![format_byte],
+                        segment_type: "fixint".to_string(),
+                        label: format!("{}", v),
+                        decoded: format!("{}", v),
+                        children: vec![],
+                    }],
+                    bytes_consumed: 1,
+                })
+            }
+        }
+    }
+
+    /// Decode a string value.
+    fn decode_string(
+        bytes: &[u8],
+        offset: usize,
+        len: usize,
+        header_len: usize,
+        type_name: &str,
+    ) -> Option<DecodedValue> {
+        let total_len = header_len + len;
+        if bytes.len() < total_len {
+            return None;
+        }
+
+        let str_bytes = &bytes[header_len..total_len];
+        let s = std::str::from_utf8(str_bytes).ok()?;
+
+        let header_bytes = bytes[..header_len].to_vec();
+        let decoded_str = format!("\"{}\"", s);
+
+        Some(DecodedValue {
+            value: serde_json::Value::String(s.to_string()),
+            segments: vec![PacketSegment {
+                offset,
+                length: header_len,
+                bytes: header_bytes,
+                segment_type: type_name.to_string(),
+                label: format!("str{}", Self::subscript(len)),
+                decoded: decoded_str.clone(),
+                children: vec![PacketSegment {
+                    offset: offset + header_len,
+                    length: len,
+                    bytes: str_bytes.to_vec(),
+                    segment_type: "string".to_string(),
+                    label: decoded_str.clone(),
+                    decoded: decoded_str,
+                    children: vec![],
+                }],
+            }],
+            bytes_consumed: total_len,
+        })
+    }
+
+    /// Decode a binary value.
+    fn decode_binary(
+        bytes: &[u8],
+        offset: usize,
+        len: usize,
+        header_len: usize,
+        type_name: &str,
+    ) -> Option<DecodedValue> {
+        let total_len = header_len + len;
+        if bytes.len() < total_len {
+            return None;
+        }
+
+        let bin_bytes = bytes[header_len..total_len].to_vec();
+        let header_bytes = bytes[..header_len].to_vec();
+
+        // Encode as base64 for JSON compatibility
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        let b64 = STANDARD.encode(&bin_bytes);
+
+        let decoded = if len <= 16 {
+            let hex: String = bin_bytes.iter().map(|b| format!("{:02x}", b)).collect();
+            format!("bytes[{}]: {}", len, hex)
+        } else {
+            format!("bytes[{}]", len)
+        };
+
+        Some(DecodedValue {
+            value: serde_json::Value::String(b64),
+            segments: vec![PacketSegment {
+                offset,
+                length: header_len,
+                bytes: header_bytes,
+                segment_type: type_name.to_string(),
+                label: format!("bin{}", Self::subscript(len)),
+                decoded: decoded.clone(),
+                children: vec![PacketSegment {
+                    offset: offset + header_len,
+                    length: len,
+                    bytes: bin_bytes,
+                    segment_type: "binary".to_string(),
+                    label: decoded.clone(),
+                    decoded,
+                    children: vec![],
+                }],
+            }],
+            bytes_consumed: total_len,
+        })
+    }
+
+    /// Decode an array value.
+    fn decode_array(
+        bytes: &[u8],
+        offset: usize,
+        count: usize,
+        header_len: usize,
+        type_name: &str,
+    ) -> Option<DecodedValue> {
+        let header_bytes = bytes[..header_len].to_vec();
+        let mut pos = header_len;
+        let mut items = Vec::new();
+        let mut child_segments = Vec::new();
+
+        for _ in 0..count {
+            if pos >= bytes.len() {
+                return None;
+            }
+            let decoded = Self::decode_value(&bytes[pos..], offset + pos)?;
+            items.push(decoded.value);
+            child_segments.extend(decoded.segments);
+            pos += decoded.bytes_consumed;
+        }
+
+        Some(DecodedValue {
+            value: serde_json::Value::Array(items),
+            segments: vec![PacketSegment {
+                offset,
+                length: header_len,
+                bytes: header_bytes,
+                segment_type: type_name.to_string(),
+                label: format!("arr{}", Self::subscript(count)),
+                decoded: format!("[{}]", count),
+                children: child_segments,
+            }],
+            bytes_consumed: pos,
+        })
+    }
+
+    /// Decode a map value.
+    fn decode_map(
+        bytes: &[u8],
+        offset: usize,
+        count: usize,
+        header_len: usize,
+        type_name: &str,
+    ) -> Option<DecodedValue> {
+        let header_bytes = bytes[..header_len].to_vec();
+        let mut pos = header_len;
+        let mut map = serde_json::Map::new();
+        let mut child_segments = Vec::new();
+
+        for _ in 0..count {
+            if pos >= bytes.len() {
+                return None;
+            }
+
+            // Decode key
+            let key_decoded = Self::decode_value(&bytes[pos..], offset + pos)?;
+            let key = match &key_decoded.value {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+            child_segments.extend(key_decoded.segments);
+            pos += key_decoded.bytes_consumed;
+
+            // Decode value
+            if pos >= bytes.len() {
+                return None;
+            }
+            let val_decoded = Self::decode_value(&bytes[pos..], offset + pos)?;
+            map.insert(key, val_decoded.value);
+            child_segments.extend(val_decoded.segments);
+            pos += val_decoded.bytes_consumed;
+        }
+
+        Some(DecodedValue {
+            value: serde_json::Value::Object(map),
+            segments: vec![PacketSegment {
+                offset,
+                length: header_len,
+                bytes: header_bytes,
+                segment_type: type_name.to_string(),
+                label: format!("map{}", Self::subscript(count)),
+                decoded: format!("{{{}}}", count),
+                children: child_segments,
+            }],
+            bytes_consumed: pos,
+        })
+    }
+
+    /// Format segments in compact inline style.
+    fn format_compact(segments: &[PacketSegment]) -> String {
+        Self::format_compact_recursive(segments)
+    }
+
+    fn format_compact_recursive(segments: &[PacketSegment]) -> String {
+        let mut parts = Vec::new();
+
+        for seg in segments {
+            let hex: String = seg
+                .bytes
+                .iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            parts.push(format!("[{}:{}]", hex, seg.label));
+
+            // Add children
+            if !seg.children.is_empty() {
+                parts.push(Self::format_compact_recursive(&seg.children));
+            }
+        }
+
+        parts.join("")
+    }
+
+    /// Format segments as detailed table.
+    fn format_detailed(segments: &[PacketSegment]) -> String {
+        let mut lines = vec![
+            "Offset  Len  Field       Type      Value".to_string(),
+            "------  ---  ----------  --------  -----".to_string(),
+        ];
+
+        Self::format_detailed_recursive(segments, &mut lines, 0);
+
+        lines.join("\n")
+    }
+
+    fn format_detailed_recursive(
+        segments: &[PacketSegment],
+        lines: &mut Vec<String>,
+        depth: usize,
+    ) {
+        let indent = "  ".repeat(depth);
+        let max_label_len = 10_usize.saturating_sub(depth * 2);
+
+        for seg in segments {
+            let decoded = if seg.decoded.len() > 25 {
+                format!("{}...", &seg.decoded[..22])
+            } else {
+                seg.decoded.clone()
+            };
+
+            let label = if seg.label.len() > max_label_len {
+                format!("{}...", &seg.label[..max_label_len.saturating_sub(3)])
+            } else {
+                seg.label.clone()
+            };
+
+            lines.push(format!(
+                "0x{:04X}  {:3}  {}{:<width$}  {:8}  {}",
+                seg.offset,
+                seg.length,
+                indent,
+                label,
+                seg.segment_type,
+                decoded,
+                width = max_label_len
+            ));
+
+            // Recurse into children
+            if !seg.children.is_empty() {
+                Self::format_detailed_recursive(&seg.children, lines, depth + 1);
+            }
+        }
+    }
+
+    /// Convert a number to subscript unicode characters.
+    fn subscript(n: usize) -> String {
+        const SUBSCRIPTS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+        n.to_string()
+            .chars()
+            .map(|c| {
+                if let Some(d) = c.to_digit(10) {
+                    SUBSCRIPTS[d as usize]
+                } else {
+                    c
+                }
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -176,5 +912,63 @@ mod tests {
 
         let decoded: serde_json::Value = rmp_serde::from_slice(&bytes).unwrap();
         assert_eq!(decoded["key"], 42);
+    }
+
+    #[test]
+    fn test_decode_fixarray() {
+        // fixarray with 3 elements: [1, 2, 3]
+        // 93 = fixarray with 3 elements
+        // 01, 02, 03 = fixint 1, 2, 3
+        let bytes = vec![0x93, 0x01, 0x02, 0x03];
+        let decoded = MsgPackFormat::decode_with_offsets(&bytes).unwrap();
+
+        assert_eq!(decoded.bytes_consumed, 4);
+        assert_eq!(decoded.value, serde_json::json!([1, 2, 3]));
+        assert_eq!(decoded.segments.len(), 1);
+        assert_eq!(decoded.segments[0].segment_type, "fixarray");
+        assert_eq!(decoded.segments[0].children.len(), 3);
+    }
+
+    #[test]
+    fn test_decode_fixmap() {
+        // fixmap with 1 entry: {"key": 42}
+        // 81 = fixmap with 1 entry
+        // a3 6b 65 79 = fixstr "key"
+        // 2a = fixint 42
+        let bytes = vec![0x81, 0xa3, 0x6b, 0x65, 0x79, 0x2a];
+        let decoded = MsgPackFormat::decode_with_offsets(&bytes).unwrap();
+
+        assert_eq!(decoded.bytes_consumed, 6);
+        assert_eq!(decoded.value, serde_json::json!({"key": 42}));
+        assert_eq!(decoded.segments.len(), 1);
+        assert_eq!(decoded.segments[0].segment_type, "fixmap");
+    }
+
+    #[test]
+    fn test_packet_layout_metadata() {
+        let format = MsgPackFormat;
+
+        // fixarray [1, 2, 3]
+        let bytes = vec![0x93, 0x01, 0x02, 0x03];
+        let value = CoreValue::Bytes(bytes);
+        let conversions = format.conversions(&value);
+
+        assert_eq!(conversions.len(), 1);
+
+        // Check that metadata contains PacketLayout
+        let metadata = conversions[0].metadata.as_ref().unwrap();
+        if let ConversionMetadata::PacketLayout {
+            segments,
+            compact,
+            detailed,
+        } = metadata
+        {
+            assert_eq!(segments.len(), 1);
+            assert!(compact.contains("arr₃"));
+            assert!(detailed.contains("Offset"));
+            assert!(detailed.contains("fixarray"));
+        } else {
+            panic!("Expected PacketLayout metadata");
+        }
     }
 }

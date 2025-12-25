@@ -9,7 +9,19 @@
 //! - Punctuation: white/default
 
 use colored::{Color, Colorize};
-use formatorbit_core::{ProtoField, ProtoValue};
+use formatorbit_core::{PacketSegment, ProtoField, ProtoValue};
+
+/// Packet layout display mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PacketMode {
+    /// Don't show packet layout.
+    #[default]
+    None,
+    /// Compact inline format: [08:tag₁][96 01:150]...
+    Compact,
+    /// Detailed table format with offset/length columns.
+    Detailed,
+}
 
 /// Configuration for pretty printing.
 #[derive(Debug, Clone, Copy)]
@@ -20,6 +32,8 @@ pub struct PrettyConfig {
     pub indent: &'static str,
     /// Compact mode (single line, no extra whitespace).
     pub compact: bool,
+    /// Packet layout mode for binary formats.
+    pub packet_mode: PacketMode,
 }
 
 impl Default for PrettyConfig {
@@ -28,6 +42,7 @@ impl Default for PrettyConfig {
             color: true,
             indent: "  ",
             compact: false,
+            packet_mode: PacketMode::None,
         }
     }
 }
@@ -364,6 +379,111 @@ fn wire_type_name(wire_type: u8) -> &'static str {
 /// Decode zigzag-encoded signed integer.
 fn decode_zigzag(n: u64) -> i64 {
     ((n >> 1) as i64) ^ (-((n & 1) as i64))
+}
+
+/// Pretty-print packet layout in compact mode.
+pub fn pretty_packet_compact(segments: &[PacketSegment], config: &PrettyConfig) -> String {
+    let mut output = String::new();
+    format_packet_compact(segments, config, &mut output);
+    output
+}
+
+fn format_packet_compact(segments: &[PacketSegment], config: &PrettyConfig, output: &mut String) {
+    for seg in segments {
+        let hex: String = seg
+            .bytes
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        output.push('[');
+        output.push_str(&colorize(&hex, Color::Magenta, config.color));
+        output.push(':');
+        output.push_str(&colorize(&seg.label, Color::Cyan, config.color));
+        output.push(']');
+
+        // Recurse into children
+        if !seg.children.is_empty() {
+            format_packet_compact(&seg.children, config, output);
+        }
+    }
+}
+
+/// Pretty-print packet layout in detailed table mode.
+pub fn pretty_packet_detailed(segments: &[PacketSegment], config: &PrettyConfig) -> String {
+    let mut lines = Vec::new();
+
+    // Header
+    lines.push(format!(
+        "{}  {}  {}  {}   {}",
+        colorize("Offset", Color::BrightBlack, config.color),
+        colorize("Len", Color::BrightBlack, config.color),
+        colorize("Field     ", Color::BrightBlack, config.color),
+        colorize("Type  ", Color::BrightBlack, config.color),
+        colorize("Value", Color::BrightBlack, config.color),
+    ));
+    lines.push(colorize(
+        "------  ---  ----------  ------   -----",
+        Color::BrightBlack,
+        config.color,
+    ));
+
+    format_packet_detailed_recursive(segments, config, &mut lines, 0);
+
+    lines.join("\n")
+}
+
+fn format_packet_detailed_recursive(
+    segments: &[PacketSegment],
+    config: &PrettyConfig,
+    lines: &mut Vec<String>,
+    depth: usize,
+) {
+    let indent = "  ".repeat(depth);
+    let max_label_len = 10_usize.saturating_sub(depth * 2);
+
+    for seg in segments {
+        let decoded = if seg.decoded.len() > 25 {
+            format!("{}...", &seg.decoded[..22])
+        } else {
+            seg.decoded.clone()
+        };
+
+        let label = if seg.label.len() > max_label_len {
+            format!("{}...", &seg.label[..max_label_len.saturating_sub(3)])
+        } else {
+            seg.label.clone()
+        };
+
+        let offset_str = colorize(
+            &format!("0x{:04X}", seg.offset),
+            Color::Yellow,
+            config.color,
+        );
+        let len_str = colorize(&format!("{:3}", seg.length), Color::Cyan, config.color);
+        let label_str = colorize(
+            &format!("{}{:<width$}", indent, label, width = max_label_len),
+            Color::Blue,
+            config.color,
+        );
+        let type_str = colorize(
+            &format!("{:6}", seg.segment_type),
+            Color::BrightBlack,
+            config.color,
+        );
+        let decoded_str = colorize(&decoded, Color::Green, config.color);
+
+        lines.push(format!(
+            "{}  {}  {}  {}   {}",
+            offset_str, len_str, label_str, type_str, decoded_str
+        ));
+
+        // Recurse into children
+        if !seg.children.is_empty() {
+            format_packet_detailed_recursive(&seg.children, config, lines, depth + 1);
+        }
+    }
 }
 
 #[cfg(test)]

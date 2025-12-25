@@ -6,8 +6,9 @@
 use std::io::{self, BufRead, Write};
 
 use colored::Colorize;
-use formatorbit_core::{ConversionResult, Formatorbit};
+use formatorbit_core::{ConversionMetadata, ConversionResult, Formatorbit};
 
+use crate::pretty::{self, PacketMode, PrettyConfig};
 use crate::tokenizer::{is_interesting_candidate, tokenize, Token};
 
 /// Configuration for pipe mode.
@@ -22,6 +23,8 @@ pub struct PipeModeConfig {
     pub json: bool,
     /// Filter to specific formats (empty = all formats)
     pub format_filter: Vec<String>,
+    /// Packet layout mode for binary formats
+    pub packet_mode: PacketMode,
 }
 
 /// A token with its interpretation results.
@@ -101,7 +104,7 @@ fn print_line_result(
 
     // Print annotations below interesting tokens
     for annotated in annotations {
-        print_annotation(out, annotated)?;
+        print_annotation(out, annotated, config)?;
     }
 
     Ok(())
@@ -144,7 +147,11 @@ fn print_highlighted_line(
 }
 
 /// Print annotation for a token.
-fn print_annotation(out: &mut impl Write, annotated: &AnnotatedToken) -> io::Result<()> {
+fn print_annotation(
+    out: &mut impl Write,
+    annotated: &AnnotatedToken,
+    config: &PipeModeConfig,
+) -> io::Result<()> {
     let interp = &annotated.result.interpretation;
 
     // Calculate indentation to align with token position
@@ -156,7 +163,33 @@ fn print_annotation(out: &mut impl Write, annotated: &AnnotatedToken) -> io::Res
         .conversions
         .iter()
         .take(3)
-        .map(|c| format!("{}: {}", c.target_format.yellow(), c.display))
+        .map(|c| {
+            // Check if we should use packet layout for this conversion
+            let display = if config.packet_mode != PacketMode::None {
+                if let Some(ConversionMetadata::PacketLayout { segments, .. }) = &c.metadata {
+                    let pretty_config = PrettyConfig {
+                        color: true,
+                        indent: "  ",
+                        compact: false,
+                        packet_mode: config.packet_mode,
+                    };
+                    match config.packet_mode {
+                        PacketMode::Compact => {
+                            pretty::pretty_packet_compact(segments, &pretty_config)
+                        }
+                        PacketMode::Detailed => {
+                            pretty::pretty_packet_detailed(segments, &pretty_config)
+                        }
+                        PacketMode::None => c.display.clone(),
+                    }
+                } else {
+                    c.display.clone()
+                }
+            } else {
+                c.display.clone()
+            };
+            format!("{}: {}", c.target_format.yellow(), display)
+        })
         .collect();
 
     let conversions_str = if conv_summary.is_empty() {

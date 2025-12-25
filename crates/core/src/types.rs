@@ -66,6 +66,29 @@ pub enum ProtoValue {
     Message(Vec<ProtoField>),
 }
 
+/// A segment within a binary packet layout.
+///
+/// Used for byte-level visualization of binary formats like protobuf and msgpack.
+/// Each segment represents a contiguous range of bytes with a specific meaning.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PacketSegment {
+    /// Byte offset from start of packet (0-indexed).
+    pub offset: usize,
+    /// Length in bytes.
+    pub length: usize,
+    /// Raw bytes for this segment.
+    pub bytes: Vec<u8>,
+    /// Segment type (e.g., "tag", "varint", "len", "string", "fixint", "fixmap").
+    pub segment_type: String,
+    /// Human-readable label (e.g., "tag₁", "field 1", "len=7").
+    pub label: String,
+    /// Decoded value as string (e.g., "150", "testing").
+    pub decoded: String,
+    /// Nested segments (for embedded messages/structures).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<PacketSegment>,
+}
+
 impl CoreValue {
     /// Returns the type name as a string.
     #[must_use]
@@ -156,6 +179,21 @@ pub enum ConversionMetadata {
         bytes: u64,
         /// Human-readable size, e.g. "15.94 MiB"
         human: String,
+    },
+
+    /// Packet layout with byte-level structure visualization.
+    ///
+    /// Used for binary formats like protobuf and msgpack to show
+    /// exactly how bytes are structured.
+    PacketLayout {
+        /// Ordered list of segments comprising the packet.
+        segments: Vec<PacketSegment>,
+        /// Pre-formatted compact display (inline horizontal style).
+        /// Example: `[08:tag₁][96 01:varint=150][12:tag₂]...`
+        compact: String,
+        /// Pre-formatted detailed display (vertical table style).
+        /// Multi-line table with columns: Offset, Len, Field, Type, Value
+        detailed: String,
     },
 }
 

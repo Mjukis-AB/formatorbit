@@ -6,9 +6,9 @@ use std::io::IsTerminal;
 
 use clap::Parser;
 use colored::{control::set_override, Colorize};
-use formatorbit_core::{CoreValue, Formatorbit};
+use formatorbit_core::{ConversionMetadata, CoreValue, Formatorbit};
 
-use crate::pretty::PrettyConfig;
+use crate::pretty::{PacketMode, PrettyConfig};
 
 const LONG_ABOUT: &str = r##"
 Formatorbit automatically detects and converts data between formats.
@@ -141,6 +141,13 @@ struct Cli {
     /// Output conversion graph in Mermaid format (renders in GitHub/GitLab)
     #[arg(long)]
     mermaid: bool,
+
+    /// Show packet layout for binary formats (protobuf, msgpack)
+    ///
+    /// Displays byte-level structure with offsets, lengths, and decoded values.
+    /// Use --packet=compact for inline horizontal format or --packet=detailed for table format.
+    #[arg(long, short = 'p', value_name = "MODE", num_args = 0..=1, default_missing_value = "compact")]
+    packet: Option<String>,
 }
 
 fn print_formats() {
@@ -241,6 +248,21 @@ fn main() {
 
     let forb = Formatorbit::new();
 
+    // Parse packet mode early (needed for both pipe and direct mode)
+    let packet_mode = match cli.packet.as_deref() {
+        Some("compact") | Some("c") | Some("") => PacketMode::Compact,
+        Some("detailed") | Some("detail") | Some("d") | Some("table") => PacketMode::Detailed,
+        Some(other) => {
+            eprintln!(
+                "{}: Unknown packet mode '{}'. Use 'compact' or 'detailed'.",
+                "error".red().bold(),
+                other
+            );
+            std::process::exit(1);
+        }
+        None => PacketMode::None,
+    };
+
     // Check if we should run in pipe mode
     // Only use pipe mode if stdin is not a terminal AND no direct input was given
     let stdin_is_pipe = !std::io::stdin().is_terminal();
@@ -250,7 +272,8 @@ fn main() {
             highlight: cli.highlight,
             max_tokens: cli.max_tokens,
             json: cli.json,
-            format_filter: cli.only.unwrap_or_default(),
+            format_filter: cli.only.clone().unwrap_or_default(),
+            packet_mode,
         };
 
         if let Err(e) = pipe::run_pipe_mode(&forb, &config) {
@@ -290,6 +313,7 @@ fn main() {
         color: !cli.no_color,
         indent: "  ",
         compact: cli.compact,
+        packet_mode,
     };
 
     // Get results - either forced format or auto-detect
@@ -359,7 +383,12 @@ fn main() {
             };
 
             for conv in conversions_to_show {
-                let display = format_conversion_display(&conv.value, &conv.display, &pretty_config);
+                let display = format_conversion_display(
+                    &conv.value,
+                    &conv.display,
+                    conv.metadata.as_ref(),
+                    &pretty_config,
+                );
                 println!("{}", display);
             }
         }
@@ -394,8 +423,13 @@ fn main() {
                     String::new()
                 };
 
-                // Pretty-print JSON values
-                let display = format_conversion_display(&conv.value, &conv.display, &pretty_config);
+                // Pretty-print JSON values (and packet layout if enabled)
+                let display = format_conversion_display(
+                    &conv.value,
+                    &conv.display,
+                    conv.metadata.as_ref(),
+                    &pretty_config,
+                );
 
                 // Indent multi-line output
                 let display_lines: Vec<&str> = display.lines().collect();
@@ -441,8 +475,20 @@ fn main() {
 fn format_conversion_display(
     value: &CoreValue,
     original_display: &str,
+    metadata: Option<&ConversionMetadata>,
     config: &PrettyConfig,
 ) -> String {
+    // If packet mode is enabled and we have PacketLayout metadata, show that
+    if config.packet_mode != PacketMode::None {
+        if let Some(ConversionMetadata::PacketLayout { segments, .. }) = metadata {
+            return match config.packet_mode {
+                PacketMode::Compact => pretty::pretty_packet_compact(segments, config),
+                PacketMode::Detailed => pretty::pretty_packet_detailed(segments, config),
+                PacketMode::None => unreachable!(),
+            };
+        }
+    }
+
     match value {
         CoreValue::Json(json) => {
             // Pretty-print JSON with colors
