@@ -1,7 +1,7 @@
 //! Color format (hex RGB/RGBA/ARGB).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
 
 /// Represents a parsed color with RGBA components.
 #[derive(Debug, Clone, Copy)]
@@ -15,6 +15,181 @@ struct Rgba {
 pub struct ColorFormat;
 
 impl ColorFormat {
+    /// Parse rgb(r, g, b) or rgba(r, g, b, a) CSS function.
+    fn parse_rgb_function(s: &str) -> Option<(Rgba, &'static str)> {
+        let trimmed = s.trim();
+
+        // Try rgba() first
+        if let Some(inner) = trimmed
+            .strip_prefix("rgba(")
+            .and_then(|s| s.strip_suffix(')'))
+        {
+            let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
+            if parts.len() == 4 {
+                let r = parts[0].parse::<u8>().ok()?;
+                let g = parts[1].parse::<u8>().ok()?;
+                let b = parts[2].parse::<u8>().ok()?;
+                // Alpha can be 0-1 float or 0-255 int
+                let a = Self::parse_alpha(parts[3])?;
+                return Some((
+                    Rgba {
+                        r,
+                        g,
+                        b,
+                        a: Some(a),
+                    },
+                    "rgba()",
+                ));
+            }
+        }
+
+        // Try rgb()
+        if let Some(inner) = trimmed
+            .strip_prefix("rgb(")
+            .and_then(|s| s.strip_suffix(')'))
+        {
+            let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
+            if parts.len() == 3 {
+                let r = parts[0].parse::<u8>().ok()?;
+                let g = parts[1].parse::<u8>().ok()?;
+                let b = parts[2].parse::<u8>().ok()?;
+                return Some((Rgba { r, g, b, a: None }, "rgb()"));
+            }
+        }
+
+        None
+    }
+
+    /// Parse hsl(h, s%, l%) or hsla(h, s%, l%, a) CSS function.
+    fn parse_hsl_function(s: &str) -> Option<(Rgba, &'static str)> {
+        let trimmed = s.trim();
+
+        // Try hsla() first
+        if let Some(inner) = trimmed
+            .strip_prefix("hsla(")
+            .and_then(|s| s.strip_suffix(')'))
+        {
+            let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
+            if parts.len() == 4 {
+                let h = Self::parse_hue(parts[0])?;
+                let s = Self::parse_percent(parts[1])?;
+                let l = Self::parse_percent(parts[2])?;
+                let a = Self::parse_alpha(parts[3])?;
+                let (r, g, b) = Self::hsl_to_rgb(h, s, l);
+                return Some((
+                    Rgba {
+                        r,
+                        g,
+                        b,
+                        a: Some(a),
+                    },
+                    "hsla()",
+                ));
+            }
+        }
+
+        // Try hsl()
+        if let Some(inner) = trimmed
+            .strip_prefix("hsl(")
+            .and_then(|s| s.strip_suffix(')'))
+        {
+            let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
+            if parts.len() == 3 {
+                let h = Self::parse_hue(parts[0])?;
+                let s = Self::parse_percent(parts[1])?;
+                let l = Self::parse_percent(parts[2])?;
+                let (r, g, b) = Self::hsl_to_rgb(h, s, l);
+                return Some((Rgba { r, g, b, a: None }, "hsl()"));
+            }
+        }
+
+        None
+    }
+
+    /// Parse hue value (0-360, with optional "deg" suffix).
+    fn parse_hue(s: &str) -> Option<f64> {
+        let s = s.strip_suffix("deg").unwrap_or(s).trim();
+        let h: f64 = s.parse().ok()?;
+        if (0.0..=360.0).contains(&h) {
+            Some(h)
+        } else {
+            None
+        }
+    }
+
+    /// Parse percentage value (0-100, with optional "%" suffix).
+    fn parse_percent(s: &str) -> Option<f64> {
+        let s = s.strip_suffix('%').unwrap_or(s).trim();
+        let p: f64 = s.parse().ok()?;
+        if (0.0..=100.0).contains(&p) {
+            Some(p)
+        } else {
+            None
+        }
+    }
+
+    /// Parse alpha value (0-1 float or 0-255 int or percentage).
+    fn parse_alpha(s: &str) -> Option<u8> {
+        let s = s.trim();
+        // Try percentage first
+        if let Some(p) = s.strip_suffix('%') {
+            let pct: f64 = p.trim().parse().ok()?;
+            return Some((pct / 100.0 * 255.0) as u8);
+        }
+        // Try float (0-1)
+        if let Ok(f) = s.parse::<f64>() {
+            if (0.0..=1.0).contains(&f) {
+                return Some((f * 255.0) as u8);
+            }
+        }
+        // Try int (0-255)
+        s.parse::<u8>().ok()
+    }
+
+    /// Convert HSL to RGB.
+    fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8) {
+        let s = s / 100.0;
+        let l = l / 100.0;
+
+        if s == 0.0 {
+            let v = (l * 255.0) as u8;
+            return (v, v, v);
+        }
+
+        let q = if l < 0.5 {
+            l * (1.0 + s)
+        } else {
+            l + s - l * s
+        };
+        let p = 2.0 * l - q;
+        let h = h / 360.0;
+
+        let r = Self::hue_to_rgb(p, q, h + 1.0 / 3.0);
+        let g = Self::hue_to_rgb(p, q, h);
+        let b = Self::hue_to_rgb(p, q, h - 1.0 / 3.0);
+
+        ((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
+    }
+
+    fn hue_to_rgb(p: f64, q: f64, mut t: f64) -> f64 {
+        if t < 0.0 {
+            t += 1.0;
+        }
+        if t > 1.0 {
+            t -= 1.0;
+        }
+        if t < 1.0 / 6.0 {
+            return p + (q - p) * 6.0 * t;
+        }
+        if t < 1.0 / 2.0 {
+            return q;
+        }
+        if t < 2.0 / 3.0 {
+            return p + (q - p) * (2.0 / 3.0 - t) * 6.0;
+        }
+        p
+    }
+
     /// Parse a hex color string like #RGB, #RRGGBB, #RRGGBBAA, or #AARRGGBB.
     fn parse_hex_color(s: &str) -> Option<(Rgba, &'static str)> {
         let hex = s.strip_prefix('#').unwrap_or(s);
@@ -86,7 +261,12 @@ impl ColorFormat {
         }
     }
 
-    fn make_interpretation(rgba: Rgba, format_hint: &str, high_confidence: bool) -> Interpretation {
+    fn make_interpretation(
+        rgba: Rgba,
+        format_hint: &str,
+        high_confidence: bool,
+        source_format: &str,
+    ) -> Interpretation {
         let Rgba { r, g, b, a } = rgba;
         let bytes = if let Some(alpha) = a {
             vec![r, g, b, alpha]
@@ -104,7 +284,7 @@ impl ColorFormat {
 
         Interpretation {
             value: CoreValue::Bytes(bytes),
-            source_format: "color-hex".to_string(),
+            source_format: source_format.to_string(),
             confidence: if high_confidence { 0.95 } else { 0.6 },
             description,
         }
@@ -157,8 +337,13 @@ impl Format for ColorFormat {
             id: self.id(),
             name: self.name(),
             category: "Colors",
-            description: "Color parsing (hex, RGB, ARGB) with HSL conversion",
-            examples: &["#FF5733", "#F00", "#FF573380", "0x80FF5733"],
+            description: "Color parsing (hex, rgb(), hsl()) with conversions",
+            examples: &[
+                "#FF5733",
+                "rgb(255, 87, 51)",
+                "hsl(120, 100%, 50%)",
+                "rgba(255, 128, 0, 0.5)",
+            ],
             aliases: self.aliases(),
         }
     }
@@ -170,12 +355,38 @@ impl Format for ColorFormat {
                 rgba,
                 format_hint,
                 input.starts_with('#'),
+                "color-hex",
             )];
         }
 
         // Try 0xRRGGBB / 0xAARRGGBB (Android style)
         if let Some((rgba, format_hint)) = Self::parse_0x_color(input) {
-            return vec![Self::make_interpretation(rgba, format_hint, true)];
+            return vec![Self::make_interpretation(
+                rgba,
+                format_hint,
+                true,
+                "color-hex",
+            )];
+        }
+
+        // Try rgb() / rgba()
+        if let Some((rgba, format_hint)) = Self::parse_rgb_function(input) {
+            return vec![Self::make_interpretation(
+                rgba,
+                format_hint,
+                true,
+                "color-rgb",
+            )];
+        }
+
+        // Try hsl() / hsla()
+        if let Some((rgba, format_hint)) = Self::parse_hsl_function(input) {
+            return vec![Self::make_interpretation(
+                rgba,
+                format_hint,
+                true,
+                "color-hsl",
+            )];
         }
 
         vec![]
@@ -191,12 +402,94 @@ impl Format for ColorFormat {
         None
     }
 
-    // Note: No conversions() either - color info is shown in parse description.
-    // We don't want arbitrary 3-4 byte values (like IPs or small hex) to show color conversions.
-    // Color conversions are only meaningful when the input was actually parsed as a color.
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        // Only convert 3 or 4 byte values (RGB or RGBA)
+        let CoreValue::Bytes(bytes) = value else {
+            return vec![];
+        };
+
+        if bytes.len() != 3 && bytes.len() != 4 {
+            return vec![];
+        }
+
+        let r = bytes[0];
+        let g = bytes[1];
+        let b = bytes[2];
+        let a = bytes.get(3).copied();
+
+        let mut conversions = Vec::new();
+
+        // Hex format
+        let hex_display = if let Some(alpha) = a {
+            format!("#{:02X}{:02X}{:02X}{:02X}", r, g, b, alpha)
+        } else {
+            format!("#{:02X}{:02X}{:02X}", r, g, b)
+        };
+        conversions.push(Conversion {
+            value: CoreValue::String(hex_display.clone()),
+            target_format: "color-hex".to_string(),
+            display: hex_display.clone(),
+            path: vec!["color-hex".to_string()],
+            steps: vec![ConversionStep {
+                format: "color-hex".to_string(),
+                value: CoreValue::String(hex_display.clone()),
+                display: hex_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // rgb()/rgba() format
+        let rgb_display = if let Some(alpha) = a {
+            let alpha_f = alpha as f64 / 255.0;
+            format!("rgba({}, {}, {}, {:.2})", r, g, b, alpha_f)
+        } else {
+            format!("rgb({}, {}, {})", r, g, b)
+        };
+        conversions.push(Conversion {
+            value: CoreValue::String(rgb_display.clone()),
+            target_format: "color-rgb".to_string(),
+            display: rgb_display.clone(),
+            path: vec!["color-rgb".to_string()],
+            steps: vec![ConversionStep {
+                format: "color-rgb".to_string(),
+                value: CoreValue::String(rgb_display.clone()),
+                display: rgb_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // hsl()/hsla() format
+        let (h, s, l) = Self::rgb_to_hsl(r, g, b);
+        let hsl_display = if let Some(alpha) = a {
+            let alpha_f = alpha as f64 / 255.0;
+            format!("hsla({}, {}%, {}%, {:.2})", h, s, l, alpha_f)
+        } else {
+            format!("hsl({}, {}%, {}%)", h, s, l)
+        };
+        conversions.push(Conversion {
+            value: CoreValue::String(hsl_display.clone()),
+            target_format: "color-hsl".to_string(),
+            display: hsl_display.clone(),
+            path: vec!["color-hsl".to_string()],
+            steps: vec![ConversionStep {
+                format: "color-hsl".to_string(),
+                value: CoreValue::String(hsl_display.clone()),
+                display: hsl_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions
+    }
 
     fn aliases(&self) -> &'static [&'static str] {
-        &["col", "rgb", "argb"]
+        &["col", "rgb", "argb", "hsl"]
     }
 }
 
@@ -212,6 +505,7 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].source_format, "color-hex");
         assert!(results[0].confidence > 0.9);
+        assert!(results[0].description.contains("RGB(255, 87, 51)"));
 
         if let CoreValue::Bytes(bytes) = &results[0].value {
             assert_eq!(bytes, &[255, 87, 51]);
@@ -260,8 +554,80 @@ mod tests {
         assert_eq!(l, 100);
     }
 
-    // Note: format() and conversions() tests removed because those methods
-    // are now disabled to avoid noise from arbitrary bytes→color conversions.
+    #[test]
+    fn test_parse_rgb_function() {
+        let format = ColorFormat;
+        let results = format.parse("rgb(35, 50, 35)");
+
+        assert_eq!(results.len(), 1);
+        assert!(results[0].description.contains("rgb()"));
+
+        if let CoreValue::Bytes(bytes) = &results[0].value {
+            assert_eq!(bytes, &[35, 50, 35]);
+        } else {
+            panic!("Expected Bytes");
+        }
+    }
+
+    #[test]
+    fn test_parse_rgba_function() {
+        let format = ColorFormat;
+        let results = format.parse("rgba(255, 128, 0, 0.5)");
+
+        assert_eq!(results.len(), 1);
+        if let CoreValue::Bytes(bytes) = &results[0].value {
+            assert_eq!(bytes, &[255, 128, 0, 127]); // 0.5 * 255 ≈ 127
+        } else {
+            panic!("Expected Bytes");
+        }
+    }
+
+    #[test]
+    fn test_parse_hsl_function() {
+        let format = ColorFormat;
+        let results = format.parse("hsl(120, 100%, 50%)");
+
+        assert_eq!(results.len(), 1);
+        if let CoreValue::Bytes(bytes) = &results[0].value {
+            // Pure green: hsl(120, 100%, 50%) = rgb(0, 255, 0)
+            assert_eq!(bytes, &[0, 255, 0]);
+        } else {
+            panic!("Expected Bytes");
+        }
+    }
+
+    #[test]
+    fn test_parse_hsla_function() {
+        let format = ColorFormat;
+        let results = format.parse("hsla(0, 100%, 50%, 0.5)");
+
+        assert_eq!(results.len(), 1);
+        if let CoreValue::Bytes(bytes) = &results[0].value {
+            // Pure red with 50% alpha
+            assert_eq!(bytes, &[255, 0, 0, 127]);
+        } else {
+            panic!("Expected Bytes");
+        }
+    }
+
+    #[test]
+    fn test_conversions_show_hex() {
+        let format = ColorFormat;
+        let value = CoreValue::Bytes(vec![35, 50, 35]);
+        let conversions = format.conversions(&value);
+
+        let hex = conversions
+            .iter()
+            .find(|c| c.target_format == "color-hex")
+            .unwrap();
+        assert_eq!(hex.display, "#233223");
+
+        let rgb = conversions
+            .iter()
+            .find(|c| c.target_format == "color-rgb")
+            .unwrap();
+        assert_eq!(rgb.display, "rgb(35, 50, 35)");
+    }
 
     #[test]
     fn test_parse_android_argb() {
