@@ -187,7 +187,9 @@ impl Format for BinaryFormat {
                 is_lossy: false,
                 steps: vec![],
                 priority: ConversionPriority::Encoding,
-                display_only: false,
+                // Display-only: the string "01001101 10101010" shouldn't be
+                // converted further (e.g. to bytes of ASCII digits)
+                display_only: true,
                 metadata: None,
             },
             Conversion {
@@ -198,7 +200,9 @@ impl Format for BinaryFormat {
                 is_lossy: false,
                 steps: vec![],
                 priority: ConversionPriority::Encoding,
-                display_only: false,
+                // Display-only: the string "0b01001101" shouldn't be
+                // converted further (e.g. to bytes of ASCII digits)
+                display_only: true,
                 metadata: None,
             },
         ]
