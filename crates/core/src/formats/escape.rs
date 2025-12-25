@@ -178,16 +178,14 @@ impl Format for EscapeFormat {
         }]
     }
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::Bytes(_) | CoreValue::String(_))
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        // Don't use generic formatting path - use conversions() instead
+        // to get specific escape-hex and escape-unicode format names
+        false
     }
 
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        match value {
-            CoreValue::Bytes(bytes) => Some(Self::encode_hex_escapes(bytes)),
-            CoreValue::String(s) => Some(Self::encode_unicode_escapes(s)),
-            _ => None,
-        }
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        None
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
