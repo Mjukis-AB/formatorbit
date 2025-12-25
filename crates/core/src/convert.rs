@@ -76,6 +76,7 @@ pub fn find_all_conversions(
                         is_lossy: false,
                         priority: ConversionPriority::default(),
                         display_only: false,
+                        metadata: None,
                     });
                 }
             }
@@ -134,6 +135,7 @@ pub fn find_all_conversions(
                         is_lossy: conv.is_lossy,
                         priority: conv.priority,
                         display_only: conv.display_only,
+                        metadata: conv.metadata,
                     });
 
                     // Add to queue for further exploration (unless terminal)

@@ -152,6 +152,7 @@ impl Format for PlistFormat {
             steps: vec![],
             priority: ConversionPriority::Structured,
             display_only: false,
+            metadata: None,
         }]
     }
 

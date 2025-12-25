@@ -9,7 +9,9 @@
 //! Also converts raw byte counts to human-readable sizes.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionMetadata, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
 
 pub struct DataSizeFormat;
 
@@ -207,10 +209,11 @@ impl Format for DataSizeFormat {
                 steps: vec![ConversionStep {
                     format: "datasize-iec".to_string(),
                     value: CoreValue::String(iec.clone()),
-                    display: iec,
+                    display: iec.clone(),
                 }],
                 priority: ConversionPriority::Semantic,
                 display_only: true,
+                metadata: Some(ConversionMetadata::DataSize { bytes, human: iec }),
                 ..Default::default()
             });
         }
@@ -226,10 +229,11 @@ impl Format for DataSizeFormat {
                 steps: vec![ConversionStep {
                     format: "datasize-si".to_string(),
                     value: CoreValue::String(si.clone()),
-                    display: si,
+                    display: si.clone(),
                 }],
                 priority: ConversionPriority::Semantic,
                 display_only: true,
+                metadata: Some(ConversionMetadata::DataSize { bytes, human: si }),
                 ..Default::default()
             });
         }

@@ -232,6 +232,7 @@ impl Format for BytesToIntFormat {
             is_lossy: false,
             priority: ConversionPriority::Raw,
             display_only: false,
+            metadata: None,
         }];
 
         // Only add little-endian if it's different
@@ -255,6 +256,7 @@ impl Format for BytesToIntFormat {
                 is_lossy: false,
                 priority: ConversionPriority::Raw,
                 display_only: false,
+                metadata: None,
             });
         }
 

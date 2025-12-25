@@ -1,7 +1,9 @@
 //! Color format (hex RGB/RGBA/ARGB).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionMetadata, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
 
 /// Represents a parsed color with RGBA components.
 #[derive(Debug, Clone, Copy)]
@@ -419,6 +421,14 @@ impl Format for ColorFormat {
 
         let mut conversions = Vec::new();
 
+        // Color metadata for all conversions
+        let color_metadata = Some(ConversionMetadata::Color {
+            r,
+            g,
+            b,
+            a: a.unwrap_or(255),
+        });
+
         // Hex format
         let hex_display = if let Some(alpha) = a {
             format!("#{:02X}{:02X}{:02X}{:02X}", r, g, b, alpha)
@@ -437,6 +447,7 @@ impl Format for ColorFormat {
             }],
             priority: ConversionPriority::Semantic,
             display_only: true,
+            metadata: color_metadata.clone(),
             ..Default::default()
         });
 
@@ -459,6 +470,7 @@ impl Format for ColorFormat {
             }],
             priority: ConversionPriority::Semantic,
             display_only: true,
+            metadata: color_metadata.clone(),
             ..Default::default()
         });
 
@@ -482,6 +494,7 @@ impl Format for ColorFormat {
             }],
             priority: ConversionPriority::Semantic,
             display_only: true,
+            metadata: color_metadata,
             ..Default::default()
         });
 

@@ -3,7 +3,7 @@
 use chrono::{DateTime, TimeZone, Utc};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionMetadata, ConversionPriority, CoreValue, Interpretation};
 
 /// Reasonable epoch range: 2000-01-01 to 2100-01-01
 /// We use 2000 as minimum to avoid false positives from small integers
@@ -173,16 +173,21 @@ impl Format for DateTimeFormat {
         if let Ok(secs) = i64::try_from(*int_val) {
             if Self::is_valid_epoch_seconds(secs) {
                 if let Some(dt) = Utc.timestamp_opt(secs, 0).single() {
+                    let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "epoch-seconds".to_string(),
-                        display: format!("{} ({})", dt.to_rfc3339(), relative),
+                        display: format!("{} ({})", iso, relative),
                         path: vec!["epoch-seconds".to_string()],
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        metadata: Some(ConversionMetadata::DateTime {
+                            iso: iso.clone(),
+                            relative,
+                        }),
                     });
                 }
             }
@@ -192,16 +197,21 @@ impl Format for DateTimeFormat {
                 let epoch_secs = secs / 1000;
                 let nanos = ((secs % 1000) * 1_000_000) as u32;
                 if let Some(dt) = Utc.timestamp_opt(epoch_secs, nanos).single() {
+                    let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "epoch-millis".to_string(),
-                        display: format!("{} ({})", dt.to_rfc3339(), relative),
+                        display: format!("{} ({})", iso, relative),
                         path: vec!["epoch-millis".to_string()],
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        metadata: Some(ConversionMetadata::DateTime {
+                            iso: iso.clone(),
+                            relative,
+                        }),
                     });
                 }
             }
@@ -210,16 +220,21 @@ impl Format for DateTimeFormat {
             if Self::is_valid_apple_timestamp(secs) {
                 let unix_secs = secs + APPLE_REFERENCE_DATE;
                 if let Some(dt) = Utc.timestamp_opt(unix_secs, 0).single() {
+                    let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "apple-cocoa".to_string(),
-                        display: format!("{} ({})", dt.to_rfc3339(), relative),
+                        display: format!("{} ({})", iso, relative),
                         path: vec!["apple-cocoa".to_string()],
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        metadata: Some(ConversionMetadata::DateTime {
+                            iso: iso.clone(),
+                            relative,
+                        }),
                     });
                 }
             }
@@ -230,16 +245,21 @@ impl Format for DateTimeFormat {
         if Self::is_valid_filetime(*int_val) {
             if let Some((unix_secs, nanos)) = Self::filetime_to_unix(*int_val) {
                 if let Some(dt) = Utc.timestamp_opt(unix_secs, nanos).single() {
+                    let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
                     conversions.push(Conversion {
                         value: CoreValue::DateTime(dt),
                         target_format: "filetime".to_string(),
-                        display: format!("{} ({})", dt.to_rfc3339(), relative),
+                        display: format!("{} ({})", iso, relative),
                         path: vec!["filetime".to_string()],
                         is_lossy: false,
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        metadata: Some(ConversionMetadata::DateTime {
+                            iso: iso.clone(),
+                            relative,
+                        }),
                     });
                 }
             }

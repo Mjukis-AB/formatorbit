@@ -62,6 +62,7 @@ impl Format for Utf8Format {
                         steps: vec![],
                         priority: ConversionPriority::Encoding,
                         display_only: false,
+                        metadata: None,
                     }]
                 } else {
                     vec![]
@@ -78,6 +79,7 @@ impl Format for Utf8Format {
                     steps: vec![],
                     priority: ConversionPriority::Raw,
                     display_only: false,
+                    metadata: None,
                 }]
             }
             _ => vec![],

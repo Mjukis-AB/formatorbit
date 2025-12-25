@@ -123,6 +123,42 @@ pub struct ConversionStep {
     pub display: String,
 }
 
+/// Structured metadata for rich UI rendering.
+///
+/// This allows UIs to render conversions with appropriate widgets
+/// (color swatches, relative time labels, etc.) without re-parsing
+/// the display string.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ConversionMetadata {
+    /// Color with RGBA components (0-255).
+    Color { r: u8, g: u8, b: u8, a: u8 },
+
+    /// Duration with human-readable form and detail.
+    Duration {
+        /// Human-readable duration, e.g. "4h38m31s"
+        human: String,
+        /// Additional context, e.g. "now + 4h38m31s = 2025-12-25T13:51:55Z"
+        detail: String,
+    },
+
+    /// DateTime with ISO format and relative time.
+    DateTime {
+        /// ISO 8601 timestamp, e.g. "2025-12-25T13:51:55Z"
+        iso: String,
+        /// Relative time, e.g. "2 hours ago" or "in 3 days"
+        relative: String,
+    },
+
+    /// Data size with byte count and human-readable form.
+    DataSize {
+        /// Raw byte count
+        bytes: u64,
+        /// Human-readable size, e.g. "15.94 MiB"
+        human: String,
+    },
+}
+
 /// A possible conversion from a value.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Conversion {
@@ -151,6 +187,33 @@ pub struct Conversion {
     /// produce nonsense like "binary of ASCII bytes of hex string".
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub display_only: bool,
+    /// Structured metadata for rich UI rendering.
+    ///
+    /// Allows UIs to render appropriate widgets (color swatches, relative time, etc.)
+    /// without re-parsing the display string.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<ConversionMetadata>,
+}
+
+impl Conversion {
+    /// Create a new Conversion with default metadata (None).
+    pub fn new(
+        value: CoreValue,
+        target_format: impl Into<String>,
+        display: impl Into<String>,
+    ) -> Self {
+        Self {
+            value,
+            target_format: target_format.into(),
+            display: display.into(),
+            path: vec![],
+            steps: vec![],
+            is_lossy: false,
+            priority: ConversionPriority::default(),
+            display_only: false,
+            metadata: None,
+        }
+    }
 }
 
 /// Complete result for an input.
