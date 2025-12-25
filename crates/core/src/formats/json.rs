@@ -82,6 +82,7 @@ impl Format for JsonFormat {
             is_lossy: false,
             priority: ConversionPriority::Structured,
             display_only: false,
+            metadata: None,
         }]
     }
 

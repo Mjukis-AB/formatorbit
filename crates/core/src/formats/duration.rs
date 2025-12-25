@@ -9,7 +9,9 @@
 use chrono::Utc;
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionMetadata, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
 
 pub struct DurationFormat;
 
@@ -269,7 +271,8 @@ impl Format for DurationFormat {
         if likely_seconds && val >= 60 {
             let human = Self::seconds_to_human(val);
             let absolute = Self::format_absolute(val as i64);
-            let display = format!("{} (now + {} = {})", human, human, absolute);
+            let detail = format!("now + {} = {}", human, absolute);
+            let display = format!("{} ({})", human, detail);
 
             conversions.push(Conversion {
                 value: CoreValue::String(human.clone()),
@@ -278,11 +281,12 @@ impl Format for DurationFormat {
                 path: vec!["duration".to_string()],
                 steps: vec![ConversionStep {
                     format: "duration".to_string(),
-                    value: CoreValue::String(human),
+                    value: CoreValue::String(human.clone()),
                     display: "as seconds".to_string(),
                 }],
                 priority: ConversionPriority::Semantic,
                 display_only: true,
+                metadata: Some(ConversionMetadata::Duration { human, detail }),
                 ..Default::default()
             });
         }
@@ -293,7 +297,8 @@ impl Format for DurationFormat {
             let secs = val / 1000;
             if secs >= 1 {
                 let absolute = Self::format_absolute(secs as i64);
-                let display = format!("{} (now + {} = {})", human, human, absolute);
+                let detail = format!("now + {} = {}", human, absolute);
+                let display = format!("{} ({})", human, detail);
 
                 conversions.push(Conversion {
                     value: CoreValue::String(human.clone()),
@@ -302,11 +307,12 @@ impl Format for DurationFormat {
                     path: vec!["duration-ms".to_string()],
                     steps: vec![ConversionStep {
                         format: "duration-ms".to_string(),
-                        value: CoreValue::String(human),
+                        value: CoreValue::String(human.clone()),
                         display: "as milliseconds".to_string(),
                     }],
                     priority: ConversionPriority::Semantic,
                     display_only: true,
+                    metadata: Some(ConversionMetadata::Duration { human, detail }),
                     ..Default::default()
                 });
             }

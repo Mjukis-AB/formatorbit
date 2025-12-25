@@ -93,6 +93,7 @@ impl Format for MsgPackFormat {
             steps: vec![],
             priority,
             display_only: false,
+            metadata: None,
         }]
     }
 

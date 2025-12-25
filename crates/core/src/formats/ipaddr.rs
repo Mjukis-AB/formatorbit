@@ -92,6 +92,7 @@ impl Format for IpAddrFormat {
                     steps: vec![],
                     priority: ConversionPriority::Semantic,
                     display_only: false,
+                    metadata: None,
                 }]
             }
             16 => {
@@ -110,6 +111,7 @@ impl Format for IpAddrFormat {
                     steps: vec![],
                     priority: ConversionPriority::Semantic,
                     display_only: false,
+                    metadata: None,
                 }];
 
                 // Also try as UUID since both are 16 bytes

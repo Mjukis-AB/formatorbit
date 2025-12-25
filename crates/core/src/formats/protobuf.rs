@@ -427,6 +427,7 @@ impl Format for ProtobufFormat {
             steps: vec![],
             priority,
             display_only: false,
+            metadata: None,
         }]
     }
 

@@ -126,6 +126,7 @@ impl Format for HexdumpFormat {
             // Priority between Encoding and Raw - shows when no structured data found
             priority: ConversionPriority::Encoding,
             display_only: false,
+            metadata: None,
         }]
     }
 

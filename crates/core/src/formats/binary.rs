@@ -188,6 +188,7 @@ impl Format for BinaryFormat {
                 steps: vec![],
                 priority: ConversionPriority::Encoding,
                 display_only: false,
+                metadata: None,
             },
             Conversion {
                 value: CoreValue::String(Self::bytes_to_binary_0b(bytes)),
@@ -198,6 +199,7 @@ impl Format for BinaryFormat {
                 steps: vec![],
                 priority: ConversionPriority::Encoding,
                 display_only: false,
+                metadata: None,
             },
         ]
     }

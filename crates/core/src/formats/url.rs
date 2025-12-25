@@ -148,6 +148,7 @@ impl Format for UrlEncodingFormat {
             steps: vec![],
             priority: ConversionPriority::Encoding,
             display_only: false,
+            metadata: None,
         }]
     }
 
