@@ -6,7 +6,7 @@
 use std::collections::VecDeque;
 
 use crate::format::Format;
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue};
 
 /// Nonsensical source→target combinations to filter out.
 /// These are conversions that technically work but are never useful.
@@ -89,6 +89,7 @@ pub fn find_all_conversions(
                         is_lossy: false,
                         priority: ConversionPriority::default(),
                         display_only: false,
+                        kind: ConversionKind::default(),
                         metadata: None,
                     });
                 }
@@ -147,6 +148,7 @@ pub fn find_all_conversions(
                         steps: full_steps.clone(),
                         is_lossy: conv.is_lossy,
                         priority: conv.priority,
+                        kind: conv.kind,
                         display_only: conv.display_only,
                         metadata: conv.metadata,
                     });

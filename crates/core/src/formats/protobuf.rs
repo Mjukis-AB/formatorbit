@@ -13,7 +13,7 @@
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionMetadata, ConversionPriority, CoreValue, PacketSegment,
+    Conversion, ConversionKind, ConversionMetadata, ConversionPriority, CoreValue, PacketSegment,
     ProtoField as PublicProtoField, ProtoValue as PublicProtoValue,
 };
 
@@ -735,6 +735,7 @@ impl Format for ProtobufFormat {
             steps: vec![],
             priority,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: Some(ConversionMetadata::PacketLayout {
                 segments,
                 compact,

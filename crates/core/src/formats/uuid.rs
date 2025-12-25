@@ -3,7 +3,7 @@
 use uuid::Uuid;
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct UuidFormat;
 
@@ -96,6 +96,7 @@ impl Format for UuidFormat {
             steps: vec![],
             priority: ConversionPriority::Semantic,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: None,
         }]
     }

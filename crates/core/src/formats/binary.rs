@@ -1,7 +1,7 @@
 //! Binary format (0b prefix, space-separated, etc.).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct BinaryFormat;
 
@@ -190,6 +190,7 @@ impl Format for BinaryFormat {
                 // Display-only: the string "01001101 10101010" shouldn't be
                 // converted further (e.g. to bytes of ASCII digits)
                 display_only: true,
+                kind: ConversionKind::Representation,
                 metadata: None,
             },
             Conversion {
@@ -203,6 +204,7 @@ impl Format for BinaryFormat {
                 // Display-only: the string "0b01001101" shouldn't be
                 // converted further (e.g. to bytes of ASCII digits)
                 display_only: true,
+                kind: ConversionKind::Representation,
                 metadata: None,
             },
         ]

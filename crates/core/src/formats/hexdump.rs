@@ -1,7 +1,9 @@
 //! Hexdump (xxd-style) format for viewing raw bytes.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
 
 pub struct HexdumpFormat;
 
@@ -126,6 +128,7 @@ impl Format for HexdumpFormat {
             // Priority between Encoding and Raw - shows when no structured data found
             priority: ConversionPriority::Encoding,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: None,
         }]
     }

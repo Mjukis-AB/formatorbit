@@ -3,7 +3,7 @@
 use percent_encoding::{percent_decode_str, utf8_percent_encode, NON_ALPHANUMERIC};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct UrlEncodingFormat;
 
@@ -148,6 +148,7 @@ impl Format for UrlEncodingFormat {
             steps: vec![],
             priority: ConversionPriority::Encoding,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: None,
         }]
     }

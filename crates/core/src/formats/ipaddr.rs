@@ -3,7 +3,7 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct IpAddrFormat;
 
@@ -92,6 +92,7 @@ impl Format for IpAddrFormat {
                     steps: vec![],
                     priority: ConversionPriority::Semantic,
                     display_only: false,
+                    kind: ConversionKind::default(),
                     metadata: None,
                 }]
             }
@@ -111,6 +112,7 @@ impl Format for IpAddrFormat {
                     steps: vec![],
                     priority: ConversionPriority::Semantic,
                     display_only: false,
+                    kind: ConversionKind::default(),
                     metadata: None,
                 }];
 
