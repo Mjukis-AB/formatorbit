@@ -82,6 +82,25 @@ fn looks_like_hex_byte(s: &str) -> bool {
     (len == 1 || len == 2) && s.chars().all(|c| c.is_ascii_hexdigit())
 }
 
+/// Check if a token looks like a space-separated hex dump (e.g., "87 A3 69 6E 74 01").
+fn looks_like_hex_dump(s: &str) -> bool {
+    // Must have at least one space to be a hex dump
+    if !s.contains(' ') {
+        return false;
+    }
+
+    // Split on spaces and verify each part is a hex byte
+    let parts: Vec<&str> = s.split(' ').collect();
+
+    // Need at least 2 parts
+    if parts.len() < 2 {
+        return false;
+    }
+
+    // All parts must be hex bytes
+    parts.iter().all(|p| looks_like_hex_byte(p))
+}
+
 /// Try to group adjacent tokens that look like hex bytes.
 fn apply_hex_grouping(tokens: &[Token], original_line: &str) -> Vec<Token> {
     let mut result = Vec::new();
@@ -132,6 +151,12 @@ pub fn is_interesting_candidate(token: &str) -> bool {
     // Skip very short tokens
     if len < 2 {
         return false;
+    }
+
+    // Check if it looks like space-separated hex bytes (e.g., "87 A3 69 6E 74 01")
+    // These can be quite long, so we check this before the length limit.
+    if looks_like_hex_dump(token) {
+        return true;
     }
 
     // Skip very long tokens (unlikely to be a single value)
@@ -273,5 +298,22 @@ mod tests {
         // Should have: [2024-01-15], User, abc123, sent, "69 1E 01 B8"
         assert_eq!(tokens.len(), 5);
         assert_eq!(tokens[4].text, "69 1E 01 B8");
+    }
+
+    #[test]
+    fn test_is_interesting_long_hex_dump() {
+        // Long hex dumps should be interesting even if > 128 chars
+        let long_hex = "87 A3 69 6E 74 01 A5 66 6C 6F 61 74 CB 3F E0 00 00 00 00 00 00 A7 62 6F 6F 6C 65 61 6E C3 A4 6E 75 6C 6C C0 A6 73 74 72 69 6E 67 A7 66 6F 6F 20 62 61 72";
+        assert!(long_hex.len() > 128); // Verify it's actually long
+        assert!(is_interesting_candidate(long_hex));
+    }
+
+    #[test]
+    fn test_looks_like_hex_dump() {
+        assert!(looks_like_hex_dump("87 A3 69"));
+        assert!(looks_like_hex_dump("FF 00"));
+        assert!(!looks_like_hex_dump("87A369")); // No spaces
+        assert!(!looks_like_hex_dump("hello world")); // Not hex
+        assert!(!looks_like_hex_dump("87")); // Single byte
     }
 }
