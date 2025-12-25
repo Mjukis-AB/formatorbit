@@ -1,7 +1,7 @@
 //! Apple plist format (XML and binary).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct PlistFormat;
 
@@ -152,6 +152,7 @@ impl Format for PlistFormat {
             steps: vec![],
             priority: ConversionPriority::Structured,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: None,
         }]
     }

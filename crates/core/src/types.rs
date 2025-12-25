@@ -116,6 +116,19 @@ pub struct Interpretation {
     pub description: String,
 }
 
+/// The kind of conversion - distinguishes between actual transformations,
+/// display representations, and traits/observations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ConversionKind {
+    /// Actual transformation (bytes -> int, int -> datetime)
+    #[default]
+    Conversion,
+    /// Same value, different notation (1024 -> 0x400, 1024 -> 1 KiB)
+    Representation,
+    /// Observation/property of the value (is power-of-2, is prime, is fibonacci)
+    Trait,
+}
+
 /// Priority level for conversion results.
 ///
 /// Higher priority conversions appear first in output.
@@ -214,6 +227,9 @@ pub struct Conversion {
     /// Priority for sorting results (lower = shown first)
     #[serde(default)]
     pub priority: ConversionPriority,
+    /// The kind of conversion (transformation, representation, or trait).
+    #[serde(default)]
+    pub kind: ConversionKind,
     /// If true, this is a display-only format - don't explore further conversions.
     ///
     /// Use this for representations that are meant for human viewing, not as
@@ -248,6 +264,7 @@ impl Conversion {
             steps: vec![],
             is_lossy: false,
             priority: ConversionPriority::default(),
+            kind: ConversionKind::default(),
             display_only: false,
             metadata: None,
         }

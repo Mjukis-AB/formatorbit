@@ -1,7 +1,9 @@
 //! JSON format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
 
 pub struct JsonFormat;
 
@@ -82,6 +84,7 @@ impl Format for JsonFormat {
             is_lossy: false,
             priority: ConversionPriority::Structured,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: None,
         }]
     }

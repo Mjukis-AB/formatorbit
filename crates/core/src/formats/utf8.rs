@@ -1,7 +1,7 @@
 //! UTF-8 string format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct Utf8Format;
 
@@ -57,6 +57,7 @@ impl Format for Utf8Format {
                         steps: vec![],
                         priority: ConversionPriority::Encoding,
                         display_only: false,
+                        kind: ConversionKind::default(),
                         metadata: None,
                     }]
                 } else {
@@ -74,6 +75,7 @@ impl Format for Utf8Format {
                     steps: vec![],
                     priority: ConversionPriority::Raw,
                     display_only: false,
+                    kind: ConversionKind::default(),
                     metadata: None,
                 }]
             }

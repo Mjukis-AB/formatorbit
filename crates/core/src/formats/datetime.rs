@@ -3,7 +3,9 @@
 use chrono::{DateTime, TimeZone, Utc};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionMetadata, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionKind, ConversionMetadata, ConversionPriority, CoreValue, Interpretation,
+};
 
 /// Reasonable epoch range: 2000-01-01 to 2100-01-01
 /// We use 2000 as minimum to avoid false positives from small integers
@@ -184,6 +186,7 @@ impl Format for DateTimeFormat {
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        kind: ConversionKind::default(),
                         metadata: Some(ConversionMetadata::DateTime {
                             iso: iso.clone(),
                             relative,
@@ -208,6 +211,7 @@ impl Format for DateTimeFormat {
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        kind: ConversionKind::default(),
                         metadata: Some(ConversionMetadata::DateTime {
                             iso: iso.clone(),
                             relative,
@@ -231,6 +235,7 @@ impl Format for DateTimeFormat {
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        kind: ConversionKind::default(),
                         metadata: Some(ConversionMetadata::DateTime {
                             iso: iso.clone(),
                             relative,
@@ -256,6 +261,7 @@ impl Format for DateTimeFormat {
                         steps: vec![],
                         priority: ConversionPriority::Semantic,
                         display_only: false,
+                        kind: ConversionKind::default(),
                         metadata: Some(ConversionMetadata::DateTime {
                             iso: iso.clone(),
                             relative,

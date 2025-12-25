@@ -2,7 +2,8 @@
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionMetadata, ConversionPriority, CoreValue, Interpretation, PacketSegment,
+    Conversion, ConversionKind, ConversionMetadata, ConversionPriority, CoreValue, Interpretation,
+    PacketSegment,
 };
 
 pub struct MsgPackFormat;
@@ -114,6 +115,7 @@ impl Format for MsgPackFormat {
             steps: vec![],
             priority,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: Some(ConversionMetadata::PacketLayout {
                 segments: decoded.segments,
                 compact,

@@ -1,7 +1,247 @@
 //! Integer formats (decimal, with endianness handling).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
+
+// =============================================================================
+// Number Trait Detection
+// =============================================================================
+
+/// Maximum value for prime checking (10^12) - fast enough to feel instant.
+const PRIME_CHECK_LIMIT: i128 = 1_000_000_000_000;
+
+/// Check if n is prime. Returns None if n is too large to check efficiently.
+fn is_prime(n: i128) -> Option<bool> {
+    if n > PRIME_CHECK_LIMIT {
+        return None;
+    }
+    if n < 2 {
+        return Some(false);
+    }
+    if n == 2 || n == 3 {
+        return Some(true);
+    }
+    if n % 2 == 0 || n % 3 == 0 {
+        return Some(false);
+    }
+    let sqrt = (n as f64).sqrt() as i128;
+    // 6k +/- 1 optimization
+    let mut i = 5;
+    while i <= sqrt {
+        if n % i == 0 || n % (i + 2) == 0 {
+            return Some(false);
+        }
+        i += 6;
+    }
+    Some(true)
+}
+
+/// First 93 Fibonacci numbers (all that fit in i128).
+const FIBONACCI: &[i128] = &[
+    0,
+    1,
+    1,
+    2,
+    3,
+    5,
+    8,
+    13,
+    21,
+    34,
+    55,
+    89,
+    144,
+    233,
+    377,
+    610,
+    987,
+    1597,
+    2584,
+    4181,
+    6765,
+    10946,
+    17711,
+    28657,
+    46368,
+    75025,
+    121393,
+    196418,
+    317811,
+    514229,
+    832040,
+    1346269,
+    2178309,
+    3524578,
+    5702887,
+    9227465,
+    14930352,
+    24157817,
+    39088169,
+    63245986,
+    102334155,
+    165580141,
+    267914296,
+    433494437,
+    701408733,
+    1134903170,
+    1836311903,
+    2971215073,
+    4807526976,
+    7778742049,
+    12586269025,
+    20365011074,
+    32951280099,
+    53316291173,
+    86267571272,
+    139583862445,
+    225851433717,
+    365435296162,
+    591286729879,
+    956722026041,
+    1548008755920,
+    2504730781961,
+    4052739537881,
+    6557470319842,
+    10610209857723,
+    17167680177565,
+    27777890035288,
+    44945570212853,
+    72723460248141,
+    117669030460994,
+    190392490709135,
+    308061521170129,
+    498454011879264,
+    806515533049393,
+    1304969544928657,
+    2111485077978050,
+    3416454622906707,
+    5527939700884757,
+    8944394323791464,
+    14472334024676221,
+    23416728348467685,
+    37889062373143906,
+    61305790721611591,
+    99194853094755497,
+    160500643816367088,
+    259695496911122585,
+    420196140727489673,
+    679891637638612258,
+    1100087778366101931,
+    1779979416004714189,
+    2880067194370816120,
+    4660046610375530309,
+    7540113804746346429,
+];
+
+/// Returns the Fibonacci index if n is a Fibonacci number.
+fn fibonacci_index(n: i128) -> Option<usize> {
+    FIBONACCI.binary_search(&n).ok()
+}
+
+/// Perfect numbers that fit in i128 (only 8 known perfect numbers, 4 fit in i64).
+const PERFECT_NUMBERS: &[i128] = &[
+    6,
+    28,
+    496,
+    8128,
+    33550336,
+    8589869056,
+    137438691328,
+    2305843008139952128,
+];
+
+/// Check if n is a perfect number.
+fn is_perfect(n: i128) -> bool {
+    PERFECT_NUMBERS.contains(&n)
+}
+
+/// Returns k if n is triangular (n = k*(k+1)/2).
+fn triangular_root(n: i128) -> Option<i128> {
+    if n < 0 {
+        return None;
+    }
+    // Solve k^2 + k - 2n = 0: k = (-1 + sqrt(1 + 8n)) / 2
+    let disc = 1 + 8 * n;
+    let sqrt = (disc as f64).sqrt() as i128;
+    // Verify it's exact
+    if sqrt * sqrt != disc {
+        return None;
+    }
+    if (sqrt - 1) % 2 != 0 {
+        return None;
+    }
+    let k = (sqrt - 1) / 2;
+    // Double-check: k*(k+1)/2 == n
+    if k * (k + 1) / 2 == n {
+        Some(k)
+    } else {
+        None
+    }
+}
+
+/// Returns the square root if n is a perfect square.
+fn perfect_square_root(n: i128) -> Option<i128> {
+    if n < 0 {
+        return None;
+    }
+    let sqrt = (n as f64).sqrt() as i128;
+    // Check both sqrt and sqrt+1 due to floating point imprecision
+    if sqrt * sqrt == n {
+        Some(sqrt)
+    } else if (sqrt + 1) * (sqrt + 1) == n {
+        Some(sqrt + 1)
+    } else {
+        None
+    }
+}
+
+/// Factorials up to 33! (all that fit in i128).
+const FACTORIALS: &[(i128, u32)] = &[
+    (1, 0),
+    (1, 1),
+    (2, 2),
+    (6, 3),
+    (24, 4),
+    (120, 5),
+    (720, 6),
+    (5040, 7),
+    (40320, 8),
+    (362880, 9),
+    (3628800, 10),
+    (39916800, 11),
+    (479001600, 12),
+    (6227020800, 13),
+    (87178291200, 14),
+    (1307674368000, 15),
+    (20922789888000, 16),
+    (355687428096000, 17),
+    (6402373705728000, 18),
+    (121645100408832000, 19),
+    (2432902008176640000, 20),
+    (51090942171709440000, 21),
+    (1124000727777607680000, 22),
+    (25852016738884976640000, 23),
+    (620448401733239439360000, 24),
+    (15511210043330985984000000, 25),
+    (403291461126605635584000000, 26),
+    (10888869450418352160768000000, 27),
+    (304888344611713860501504000000, 28),
+    (8841761993739701954543616000000, 29),
+    (265252859812191058636308480000000, 30),
+    (8222838654177922817725562880000000, 31),
+    (263130836933693530167218012160000000, 32),
+    (8683317618811886495518194401280000000, 33),
+];
+
+/// Returns k if n = k! (factorial).
+fn factorial_of(n: i128) -> Option<u32> {
+    FACTORIALS
+        .binary_search_by_key(&n, |&(val, _)| val)
+        .ok()
+        .map(|idx| FACTORIALS[idx].1)
+}
 
 pub struct DecimalFormat;
 
@@ -73,7 +313,7 @@ impl Format for DecimalFormat {
         if *int_val >= 0 && *int_val <= u64::MAX as i128 {
             let val = *int_val as u64;
 
-            // Hex representation - Semantic priority since it's a meaningful representation
+            // Hex representation - Representation kind
             let hex_display = format!("0x{:X}", val);
             conversions.push(Conversion {
                 value: CoreValue::String(hex_display.clone()),
@@ -86,7 +326,8 @@ impl Format for DecimalFormat {
                     display: hex_display,
                 }],
                 priority: ConversionPriority::Semantic,
-                display_only: true, // Display-only, don't convert further
+                kind: ConversionKind::Representation,
+                display_only: true,
                 ..Default::default()
             });
 
@@ -104,7 +345,8 @@ impl Format for DecimalFormat {
                         display: bin_display,
                     }],
                     priority: ConversionPriority::Semantic,
-                    display_only: true, // Display-only, don't convert further
+                    kind: ConversionKind::Representation,
+                    display_only: true,
                     ..Default::default()
                 });
             }
@@ -122,28 +364,171 @@ impl Format for DecimalFormat {
                     display: oct_display,
                 }],
                 priority: ConversionPriority::Semantic,
-                display_only: true, // Display-only, don't convert further
+                kind: ConversionKind::Representation,
+                display_only: true,
                 ..Default::default()
             });
+
+            // =========================================================
+            // Number Traits (observations about the value)
+            // =========================================================
 
             // Power of 2 detection (for values >= 2)
             if val >= 2 && val.is_power_of_two() {
                 let exp = val.trailing_zeros();
-                let pow_display = format!("2^{}", exp);
+                let display = format!("2^{}", exp);
                 conversions.push(Conversion {
-                    value: CoreValue::String(pow_display.clone()),
+                    value: CoreValue::String(display.clone()),
                     target_format: "power-of-2".to_string(),
-                    display: pow_display.clone(),
+                    display: display.clone(),
                     path: vec!["power-of-2".to_string()],
                     steps: vec![ConversionStep {
                         format: "power-of-2".to_string(),
-                        value: CoreValue::String(pow_display.clone()),
-                        display: pow_display,
+                        value: CoreValue::String(display.clone()),
+                        display,
                     }],
                     priority: ConversionPriority::Semantic,
+                    kind: ConversionKind::Trait,
                     display_only: true,
                     ..Default::default()
                 });
+            }
+
+            // Perfect square detection (for values >= 4, skip 0 and 1)
+            if val >= 4 {
+                if let Some(root) = perfect_square_root(*int_val) {
+                    let display = format!("{}²", root);
+                    conversions.push(Conversion {
+                        value: CoreValue::String(display.clone()),
+                        target_format: "perfect-square".to_string(),
+                        display: display.clone(),
+                        path: vec!["perfect-square".to_string()],
+                        steps: vec![ConversionStep {
+                            format: "perfect-square".to_string(),
+                            value: CoreValue::String(display.clone()),
+                            display,
+                        }],
+                        priority: ConversionPriority::Semantic,
+                        kind: ConversionKind::Trait,
+                        display_only: true,
+                        ..Default::default()
+                    });
+                }
+            }
+        }
+
+        // Traits that work on i128 (including negative numbers)
+
+        // Prime detection (only for positive numbers up to 10^12)
+        if *int_val >= 2 {
+            if let Some(true) = is_prime(*int_val) {
+                let display = "prime".to_string();
+                conversions.push(Conversion {
+                    value: CoreValue::String(display.clone()),
+                    target_format: "prime".to_string(),
+                    display: display.clone(),
+                    path: vec!["prime".to_string()],
+                    steps: vec![ConversionStep {
+                        format: "prime".to_string(),
+                        value: CoreValue::String(display.clone()),
+                        display,
+                    }],
+                    priority: ConversionPriority::Semantic,
+                    kind: ConversionKind::Trait,
+                    display_only: true,
+                    ..Default::default()
+                });
+            }
+        }
+
+        // Fibonacci detection (for non-negative values)
+        if *int_val >= 0 {
+            if let Some(idx) = fibonacci_index(*int_val) {
+                // Skip fib(0)=0 and fib(1)=1, fib(2)=1 as they're trivial
+                if idx >= 3 {
+                    let display = format!("fib({})", idx);
+                    conversions.push(Conversion {
+                        value: CoreValue::String(display.clone()),
+                        target_format: "fibonacci".to_string(),
+                        display: display.clone(),
+                        path: vec!["fibonacci".to_string()],
+                        steps: vec![ConversionStep {
+                            format: "fibonacci".to_string(),
+                            value: CoreValue::String(display.clone()),
+                            display,
+                        }],
+                        priority: ConversionPriority::Semantic,
+                        kind: ConversionKind::Trait,
+                        display_only: true,
+                        ..Default::default()
+                    });
+                }
+            }
+        }
+
+        // Perfect number detection
+        if is_perfect(*int_val) {
+            let display = "perfect".to_string();
+            conversions.push(Conversion {
+                value: CoreValue::String(display.clone()),
+                target_format: "perfect-number".to_string(),
+                display: display.clone(),
+                path: vec!["perfect-number".to_string()],
+                steps: vec![ConversionStep {
+                    format: "perfect-number".to_string(),
+                    value: CoreValue::String(display.clone()),
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Trait,
+                display_only: true,
+                ..Default::default()
+            });
+        }
+
+        // Triangular number detection (for positive values, skip trivial 0, 1)
+        if *int_val >= 3 {
+            if let Some(k) = triangular_root(*int_val) {
+                let display = format!("triangular({})", k);
+                conversions.push(Conversion {
+                    value: CoreValue::String(display.clone()),
+                    target_format: "triangular".to_string(),
+                    display: display.clone(),
+                    path: vec!["triangular".to_string()],
+                    steps: vec![ConversionStep {
+                        format: "triangular".to_string(),
+                        value: CoreValue::String(display.clone()),
+                        display,
+                    }],
+                    priority: ConversionPriority::Semantic,
+                    kind: ConversionKind::Trait,
+                    display_only: true,
+                    ..Default::default()
+                });
+            }
+        }
+
+        // Factorial detection (skip 0!=1, 1!=1, 2!=2 as trivial)
+        if *int_val >= 6 {
+            if let Some(k) = factorial_of(*int_val) {
+                if k >= 3 {
+                    let display = format!("{}!", k);
+                    conversions.push(Conversion {
+                        value: CoreValue::String(display.clone()),
+                        target_format: "factorial".to_string(),
+                        display: display.clone(),
+                        path: vec!["factorial".to_string()],
+                        steps: vec![ConversionStep {
+                            format: "factorial".to_string(),
+                            value: CoreValue::String(display.clone()),
+                            display,
+                        }],
+                        priority: ConversionPriority::Semantic,
+                        kind: ConversionKind::Trait,
+                        display_only: true,
+                        ..Default::default()
+                    });
+                }
             }
         }
 
@@ -232,6 +617,7 @@ impl Format for BytesToIntFormat {
             is_lossy: false,
             priority: ConversionPriority::Raw,
             display_only: false,
+            kind: ConversionKind::default(),
             metadata: None,
         }];
 
@@ -256,6 +642,7 @@ impl Format for BytesToIntFormat {
                 is_lossy: false,
                 priority: ConversionPriority::Raw,
                 display_only: false,
+                kind: ConversionKind::default(),
                 metadata: None,
             });
         }
