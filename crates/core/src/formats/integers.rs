@@ -125,6 +125,26 @@ impl Format for DecimalFormat {
                 display_only: true, // Display-only, don't convert further
                 ..Default::default()
             });
+
+            // Power of 2 detection (for values >= 2)
+            if val >= 2 && val.is_power_of_two() {
+                let exp = val.trailing_zeros();
+                let pow_display = format!("2^{}", exp);
+                conversions.push(Conversion {
+                    value: CoreValue::String(pow_display.clone()),
+                    target_format: "power-of-2".to_string(),
+                    display: pow_display.clone(),
+                    path: vec!["power-of-2".to_string()],
+                    steps: vec![ConversionStep {
+                        format: "power-of-2".to_string(),
+                        value: CoreValue::String(pow_display.clone()),
+                        display: pow_display,
+                    }],
+                    priority: ConversionPriority::Semantic,
+                    display_only: true,
+                    ..Default::default()
+                });
+            }
         }
 
         conversions

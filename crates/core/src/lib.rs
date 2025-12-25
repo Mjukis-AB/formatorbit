@@ -12,10 +12,10 @@ pub use format::{Format, FormatInfo};
 pub use types::*;
 
 use formats::{
-    Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat, DateTimeFormat,
-    DecimalFormat, EscapeFormat, ExprFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat,
-    JsonFormat, JwtFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, ProtobufFormat,
-    UlidFormat, UrlEncodingFormat, Utf8Format, UuidFormat,
+    Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat, DataSizeFormat,
+    DateTimeFormat, DecimalFormat, EscapeFormat, ExprFormat, HashFormat, HexFormat, HexdumpFormat,
+    IpAddrFormat, JsonFormat, JwtFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat,
+    ProtobufFormat, UlidFormat, UrlEncodingFormat, Utf8Format, UuidFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -46,6 +46,7 @@ impl Formatorbit {
                 Box::new(OctalFormat),
                 Box::new(Base64Format),
                 Box::new(DecimalFormat),
+                Box::new(DataSizeFormat),
                 Box::new(ExprFormat),
                 Box::new(EscapeFormat),
                 Box::new(DateTimeFormat),
