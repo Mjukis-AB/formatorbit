@@ -25,15 +25,10 @@ impl Format for Utf8Format {
         }
     }
 
-    fn parse(&self, input: &str) -> Vec<Interpretation> {
-        // Everything is valid UTF-8 (we already have a &str)
-        // This acts as a fallback interpretation
-        vec![Interpretation {
-            value: CoreValue::String(input.to_string()),
-            source_format: "utf8".to_string(),
-            confidence: 0.1, // Low confidence as fallback
-            description: format!("{} characters", input.chars().count()),
-        }]
+    fn parse(&self, _input: &str) -> Vec<Interpretation> {
+        // Don't parse text as "utf8" - it just creates noise.
+        // The utf8 format is only useful for bytes→string conversion.
+        vec![]
     }
 
     fn can_format(&self, value: &CoreValue) -> bool {
@@ -96,18 +91,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_utf8() {
+    fn test_parse_utf8_disabled() {
+        // utf8 parsing is disabled - it only does bytes→string conversion
         let format = Utf8Format;
         let results = format.parse("Hello, World!");
-
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].source_format, "utf8");
-
-        if let CoreValue::String(s) = &results[0].value {
-            assert_eq!(s, "Hello, World!");
-        } else {
-            panic!("Expected String");
-        }
+        assert!(results.is_empty());
     }
 
     #[test]
