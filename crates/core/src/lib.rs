@@ -15,7 +15,8 @@ use formats::{
     Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat, DataSizeFormat,
     DateTimeFormat, DecimalFormat, DurationFormat, EscapeFormat, ExprFormat, HashFormat, HexFormat,
     HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat, MsgPackFormat, NanoIdFormat, OctalFormat,
-    PlistFormat, ProtobufFormat, UlidFormat, UrlEncodingFormat, Utf8Format, UuidFormat,
+    PlistFormat, ProtobufFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
+    UuidFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -47,6 +48,7 @@ impl Formatorbit {
                 Box::new(Base64Format),
                 Box::new(DecimalFormat),
                 Box::new(DataSizeFormat),
+                Box::new(TemperatureFormat),
                 Box::new(ExprFormat),
                 Box::new(EscapeFormat),
                 Box::new(DurationFormat),
