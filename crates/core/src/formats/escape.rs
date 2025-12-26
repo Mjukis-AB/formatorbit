@@ -31,6 +31,25 @@ impl EscapeFormat {
         false
     }
 
+    /// Count the number of escape sequences in a string.
+    fn count_escapes(s: &str) -> usize {
+        let mut count = 0;
+        let mut chars = s.chars().peekable();
+        while let Some(c) = chars.next() {
+            if c == '\\' {
+                if let Some(&next) = chars.peek() {
+                    if matches!(
+                        next,
+                        'x' | 'u' | 'U' | 'n' | 't' | 'r' | '0'..='7' | '\\' | '"' | '\''
+                    ) {
+                        count += 1;
+                    }
+                }
+            }
+        }
+        count
+    }
+
     /// Decode escape sequences in a string.
     fn decode_escapes(s: &str) -> Option<Vec<u8>> {
         let mut result = Vec::new();
@@ -145,6 +164,22 @@ impl Format for EscapeFormat {
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
         if !Self::has_escapes(input) {
+            return vec![];
+        }
+
+        // Count escape sequences vs total length to determine if this is
+        // primarily escape-encoded data or just text that happens to contain escapes
+        let escape_count = Self::count_escapes(input);
+        let input_len = input.len();
+
+        // Require at least 10% of the input to be escape sequences
+        // A \xNN sequence is 4 chars representing 1 byte, so ~25% overhead
+        // If we have very few escapes in a long string, it's probably not escape data
+        let min_escape_ratio = 0.10;
+        let escape_chars = escape_count * 4; // rough estimate of chars consumed by escapes
+        let escape_ratio = escape_chars as f32 / input_len as f32;
+
+        if escape_ratio < min_escape_ratio && input_len > 20 {
             return vec![];
         }
 
