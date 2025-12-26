@@ -219,13 +219,141 @@ pub fn parse_number(s: &str) -> Option<f64> {
 }
 
 /// Format a value with appropriate precision.
-/// Shows integers without decimals, others with up to 2 decimal places.
+///
+/// For "normal" values (0.01 to 999999), shows simple decimal format.
+/// For very small or very large values, uses scientific notation.
 pub fn format_value(value: f64) -> String {
-    if (value - value.round()).abs() < 0.005 {
-        format!("{}", value.round() as i64)
-    } else {
-        format!("{:.2}", value)
+    if value == 0.0 {
+        return "0".to_string();
     }
+
+    let abs_value = value.abs();
+
+    // Normal range: show as regular decimal
+    if (0.01..1_000_000.0).contains(&abs_value) {
+        if (value - value.round()).abs() < 0.005 {
+            format!("{}", value.round() as i64)
+        } else {
+            format!("{:.2}", value)
+        }
+    } else {
+        // Very small or very large: use scientific notation
+        format_scientific(value)
+    }
+}
+
+/// Format a value in scientific notation (e.g., 5e-9, 1.5e12).
+#[allow(dead_code)]
+pub fn format_scientific(value: f64) -> String {
+    if value == 0.0 {
+        return "0".to_string();
+    }
+
+    let exponent = value.abs().log10().floor() as i32;
+    let mantissa = value / 10_f64.powi(exponent);
+
+    // Clean up mantissa display
+    if (mantissa - mantissa.round()).abs() < 0.005 {
+        format!("{}e{}", mantissa.round() as i64, exponent)
+    } else {
+        format!("{:.2}e{}", mantissa, exponent)
+    }
+}
+
+/// Format a value with full decimal representation.
+/// For extreme values, uses "..N zeros.." notation.
+#[allow(dead_code)]
+pub fn format_decimal(value: f64) -> String {
+    if value == 0.0 {
+        return "0".to_string();
+    }
+
+    let abs_value = value.abs();
+
+    if (0.0001..1_000_000_000.0).contains(&abs_value) {
+        // Normal-ish range: show full decimal, trim trailing zeros
+        let precision = if abs_value < 1.0 {
+            // Calculate needed precision for small decimals
+            let log = -abs_value.log10().floor() as usize;
+            (log + 4).min(15)
+        } else {
+            2
+        };
+        let s = format!("{:.prec$}", value, prec = precision);
+        let s = s.trim_end_matches('0').trim_end_matches('.');
+        s.to_string()
+    } else if abs_value < 0.0001 {
+        // Very small: use zeros notation
+        let exponent = (-value.abs().log10().floor()) as usize;
+        if exponent > 8 {
+            let mantissa = value.abs() * 10_f64.powi(exponent as i32);
+            let sign = if value < 0.0 { "-" } else { "" };
+            format!("{}0.[{}zeros]{:.0}", sign, exponent - 1, mantissa)
+        } else {
+            let s = format!("{:.prec$}", value, prec = exponent + 2);
+            s.trim_end_matches('0').trim_end_matches('.').to_string()
+        }
+    } else {
+        // Very large: use zeros notation
+        let exponent = value.abs().log10().floor() as usize;
+        if exponent > 12 {
+            let mantissa = value / 10_f64.powi(exponent as i32);
+            let sign = if value < 0.0 { "-" } else { "" };
+            format!("{}{:.0}[{}zeros]", sign, mantissa.abs(), exponent)
+        } else {
+            format!("{:.0}", value)
+        }
+    }
+}
+
+/// Find the best SI prefix for a value to keep the number in a readable range (1-999).
+/// Returns (scaled_value, prefix_symbol, prefix_exponent).
+pub fn find_best_si_prefix(value: f64) -> (f64, &'static str, i32) {
+    if value == 0.0 {
+        return (0.0, "", 0);
+    }
+
+    let abs_value = value.abs();
+    let exponent = abs_value.log10().floor() as i32;
+
+    // Find the SI prefix whose exponent is closest but <= the value's exponent
+    // We want the scaled value to be between 1 and 999
+    // Use floor division (not truncation) to handle negative exponents correctly
+    let target_exp = if exponent >= 0 {
+        (exponent / 3) * 3
+    } else {
+        ((exponent - 2) / 3) * 3 // Floor division for negatives
+    };
+
+    // Find matching prefix
+    for prefix in SI_PREFIXES {
+        if prefix.exponent == target_exp {
+            let scaled = value / prefix.factor();
+            return (scaled, prefix.symbol, prefix.exponent);
+        }
+    }
+
+    // No prefix found (value in 1-999 range), return as-is
+    (value, "", 0)
+}
+
+/// Format a value with the best SI prefix for readability.
+/// E.g., 0.000005 with unit "m" -> "5 µm"
+pub fn format_with_si_prefix(value: f64, base_unit: &str) -> String {
+    if value == 0.0 {
+        return format!("0 {}", base_unit);
+    }
+
+    let (scaled, prefix, _) = find_best_si_prefix(value);
+
+    // Format the scaled value
+    let num = if (scaled - scaled.round()).abs() < 0.005 {
+        format!("{}", scaled.round() as i64)
+    } else {
+        format!("{:.2}", scaled)
+    };
+
+    format!("{} {}{}", num, prefix, base_unit)
 }
 
 #[cfg(test)]

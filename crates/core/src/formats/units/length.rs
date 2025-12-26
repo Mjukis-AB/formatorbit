@@ -11,7 +11,7 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number, SI_PREFIXES};
+use super::{format_value, format_with_si_prefix, parse_number, SI_PREFIXES};
 
 pub struct LengthFormat;
 
@@ -148,7 +148,13 @@ impl Format for LengthFormat {
             return vec![];
         }
 
-        let description = format!("{} m", format_value(meters));
+        // Use SI-prefixed display for extreme values, plain meters otherwise
+        let abs_meters = meters.abs();
+        let description = if abs_meters > 0.0 && !(0.01..1_000_000.0).contains(&abs_meters) {
+            format_with_si_prefix(meters, "m")
+        } else {
+            format!("{} m", format_value(meters))
+        };
 
         vec![Interpretation {
             value: CoreValue::Float(meters),
@@ -178,6 +184,7 @@ impl Format for LengthFormat {
 
         let mut conversions = Vec::new();
 
+        // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = meters / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
