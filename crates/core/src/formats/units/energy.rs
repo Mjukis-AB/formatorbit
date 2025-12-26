@@ -11,7 +11,10 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number, SI_PREFIXES};
+use super::{
+    format_decimal, format_scientific, format_value, format_with_si_prefix, parse_number,
+    SI_PREFIXES,
+};
 
 pub struct EnergyFormat;
 
@@ -152,7 +155,7 @@ impl Format for EnergyFormat {
         let description = format!("{} J", format_value(joules));
 
         vec![Interpretation {
-            value: CoreValue::Float(joules),
+            value: CoreValue::Energy(joules),
             source_format: "energy".to_string(),
             confidence: 0.85,
             description,
@@ -168,7 +171,7 @@ impl Format for EnergyFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(joules) = value else {
+        let CoreValue::Energy(joules) = value else {
             return vec![];
         };
 
@@ -184,13 +187,13 @@ impl Format for EnergyFormat {
             let display = format!("{} {}", format_value(converted), abbrev);
 
             conversions.push(Conversion {
-                value: CoreValue::Float(converted),
+                value: CoreValue::Energy(joules),
                 target_format: (*name).to_string(),
                 display: display.clone(),
                 path: vec![(*name).to_string()],
                 steps: vec![ConversionStep {
                     format: (*name).to_string(),
-                    value: CoreValue::Float(converted),
+                    value: CoreValue::Energy(joules),
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
@@ -198,6 +201,59 @@ impl Format for EnergyFormat {
                 ..Default::default()
             });
         }
+
+        // Multiple representations for the base unit (joules)
+        let si_display = format_with_si_prefix(joules, "J");
+        let sci_display = format!("{} J", format_scientific(joules));
+        let dec_display = format!("{} J", format_decimal(joules));
+
+        conversions.push(Conversion {
+            value: CoreValue::Energy(joules),
+            target_format: "joules-si".to_string(),
+            display: si_display.clone(),
+            path: vec!["joules-si".to_string()],
+            steps: vec![ConversionStep {
+                format: "joules-si".to_string(),
+                value: CoreValue::Energy(joules),
+                display: si_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Energy(joules),
+            target_format: "joules-scientific".to_string(),
+            display: sci_display.clone(),
+            path: vec!["joules-scientific".to_string()],
+            steps: vec![ConversionStep {
+                format: "joules-scientific".to_string(),
+                value: CoreValue::Energy(joules),
+                display: sci_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Energy(joules),
+            target_format: "joules-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["joules-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "joules-decimal".to_string(),
+                value: CoreValue::Energy(joules),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
 
         conversions
     }
@@ -218,7 +274,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(j) => Some(*j),
+            CoreValue::Energy(j) => Some(*j),
             _ => None,
         }
     }

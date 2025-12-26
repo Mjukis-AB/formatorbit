@@ -11,7 +11,10 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number, SI_PREFIXES};
+use super::{
+    format_decimal, format_scientific, format_value, format_with_si_prefix, parse_number,
+    SI_PREFIXES,
+};
 
 pub struct PressureFormat;
 
@@ -142,7 +145,7 @@ impl Format for PressureFormat {
         let description = format!("{} Pa", format_value(pa));
 
         vec![Interpretation {
-            value: CoreValue::Float(pa),
+            value: CoreValue::Pressure(pa),
             source_format: "pressure".to_string(),
             confidence: 0.85,
             description,
@@ -158,7 +161,7 @@ impl Format for PressureFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(pa) = value else {
+        let CoreValue::Pressure(pa) = value else {
             return vec![];
         };
 
@@ -174,13 +177,13 @@ impl Format for PressureFormat {
             let display = format!("{} {}", format_value(converted), abbrev);
 
             conversions.push(Conversion {
-                value: CoreValue::Float(converted),
+                value: CoreValue::Pressure(pa),
                 target_format: (*name).to_string(),
                 display: display.clone(),
                 path: vec![(*name).to_string()],
                 steps: vec![ConversionStep {
                     format: (*name).to_string(),
-                    value: CoreValue::Float(converted),
+                    value: CoreValue::Pressure(pa),
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
@@ -188,6 +191,59 @@ impl Format for PressureFormat {
                 ..Default::default()
             });
         }
+
+        // Multiple representations for the base unit (pascals)
+        let si_display = format_with_si_prefix(pa, "Pa");
+        let sci_display = format!("{} Pa", format_scientific(pa));
+        let dec_display = format!("{} Pa", format_decimal(pa));
+
+        conversions.push(Conversion {
+            value: CoreValue::Pressure(pa),
+            target_format: "pascals-si".to_string(),
+            display: si_display.clone(),
+            path: vec!["pascals-si".to_string()],
+            steps: vec![ConversionStep {
+                format: "pascals-si".to_string(),
+                value: CoreValue::Pressure(pa),
+                display: si_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Pressure(pa),
+            target_format: "pascals-scientific".to_string(),
+            display: sci_display.clone(),
+            path: vec!["pascals-scientific".to_string()],
+            steps: vec![ConversionStep {
+                format: "pascals-scientific".to_string(),
+                value: CoreValue::Pressure(pa),
+                display: sci_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Pressure(pa),
+            target_format: "pascals-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["pascals-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "pascals-decimal".to_string(),
+                value: CoreValue::Pressure(pa),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
 
         conversions
     }
@@ -208,7 +264,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(pa) => Some(*pa),
+            CoreValue::Pressure(pa) => Some(*pa),
             _ => None,
         }
     }

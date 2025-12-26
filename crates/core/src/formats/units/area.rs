@@ -14,7 +14,7 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number, SI_PREFIXES};
+use super::{format_decimal, format_scientific, format_value, parse_number, SI_PREFIXES};
 
 pub struct AreaFormat;
 
@@ -169,7 +169,7 @@ impl Format for AreaFormat {
         let description = format!("{} m²", format_value(sqm));
 
         vec![Interpretation {
-            value: CoreValue::Float(sqm),
+            value: CoreValue::Area(sqm),
             source_format: "area".to_string(),
             confidence: 0.85,
             description,
@@ -185,7 +185,7 @@ impl Format for AreaFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(sqm) = value else {
+        let CoreValue::Area(sqm) = value else {
             return vec![];
         };
 
@@ -201,13 +201,13 @@ impl Format for AreaFormat {
             let display = format!("{} {}", format_value(converted), abbrev);
 
             conversions.push(Conversion {
-                value: CoreValue::Float(converted),
+                value: CoreValue::Area(sqm),
                 target_format: (*name).to_string(),
                 display: display.clone(),
                 path: vec![(*name).to_string()],
                 steps: vec![ConversionStep {
                     format: (*name).to_string(),
-                    value: CoreValue::Float(converted),
+                    value: CoreValue::Area(sqm),
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
@@ -215,6 +215,43 @@ impl Format for AreaFormat {
                 ..Default::default()
             });
         }
+
+        // Additional representations for base unit (square meters)
+        // Note: SI prefix for area is tricky (km² vs m²) so just do scientific/decimal
+        let sci_display = format!("{} m²", format_scientific(sqm));
+        let dec_display = format!("{} m²", format_decimal(sqm));
+
+        conversions.push(Conversion {
+            value: CoreValue::Area(sqm),
+            target_format: "sqm-scientific".to_string(),
+            display: sci_display.clone(),
+            path: vec!["sqm-scientific".to_string()],
+            steps: vec![ConversionStep {
+                format: "sqm-scientific".to_string(),
+                value: CoreValue::Area(sqm),
+                display: sci_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Area(sqm),
+            target_format: "sqm-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["sqm-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "sqm-decimal".to_string(),
+                value: CoreValue::Area(sqm),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
 
         conversions
     }
@@ -235,7 +272,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(sqm) => Some(*sqm),
+            CoreValue::Area(sqm) => Some(*sqm),
             _ => None,
         }
     }

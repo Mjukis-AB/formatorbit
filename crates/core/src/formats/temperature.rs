@@ -183,7 +183,7 @@ impl Format for TemperatureFormat {
         );
 
         vec![Interpretation {
-            value: CoreValue::Float(kelvin),
+            value: CoreValue::Temperature(kelvin),
             source_format: "temperature".to_string(),
             confidence: 0.85,
             description,
@@ -199,7 +199,7 @@ impl Format for TemperatureFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(kelvin) = value else {
+        let CoreValue::Temperature(kelvin) = value else {
             return vec![];
         };
 
@@ -212,13 +212,13 @@ impl Format for TemperatureFormat {
         // Celsius
         let c_display = format!("{}°C", Self::format_value(celsius));
         conversions.push(Conversion {
-            value: CoreValue::Float(celsius),
+            value: CoreValue::Temperature(kelvin),
             target_format: "celsius".to_string(),
             display: c_display.clone(),
             path: vec!["celsius".to_string()],
             steps: vec![ConversionStep {
                 format: "celsius".to_string(),
-                value: CoreValue::Float(celsius),
+                value: CoreValue::Temperature(kelvin),
                 display: c_display,
             }],
             priority: ConversionPriority::Semantic,
@@ -229,13 +229,13 @@ impl Format for TemperatureFormat {
         // Fahrenheit
         let f_display = format!("{}°F", Self::format_value(fahrenheit));
         conversions.push(Conversion {
-            value: CoreValue::Float(fahrenheit),
+            value: CoreValue::Temperature(kelvin),
             target_format: "fahrenheit".to_string(),
             display: f_display.clone(),
             path: vec!["fahrenheit".to_string()],
             steps: vec![ConversionStep {
                 format: "fahrenheit".to_string(),
-                value: CoreValue::Float(fahrenheit),
+                value: CoreValue::Temperature(kelvin),
                 display: f_display,
             }],
             priority: ConversionPriority::Semantic,
@@ -246,13 +246,13 @@ impl Format for TemperatureFormat {
         // Kelvin
         let k_display = format!("{} K", Self::format_value(kelvin));
         conversions.push(Conversion {
-            value: CoreValue::Float(kelvin),
+            value: CoreValue::Temperature(kelvin),
             target_format: "kelvin".to_string(),
             display: k_display.clone(),
             path: vec!["kelvin".to_string()],
             steps: vec![ConversionStep {
                 format: "kelvin".to_string(),
-                value: CoreValue::Float(kelvin),
+                value: CoreValue::Temperature(kelvin),
                 display: k_display,
             }],
             priority: ConversionPriority::Semantic,
@@ -279,7 +279,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(k) => Some(*k),
+            CoreValue::Temperature(k) => Some(*k),
             _ => None,
         }
     }
@@ -371,7 +371,7 @@ mod tests {
     fn test_conversions() {
         let format = TemperatureFormat;
         // 0°C = 273.15K
-        let value = CoreValue::Float(273.15);
+        let value = CoreValue::Temperature(273.15);
         let conversions = format.conversions(&value);
 
         assert_eq!(conversions.len(), 3);

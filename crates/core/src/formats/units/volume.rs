@@ -11,7 +11,10 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number, SI_PREFIXES};
+use super::{
+    format_decimal, format_scientific, format_value, format_with_si_prefix, parse_number,
+    SI_PREFIXES,
+};
 
 pub struct VolumeFormat;
 
@@ -151,7 +154,7 @@ impl Format for VolumeFormat {
         let description = format!("{} mL", format_value(ml));
 
         vec![Interpretation {
-            value: CoreValue::Float(ml),
+            value: CoreValue::Volume(ml),
             source_format: "volume".to_string(),
             confidence: 0.85,
             description,
@@ -167,7 +170,7 @@ impl Format for VolumeFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(ml) = value else {
+        let CoreValue::Volume(ml) = value else {
             return vec![];
         };
 
@@ -198,6 +201,59 @@ impl Format for VolumeFormat {
             });
         }
 
+        // Multiple representations for the base unit (milliliters)
+        let si_display = format_with_si_prefix(ml / 1000.0, "L"); // Convert mL to L for SI prefix
+        let sci_display = format!("{} mL", format_scientific(ml));
+        let dec_display = format!("{} mL", format_decimal(ml));
+
+        conversions.push(Conversion {
+            value: CoreValue::Volume(ml),
+            target_format: "liters-si".to_string(),
+            display: si_display.clone(),
+            path: vec!["liters-si".to_string()],
+            steps: vec![ConversionStep {
+                format: "liters-si".to_string(),
+                value: CoreValue::Volume(ml),
+                display: si_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Volume(ml),
+            target_format: "milliliters-scientific".to_string(),
+            display: sci_display.clone(),
+            path: vec!["milliliters-scientific".to_string()],
+            steps: vec![ConversionStep {
+                format: "milliliters-scientific".to_string(),
+                value: CoreValue::Volume(ml),
+                display: sci_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Volume(ml),
+            target_format: "milliliters-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["milliliters-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "milliliters-decimal".to_string(),
+                value: CoreValue::Volume(ml),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
         conversions
     }
 
@@ -217,7 +273,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(ml) => Some(*ml),
+            CoreValue::Volume(ml) => Some(*ml),
             _ => None,
         }
     }
