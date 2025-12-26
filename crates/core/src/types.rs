@@ -283,7 +283,9 @@ pub struct Conversion {
     ///
     /// Without this flag, the BFS would convert "0xC82" string to bytes and
     /// produce nonsense like "binary of ASCII bytes of hex string".
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    ///
+    /// This is an internal implementation detail and not exposed via FFI/API.
+    #[serde(skip)]
     pub display_only: bool,
     /// Structured metadata for rich UI rendering.
     ///
