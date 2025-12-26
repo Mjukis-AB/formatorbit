@@ -98,11 +98,15 @@ const BLOCKED_PATHS: &[(&str, &str)] = &[
     ("uuid", "epoch-millis"),
     ("uuid", "apple-cocoa"),
     ("uuid", "filetime"),
-    // Expression results - filter noise, keep primary decimal and representations
+    // Expression results - filter noise, keep primary result and hex/binary/octal representations
     ("expr", "msgpack"),
     ("expr", "octal"),
     ("expr", "datasize"),
+    ("expr", "datasize-iec"),
+    ("expr", "datasize-si"),
     ("expr", "duration"),
+    ("expr", "duration-ms"),
+    ("expr", "decimal"),
     // Data sizes aren't durations
     ("datasize", "duration"),
     ("datasize", "duration-ms"),
