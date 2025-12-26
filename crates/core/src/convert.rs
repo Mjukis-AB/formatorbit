@@ -103,6 +103,30 @@ const BLOCKED_PATHS: &[(&str, &str)] = &[
     ("expr", "octal"),
     ("expr", "datasize"),
     ("expr", "duration"),
+    // Data sizes aren't durations
+    ("datasize", "duration"),
+    ("datasize", "duration-ms"),
+    // Durations aren't data sizes or re-interpreted as different time scales
+    ("duration", "datasize"),
+    ("duration", "datasize-iec"),
+    ("duration", "datasize-si"),
+    ("duration", "duration-ms"),
+    // Colors aren't timestamps or data sizes
+    ("color-hex", "duration"),
+    ("color-hex", "duration-ms"),
+    ("color-hex", "datasize"),
+    ("color-hex", "datasize-iec"),
+    ("color-hex", "datasize-si"),
+    ("color-rgb", "duration"),
+    ("color-rgb", "duration-ms"),
+    ("color-rgb", "datasize"),
+    ("color-rgb", "datasize-iec"),
+    ("color-rgb", "datasize-si"),
+    ("color-hsl", "duration"),
+    ("color-hsl", "duration-ms"),
+    ("color-hsl", "datasize"),
+    ("color-hsl", "datasize-iec"),
+    ("color-hsl", "datasize-si"),
 ];
 
 /// Check if a source→target conversion should be blocked.
