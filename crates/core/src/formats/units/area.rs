@@ -196,9 +196,37 @@ impl Format for AreaFormat {
 
         let mut conversions = Vec::new();
 
+        // Primary result: decimal square meters (canonical base unit value)
+        let dec_display = format!("{} m²", format_decimal(sqm));
+        conversions.push(Conversion {
+            value: CoreValue::Area(sqm),
+            target_format: "sqm-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["sqm-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "sqm-decimal".to_string(),
+                value: CoreValue::Area(sqm),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = sqm / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
+
+            // Imperial/non-SI units (sqft, acres, hectares) are true conversions
+            // Metric square meters (m², km², cm²) are representations
+            let is_non_metric = matches!(*name, "square feet" | "acres" | "hectares");
+            let kind = if is_non_metric {
+                ConversionKind::Conversion
+            } else {
+                ConversionKind::Representation
+            };
 
             conversions.push(Conversion {
                 value: CoreValue::Area(sqm),
@@ -211,16 +239,13 @@ impl Format for AreaFormat {
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Additional representations for base unit (square meters)
-        // Note: SI prefix for area is tricky (km² vs m²) so just do scientific/decimal
+        // Additional representation: scientific notation
         let sci_display = format!("{} m²", format_scientific(sqm));
-        let dec_display = format!("{} m²", format_decimal(sqm));
-
         conversions.push(Conversion {
             value: CoreValue::Area(sqm),
             target_format: "sqm-scientific".to_string(),
@@ -230,22 +255,6 @@ impl Format for AreaFormat {
                 format: "sqm-scientific".to_string(),
                 value: CoreValue::Area(sqm),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        conversions.push(Conversion {
-            value: CoreValue::Area(sqm),
-            target_format: "sqm-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["sqm-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "sqm-decimal".to_string(),
-                value: CoreValue::Area(sqm),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,

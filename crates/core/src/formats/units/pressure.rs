@@ -172,9 +172,37 @@ impl Format for PressureFormat {
 
         let mut conversions = Vec::new();
 
+        // Primary result: decimal pascals (canonical base unit value)
+        let dec_display = format!("{} Pa", format_decimal(pa));
+        conversions.push(Conversion {
+            value: CoreValue::Pressure(pa),
+            target_format: "pascals-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["pascals-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "pascals-decimal".to_string(),
+                value: CoreValue::Pressure(pa),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = pa / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
+
+            // psi and atmospheres are true conversions (different systems)
+            // pascals, kPa, MPa, bar are metric representations
+            let is_non_metric = matches!(*name, "psi" | "atmospheres");
+            let kind = if is_non_metric {
+                ConversionKind::Conversion
+            } else {
+                ConversionKind::Representation
+            };
 
             conversions.push(Conversion {
                 value: CoreValue::Pressure(pa),
@@ -187,15 +215,14 @@ impl Format for PressureFormat {
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Multiple representations for the base unit (pascals)
+        // Additional representations for the base unit (pascals)
         let si_display = format_with_si_prefix(pa, "Pa");
         let sci_display = format!("{} Pa", format_scientific(pa));
-        let dec_display = format!("{} Pa", format_decimal(pa));
 
         conversions.push(Conversion {
             value: CoreValue::Pressure(pa),
@@ -222,22 +249,6 @@ impl Format for PressureFormat {
                 format: "pascals-scientific".to_string(),
                 value: CoreValue::Pressure(pa),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        conversions.push(Conversion {
-            value: CoreValue::Pressure(pa),
-            target_format: "pascals-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["pascals-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "pascals-decimal".to_string(),
-                value: CoreValue::Pressure(pa),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,
