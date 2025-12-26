@@ -26,6 +26,8 @@ rmp-serde = "1"
 percent-encoding = "2"
 plist = "1"
 evalexpr = "13"
+ureq = { version = "2", features = ["json"] }
+dirs = "5"
 
 [dependencies.pyo3]
 version = "0.23"
