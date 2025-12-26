@@ -243,7 +243,6 @@ pub fn format_value(value: f64) -> String {
 }
 
 /// Format a value in scientific notation (e.g., 5e-9, 1.5e12).
-#[allow(dead_code)]
 pub fn format_scientific(value: f64) -> String {
     if value == 0.0 {
         return "0".to_string();
@@ -262,7 +261,6 @@ pub fn format_scientific(value: f64) -> String {
 
 /// Format a value with full decimal representation.
 /// For extreme values, uses "..N zeros.." notation.
-#[allow(dead_code)]
 pub fn format_decimal(value: f64) -> String {
     if value == 0.0 {
         return "0".to_string();

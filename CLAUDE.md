@@ -142,6 +142,15 @@ pub struct Conversion {
     pub display: String,          // Ready-to-show output
     pub path: Vec<String>,        // How we got here
     pub is_lossy: bool,
+    pub kind: ConversionKind,     // Conversion, Representation, or Trait
+    pub display_only: bool,       // If true, don't explore further in BFS
+}
+
+// Distinguishes types of conversions for UI grouping
+pub enum ConversionKind {
+    Conversion,     // Actual transformation (bytes → int, int → datetime)
+    Representation, // Same value, different notation (1024 → 0x400, 5e-9 m → 5 nm)
+    Trait,          // Observation/property (is prime, is power-of-2, is fibonacci)
 }
 ```
 
@@ -197,6 +206,41 @@ const MAX_EPOCH: i64 = 4_102_444_800; // 2100-01-01
 
 // For milliseconds, multiply range by 1000
 ```
+
+### 5. ConversionKind: Conversion vs Representation vs Trait
+
+Use the correct `ConversionKind` to enable proper UI grouping:
+
+**Conversion** - Actual data transformation. The output is semantically different:
+- bytes → integer (interpreting bytes as a number)
+- integer → datetime (epoch timestamp)
+- hex → base64 (re-encoding)
+
+**Representation** - Same underlying value, different notation. UI can group these:
+- `5e-9 m` → `5 nm` (SI prefix)
+- `5e-9 m` → `0.000000005 m` (decimal)
+- `1024` → `0x400` (hex notation)
+- `1024` → `1 KiB` (human-readable size)
+
+**Trait** - Observation about the value. Doesn't produce a new value to convert:
+- "is prime"
+- "is power of 2"
+- "is fibonacci number"
+
+```rust
+// Multiple representations of the same value
+conversions.push(Conversion {
+    target_format: "meters-si".to_string(),
+    display: format_with_si_prefix(meters, "m"),  // "5 nm"
+    kind: ConversionKind::Representation,
+    display_only: true,  // Prevent BFS from exploring further
+    ..Default::default()
+});
+```
+
+Set `display_only: true` on representations to prevent the BFS from treating
+the display string as input for further conversions (e.g., converting "5 nm"
+as ASCII bytes → hex).
 
 ## File Organization
 

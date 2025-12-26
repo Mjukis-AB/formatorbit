@@ -11,7 +11,10 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number, SI_PREFIXES};
+use super::{
+    format_decimal, format_scientific, format_value, format_with_si_prefix, parse_number,
+    SI_PREFIXES,
+};
 
 pub struct WeightFormat;
 
@@ -142,7 +145,7 @@ impl Format for WeightFormat {
         let description = format!("{} g", format_value(grams));
 
         vec![Interpretation {
-            value: CoreValue::Float(grams),
+            value: CoreValue::Weight(grams),
             source_format: "weight".to_string(),
             confidence: 0.85,
             description,
@@ -158,7 +161,7 @@ impl Format for WeightFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(grams) = value else {
+        let CoreValue::Weight(grams) = value else {
             return vec![];
         };
 
@@ -174,13 +177,13 @@ impl Format for WeightFormat {
             let display = format!("{} {}", format_value(converted), abbrev);
 
             conversions.push(Conversion {
-                value: CoreValue::Float(converted),
+                value: CoreValue::Weight(grams),
                 target_format: (*name).to_string(),
                 display: display.clone(),
                 path: vec![(*name).to_string()],
                 steps: vec![ConversionStep {
                     format: (*name).to_string(),
-                    value: CoreValue::Float(converted),
+                    value: CoreValue::Weight(grams),
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
@@ -188,6 +191,59 @@ impl Format for WeightFormat {
                 ..Default::default()
             });
         }
+
+        // Multiple representations for the base unit (grams)
+        let si_display = format_with_si_prefix(grams, "g");
+        let sci_display = format!("{} g", format_scientific(grams));
+        let dec_display = format!("{} g", format_decimal(grams));
+
+        conversions.push(Conversion {
+            value: CoreValue::Weight(grams),
+            target_format: "grams-si".to_string(),
+            display: si_display.clone(),
+            path: vec!["grams-si".to_string()],
+            steps: vec![ConversionStep {
+                format: "grams-si".to_string(),
+                value: CoreValue::Weight(grams),
+                display: si_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Weight(grams),
+            target_format: "grams-scientific".to_string(),
+            display: sci_display.clone(),
+            path: vec!["grams-scientific".to_string()],
+            steps: vec![ConversionStep {
+                format: "grams-scientific".to_string(),
+                value: CoreValue::Weight(grams),
+                display: sci_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Weight(grams),
+            target_format: "grams-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["grams-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "grams-decimal".to_string(),
+                value: CoreValue::Weight(grams),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
 
         conversions
     }
@@ -208,7 +264,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(g) => Some(*g),
+            CoreValue::Weight(g) => Some(*g),
             _ => None,
         }
     }

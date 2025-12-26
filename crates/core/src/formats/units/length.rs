@@ -11,7 +11,10 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, format_with_si_prefix, parse_number, SI_PREFIXES};
+use super::{
+    format_decimal, format_scientific, format_value, format_with_si_prefix, parse_number,
+    SI_PREFIXES,
+};
 
 pub struct LengthFormat;
 
@@ -157,7 +160,7 @@ impl Format for LengthFormat {
         };
 
         vec![Interpretation {
-            value: CoreValue::Float(meters),
+            value: CoreValue::Length(meters),
             source_format: "length".to_string(),
             confidence: 0.85,
             description,
@@ -173,7 +176,7 @@ impl Format for LengthFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(meters) = value else {
+        let CoreValue::Length(meters) = value else {
             return vec![];
         };
 
@@ -190,13 +193,13 @@ impl Format for LengthFormat {
             let display = format!("{} {}", format_value(converted), abbrev);
 
             conversions.push(Conversion {
-                value: CoreValue::Float(converted),
+                value: CoreValue::Length(converted * multiplier), // Keep in meters
                 target_format: (*name).to_string(),
                 display: display.clone(),
                 path: vec![(*name).to_string()],
                 steps: vec![ConversionStep {
                     format: (*name).to_string(),
-                    value: CoreValue::Float(converted),
+                    value: CoreValue::Length(converted * multiplier),
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
@@ -204,6 +207,63 @@ impl Format for LengthFormat {
                 ..Default::default()
             });
         }
+
+        // Multiple representations for the base unit (meters)
+        // These show the same value in different notations
+        let si_display = format_with_si_prefix(meters, "m");
+        let sci_display = format!("{} m", format_scientific(meters));
+        let dec_display = format!("{} m", format_decimal(meters));
+
+        // SI prefix representation (e.g., "5 nm", "2.5 µm", "3 km")
+        conversions.push(Conversion {
+            value: CoreValue::Length(meters),
+            target_format: "meters-si".to_string(),
+            display: si_display.clone(),
+            path: vec!["meters-si".to_string()],
+            steps: vec![ConversionStep {
+                format: "meters-si".to_string(),
+                value: CoreValue::Length(meters),
+                display: si_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Scientific notation (e.g., "5e-9 m")
+        conversions.push(Conversion {
+            value: CoreValue::Length(meters),
+            target_format: "meters-scientific".to_string(),
+            display: sci_display.clone(),
+            path: vec!["meters-scientific".to_string()],
+            steps: vec![ConversionStep {
+                format: "meters-scientific".to_string(),
+                value: CoreValue::Length(meters),
+                display: sci_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Full decimal representation (e.g., "0.[8zeros]5 m")
+        conversions.push(Conversion {
+            value: CoreValue::Length(meters),
+            target_format: "meters-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["meters-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "meters-decimal".to_string(),
+                value: CoreValue::Length(meters),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
 
         conversions
     }
@@ -224,7 +284,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(m) => Some(*m),
+            CoreValue::Length(m) => Some(*m),
             _ => None,
         }
     }
@@ -284,7 +344,7 @@ mod tests {
     #[test]
     fn test_conversions() {
         let format = LengthFormat;
-        let value = CoreValue::Float(1000.0); // 1000 meters = 1 km
+        let value = CoreValue::Length(1000.0); // 1000 meters = 1 km
         let conversions = format.conversions(&value);
 
         let km = conversions.iter().find(|c| c.target_format == "kilometers");

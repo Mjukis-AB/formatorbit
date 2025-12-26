@@ -8,7 +8,7 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number};
+use super::{format_decimal, format_scientific, format_value, parse_number};
 
 pub struct SpeedFormat;
 
@@ -101,7 +101,7 @@ impl Format for SpeedFormat {
         let description = format!("{} m/s", format_value(mps));
 
         vec![Interpretation {
-            value: CoreValue::Float(mps),
+            value: CoreValue::Speed(mps),
             source_format: "speed".to_string(),
             confidence: 0.85,
             description,
@@ -117,7 +117,7 @@ impl Format for SpeedFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Float(mps) = value else {
+        let CoreValue::Speed(mps) = value else {
             return vec![];
         };
 
@@ -133,13 +133,13 @@ impl Format for SpeedFormat {
             let display = format!("{} {}", format_value(converted), abbrev);
 
             conversions.push(Conversion {
-                value: CoreValue::Float(converted),
+                value: CoreValue::Speed(mps),
                 target_format: (*name).to_string(),
                 display: display.clone(),
                 path: vec![(*name).to_string()],
                 steps: vec![ConversionStep {
                     format: (*name).to_string(),
-                    value: CoreValue::Float(converted),
+                    value: CoreValue::Speed(mps),
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
@@ -147,6 +147,42 @@ impl Format for SpeedFormat {
                 ..Default::default()
             });
         }
+
+        // Additional representations for base unit (m/s)
+        let sci_display = format!("{} m/s", format_scientific(mps));
+        let dec_display = format!("{} m/s", format_decimal(mps));
+
+        conversions.push(Conversion {
+            value: CoreValue::Speed(mps),
+            target_format: "m/s-scientific".to_string(),
+            display: sci_display.clone(),
+            path: vec!["m/s-scientific".to_string()],
+            steps: vec![ConversionStep {
+                format: "m/s-scientific".to_string(),
+                value: CoreValue::Speed(mps),
+                display: sci_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        conversions.push(Conversion {
+            value: CoreValue::Speed(mps),
+            target_format: "m/s-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["m/s-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "m/s-decimal".to_string(),
+                value: CoreValue::Speed(mps),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Semantic,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
 
         conversions
     }
@@ -167,7 +203,7 @@ mod tests {
             return None;
         }
         match &results[0].value {
-            CoreValue::Float(mps) => Some(*mps),
+            CoreValue::Speed(mps) => Some(*mps),
             _ => None,
         }
     }

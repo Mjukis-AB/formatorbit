@@ -36,6 +36,30 @@ pub enum CoreValue {
     /// This allows UI apps to render protobuf with field number annotations
     /// and wire type information.
     Protobuf(Vec<ProtoField>),
+
+    // =========================================================================
+    // Unit-specific value types
+    // =========================================================================
+    // These ensure that unit conversions only happen within the same category.
+    // E.g., Length values won't accidentally be converted as Weight values.
+    /// Length in meters (base SI unit).
+    Length(f64),
+    /// Weight/mass in grams (base unit).
+    Weight(f64),
+    /// Volume in milliliters (base unit).
+    Volume(f64),
+    /// Speed in meters per second (base SI unit).
+    Speed(f64),
+    /// Pressure in pascals (base SI unit).
+    Pressure(f64),
+    /// Energy in joules (base SI unit).
+    Energy(f64),
+    /// Angle in degrees (base unit).
+    Angle(f64),
+    /// Area in square meters (base SI unit).
+    Area(f64),
+    /// Temperature in Kelvin (base SI unit).
+    Temperature(f64),
 }
 
 /// A decoded protobuf field.
@@ -103,6 +127,15 @@ impl CoreValue {
             Self::DateTime(_) => "datetime",
             Self::Json(_) => "json",
             Self::Protobuf(_) => "protobuf",
+            Self::Length(_) => "length",
+            Self::Weight(_) => "weight",
+            Self::Volume(_) => "volume",
+            Self::Speed(_) => "speed",
+            Self::Pressure(_) => "pressure",
+            Self::Energy(_) => "energy",
+            Self::Angle(_) => "angle",
+            Self::Area(_) => "area",
+            Self::Temperature(_) => "temperature",
         }
     }
 }
