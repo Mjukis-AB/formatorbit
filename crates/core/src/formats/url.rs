@@ -58,6 +58,23 @@ impl UrlEncodingFormat {
         }
         false
     }
+
+    /// Check if input looks like code/text rather than URL-encoded data.
+    fn looks_like_code(s: &str) -> bool {
+        // Multi-line text is unlikely to be URL-encoded
+        if s.contains('\n') {
+            return true;
+        }
+
+        // Common programming syntax suggests code
+        let code_chars = ['(', ')', '{', '}', '[', ']', ';', '"', '\''];
+        let code_char_count = s.chars().filter(|c| code_chars.contains(c)).count();
+        if code_char_count >= 2 {
+            return true;
+        }
+
+        false
+    }
 }
 
 impl Format for UrlEncodingFormat {
@@ -81,6 +98,11 @@ impl Format for UrlEncodingFormat {
     }
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
+        // Skip if input looks like code/text rather than URL-encoded data
+        if Self::looks_like_code(input) {
+            return vec![];
+        }
+
         // Only try to decode if it looks URL-encoded
         let has_percent = Self::has_percent_encoding(input);
         let has_url_plus = Self::has_url_style_plus(input);
@@ -203,5 +225,19 @@ mod tests {
         let format = UrlEncodingFormat;
         // Plain text without encoding
         assert!(format.parse("HelloWorld").is_empty());
+    }
+
+    #[test]
+    fn test_skip_code_like_input() {
+        let format = UrlEncodingFormat;
+
+        // Multi-line text should not be parsed as URL-encoded
+        assert!(format.parse("hello+world\nfoo+bar").is_empty());
+
+        // Code with brackets should not be parsed
+        assert!(format.parse("print(\"hello+world\")").is_empty());
+
+        // But simple word+word should still work
+        assert!(!format.parse("hello+world").is_empty());
     }
 }
