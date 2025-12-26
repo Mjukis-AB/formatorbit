@@ -172,20 +172,24 @@ pub enum ConversionKind {
 /// Priority level for conversion results.
 ///
 /// Higher priority conversions appear first in output.
-/// Structured data (JSON, MessagePack) is most valuable,
-/// followed by semantic interpretations (datetime, UUID),
+/// Primary is the canonical result value (always first),
+/// followed by structured data (JSON, MessagePack),
+/// then semantic interpretations (datetime, UUID),
 /// then encodings (hex, base64), then raw representations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub enum ConversionPriority {
+    /// The canonical/primary result - always shown first
+    /// Used for expression results, computed values, etc.
+    Primary = 0,
     /// Structured data (json, msgpack) - most valuable
-    Structured = 0,
+    Structured = 1,
     /// Semantic formats (datetime, uuid, ip, color) - meaningful interpretation
-    Semantic = 1,
+    Semantic = 2,
     /// Encoding formats (hex, base64, url) - different representations
     #[default]
-    Encoding = 2,
+    Encoding = 3,
     /// Raw formats (bytes, int) - low-level
-    Raw = 3,
+    Raw = 4,
 }
 
 /// A single step in a conversion path.
