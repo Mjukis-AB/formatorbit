@@ -14,6 +14,34 @@ impl Base64Format {
             && s.chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=')
     }
+
+    /// Check if the string looks like a code identifier (camelCase, snake_case, etc.)
+    /// These are almost never base64-encoded data.
+    fn looks_like_identifier(s: &str) -> bool {
+        // Must be letters only (no digits, +, /, =) to be an identifier
+        let letters_only = s.chars().all(|c| c.is_ascii_alphabetic());
+        if !letters_only {
+            return false;
+        }
+
+        // camelCase: lowercase followed by uppercase somewhere
+        // e.g., "aspectButton", "getElementById"
+        let has_camel_case = s
+            .chars()
+            .zip(s.chars().skip(1))
+            .any(|(a, b)| a.is_ascii_lowercase() && b.is_ascii_uppercase());
+
+        // Starts with common identifier patterns
+        let common_prefixes = ["get", "set", "is", "has", "on", "do", "my", "the", "new"];
+        let starts_with_prefix = common_prefixes
+            .iter()
+            .any(|p| s.to_lowercase().starts_with(p) && s.len() > p.len() + 2);
+
+        let reasonable_length = s.len() >= 4 && s.len() <= 30;
+
+        // If it's camelCase or has common prefixes, likely an identifier
+        has_camel_case || (starts_with_prefix && reasonable_length)
+    }
 }
 
 impl Format for Base64Format {
@@ -39,6 +67,11 @@ impl Format for Base64Format {
     fn parse(&self, input: &str) -> Vec<Interpretation> {
         // Quick validation of characters
         if !Self::is_valid_base64_chars(input) {
+            return vec![];
+        }
+
+        // Skip things that look like code identifiers (camelCase, etc.)
+        if Self::looks_like_identifier(input) {
             return vec![];
         }
 

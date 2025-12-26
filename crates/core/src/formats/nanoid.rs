@@ -17,6 +17,21 @@ impl NanoIdFormat {
         s.chars().all(|c| NANOID_ALPHABET.contains(c))
     }
 
+    /// Check if the string looks like a code identifier (camelCase, etc.)
+    fn looks_like_identifier(s: &str) -> bool {
+        // Must be letters only to be a code identifier
+        // Strings with digits, underscores, or hyphens are likely IDs not identifiers
+        let letters_only = s.chars().all(|c| c.is_ascii_alphabetic());
+        if !letters_only {
+            return false;
+        }
+
+        // camelCase: lowercase followed by uppercase somewhere
+        s.chars()
+            .zip(s.chars().skip(1))
+            .any(|(a, b)| a.is_ascii_lowercase() && b.is_ascii_uppercase())
+    }
+
     /// Calculate confidence based on various heuristics.
     fn calculate_confidence(s: &str) -> f32 {
         let len = s.len();
@@ -71,6 +86,11 @@ impl Format for NanoIdFormat {
 
         // Must be valid NanoID alphabet
         if !Self::is_valid_nanoid(trimmed) {
+            return vec![];
+        }
+
+        // Skip camelCase identifiers - they're not NanoIDs
+        if Self::looks_like_identifier(trimmed) {
             return vec![];
         }
 
