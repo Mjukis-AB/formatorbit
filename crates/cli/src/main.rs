@@ -6,7 +6,7 @@ use std::io::IsTerminal;
 
 use clap::Parser;
 use colored::{control::set_override, Colorize};
-use formatorbit_core::{ConversionMetadata, CoreValue, Formatorbit};
+use formatorbit_core::{ConversionKind, ConversionMetadata, CoreValue, Formatorbit};
 
 use crate::pretty::{PacketMode, PrettyConfig};
 
@@ -439,12 +439,22 @@ fn main() {
                     &pretty_config,
                 );
 
+                // Symbol based on conversion kind:
+                // → Conversion (actual transformation)
+                // ≈ Representation (same value, different notation)
+                // ✓ Trait (property/observation)
+                let kind_symbol = match conv.kind {
+                    ConversionKind::Conversion => "→".cyan(),
+                    ConversionKind::Representation => "≈".blue(),
+                    ConversionKind::Trait => "✓".magenta(),
+                };
+
                 // Indent multi-line output
                 let display_lines: Vec<&str> = display.lines().collect();
                 if display_lines.len() > 1 {
                     println!(
                         "  {} {}:{}",
-                        "→".cyan(),
+                        kind_symbol,
                         conv.target_format.yellow(),
                         path_str.dimmed()
                     );
@@ -454,7 +464,7 @@ fn main() {
                 } else {
                     println!(
                         "  {} {}: {}{}",
-                        "→".cyan(),
+                        kind_symbol,
                         conv.target_format.yellow(),
                         display,
                         path_str.dimmed()
