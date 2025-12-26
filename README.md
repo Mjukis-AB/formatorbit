@@ -201,8 +201,10 @@ forb --mermaid 691E01B8
 |----------|---------|
 | **Encoding** | hex, base64, binary, octal, url-encoding, escape sequences (`\x48`, `\u0048`) |
 | **Hashing** | MD5, SHA-1, SHA-256, SHA-512 (detection by length) |
-| **Numbers** | decimal, binary, octal, data sizes (`1MB`, `1MiB`), power-of-2 detection |
+| **Numbers** | decimal, binary, octal, data sizes (`1MB`, `1MiB`), temperature (`30°C`, `86°F`) |
 | **Math** | Expression evaluation (`2 + 2`, `0xFF + 1`, `1 << 8`, `0b1010 \| 0b0101`) |
+| **Units** | length, weight, volume, speed, pressure, energy, angle, area (with SI prefixes) |
+| **Currency** | `100 USD`, `$50`, `5kEUR`, `2.5MSEK` (with live exchange rates) |
 | **Time** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601, durations (`1h30m`) |
 | **Identifiers** | UUID (v1-v8 detection), ULID (with timestamp), NanoID, CUID2, JWT |
 | **Network** | IPv4, IPv6 |
@@ -261,6 +263,16 @@ For quick filtering with `--only`, formats have short aliases:
 | plist | pl |
 | url-encoded | url, percent |
 | msgpack | mp, mpack |
+| currency | cur, money |
+| length | len, distance |
+| weight | mass, kg, lb |
+| volume | vol, liter, gallon |
+| speed | velocity |
+| pressure | psi, bar, atm |
+| energy | joule, calorie, kwh |
+| angle | deg, rad |
+| area | sqft, sqm |
+| temperature | temp, celsius, fahrenheit |
 
 ## Examples
 
@@ -415,6 +427,87 @@ $ forb '\x48\x65\x6c\x6c\x6f'
   → hex: 48656C6C6F
 ```
 
+### Currency Conversion
+
+Exchange rates are fetched from the European Central Bank and cached locally.
+
+```bash
+$ forb '100USD'
+
+▶ currency (95% confidence)
+  100.00 USD
+  → eur: €84.84
+  → gbp: £74.06
+  → jpy: 15,596 JPY
+  → sek: 916.73 SEK
+```
+
+SI prefixes work with currency for large amounts:
+
+```bash
+$ forb '5kSEK'          # 5,000 SEK
+$ forb '2.5MEUR'        # 2.5 million EUR
+```
+
+Ambiguous symbols show multiple interpretations:
+
+```bash
+$ forb '$100'           # Shows USD, CAD, AUD, etc.
+```
+
+### Unit Conversions
+
+Length, weight, volume, speed, pressure, energy, angle, and area with automatic SI prefix handling:
+
+```bash
+$ forb '5km'
+
+▶ length (85% confidence)
+  5 km
+  → meters: 5000 m
+  → feet: 16404.20 ft
+  → miles: 3.11 mi
+```
+
+```bash
+$ forb '150lbs'
+
+▶ weight (85% confidence)
+  150 lbs
+  → kilograms: 68.04 kg
+  → grams: 68038.86 g
+```
+
+```bash
+$ forb '60mph'
+
+▶ speed (90% confidence)
+  60 mph
+  → km/h: 96.56 km/h
+  → m/s: 26.82 m/s
+  → knots: 52.14 knots
+```
+
+### Temperature
+
+```bash
+$ forb '30C'
+
+▶ temperature (85% confidence)
+  30°C (Celsius)
+  → fahrenheit: 86°F
+  → kelvin: 303.15 K
+```
+
+```bash
+$ forb '72F'
+
+▶ temperature (85% confidence)
+  72°F (Fahrenheit)
+  → celsius: 22.22°C
+  → kelvin: 295.37 K
+```
+
 ### Processing Logs
 
 ```bash
@@ -443,6 +536,11 @@ $ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655
 2. Semantic types (datetime, UUID, IP address, color)
 3. Encodings (hex, base64, url-encoded)
 4. Raw values (integers, bytes)
+
+**Conversion kinds** - different types of output:
+- **Conversions**: Actual data transformations (bytes → integer, epoch → datetime)
+- **Representations**: Same value in different notation (1024 → 0x400, 5e-9 m → 5 nm)
+- **Traits**: Observations about the value (is power-of-2, is prime)
 
 Use `-l 0` to show all conversions, or `-l N` to show top N.
 

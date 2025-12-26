@@ -14,14 +14,17 @@ const LONG_ABOUT: &str = r##"
 Formatorbit automatically detects and converts data between formats.
 
 Paste in data and see all possible interpretations - hex, base64, timestamps,
-UUIDs, colors, math expressions, durations, escape sequences, and more.
+UUIDs, colors, math expressions, currencies, units, and more.
 
 SUPPORTED FORMATS:
   Encoding:     hex, base64, binary, octal, url-encoding, escape sequences
-  Numbers:      decimal, data sizes (1MB, 1MiB), power-of-2 detection
+  Numbers:      decimal, data sizes (1MB, 1MiB), temperature (30°C, 86°F)
   Math:         expressions (2 + 2, 0xFF + 1, 1 << 8)
-  Time:         Unix epoch (sec/ms), durations (1h30m), ISO 8601, RFC 2822
-  Identifiers:  UUID (v1-v8), ULID, JWT
+  Units:        length, weight, volume, speed, pressure, energy, angle, area
+  Currency:     100 USD, $50, 5kEUR, 2.5MSEK (with live exchange rates)
+  Time:         Unix epoch (sec/ms), durations (1h30m), ISO 8601
+  Hashing:      MD5, SHA-1, SHA-256, SHA-512 (detection by length)
+  Identifiers:  UUID (v1-v8), ULID, NanoID, CUID2, JWT
   Network:      IPv4, IPv6
   Colors:       #RGB, rgb(), hsl(), 0xAARRGGBB (Android)
   Data:         JSON, MessagePack, Protobuf, plist, UTF-8
@@ -32,9 +35,10 @@ EXAMPLES:
   forb 1703456789               Unix timestamp (shows relative time)
   forb '0xFF + 1'               Evaluate expression
   forb 1h30m                    Parse duration
-  forb 1MiB                     Parse data size
+  forb 100USD                   Convert currency
+  forb 5m                       Convert length units
+  forb 30C                      Convert temperature
   forb 'rgb(35, 50, 35)'        Parse CSS color
-  forb '\x48\x65\x6c\x6c\x6f'   Decode escape sequences
 
 OUTPUT:
   Shows all possible interpretations ranked by confidence.
@@ -161,7 +165,11 @@ fn print_formats() {
     let categories = [
         "Encoding",
         "Numbers",
+        "Math",
+        "Units",
         "Timestamps",
+        "Time",
+        "Hashing",
         "Identifiers",
         "Network",
         "Colors",

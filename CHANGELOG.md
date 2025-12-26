@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-12-26
+
+### Added
+- **Currency conversion** - parse `100 USD`, `$50`, `€25`, `5kEUR`, `2.5MSEK` with live exchange rates
+  - Fetches rates from European Central Bank via Frankfurter API
+  - Caches rates locally with 24-hour TTL
+  - SI prefix support for large amounts (k=thousand, M=million, G=billion)
+  - Ambiguous symbols (`$`, `kr`) show multiple interpretations with locale-aware confidence
+- **Unit conversion formats** - 8 new unit categories with full SI prefix support:
+  - Length: `5km`, `100m`, `3.5 miles`, `50nm` (nanometers)
+  - Weight: `5kg`, `150lbs`, `100mg`, `50ng` (nanograms)
+  - Volume: `500mL`, `2L`, `1 gallon`, `50µL`
+  - Speed: `100km/h`, `60mph`, `10 m/s`, `30 knots`
+  - Pressure: `101.3kPa`, `14.7psi`, `1 atm`, `760mmHg`
+  - Energy: `100kJ`, `500 calories`, `1 kWh`, `1 BTU`
+  - Angle: `90deg`, `3.14rad`, `45°`, `100grad`
+  - Area: `100m²`, `500 sqft`, `2 acres`, `1 hectare`
+- **Temperature conversion** - parse `30°C`, `86°F`, `300K` with conversions between Celsius, Fahrenheit, and Kelvin
+- **Multiple representations** for unit values - shows SI prefix, scientific notation, and decimal forms
+- **Unit-specific CoreValue variants** - `Length(f64)`, `Weight(f64)`, `Currency { amount, code }`, etc. for type-safe conversions
+
+### Changed
+- `--formats` now shows all categories including Math, Units, Time, and Hashing
+- `--help` updated with currency and unit examples
+- README expanded with currency, unit, and temperature examples
+- README now explains Conversion Kinds (Conversion vs Representation vs Trait)
+
+### Fixed
+- Unit conversions no longer cross-contaminate (e.g., weight doesn't show length conversions)
+
 ## [0.4.0] - 2025-12-25
 
 ### Added
