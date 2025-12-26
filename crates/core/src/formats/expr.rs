@@ -7,7 +7,7 @@
 //! - `2 ^ 16` → 65536
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct ExprFormat;
 
@@ -167,8 +167,33 @@ impl Format for ExprFormat {
         None
     }
 
-    fn conversions(&self, _value: &CoreValue) -> Vec<Conversion> {
-        vec![]
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        // Emit the primary result as the first conversion
+        // This ensures UI clients can always use conversions[0] as the canonical result
+        // Uses "result" as target_format to avoid conflict with DecimalFormat's "decimal"
+        match value {
+            CoreValue::Int { value: n, .. } => vec![Conversion {
+                value: CoreValue::String(n.to_string()),
+                target_format: "result".to_string(),
+                display: n.to_string(),
+                path: vec!["result".to_string()],
+                priority: ConversionPriority::Primary,
+                kind: ConversionKind::Representation,
+                display_only: true,
+                ..Default::default()
+            }],
+            CoreValue::Float(f) => vec![Conversion {
+                value: CoreValue::String(format!("{f}")),
+                target_format: "result".to_string(),
+                display: format!("{f}"),
+                path: vec!["result".to_string()],
+                priority: ConversionPriority::Primary,
+                kind: ConversionKind::Representation,
+                display_only: true,
+                ..Default::default()
+            }],
+            _ => vec![],
+        }
     }
 
     fn aliases(&self) -> &'static [&'static str] {

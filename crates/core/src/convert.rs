@@ -98,6 +98,11 @@ const BLOCKED_PATHS: &[(&str, &str)] = &[
     ("uuid", "epoch-millis"),
     ("uuid", "apple-cocoa"),
     ("uuid", "filetime"),
+    // Expression results - filter noise, keep primary decimal and representations
+    ("expr", "msgpack"),
+    ("expr", "octal"),
+    ("expr", "datasize"),
+    ("expr", "duration"),
 ];
 
 /// Check if a source→target conversion should be blocked.
