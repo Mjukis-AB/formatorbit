@@ -134,9 +134,36 @@ impl Format for AngleFormat {
         let degrees = *degrees;
         let mut conversions = Vec::new();
 
+        // Primary result: decimal degrees (canonical base unit value)
+        let dec_display = format!("{}°", format_decimal(degrees));
+        conversions.push(Conversion {
+            value: CoreValue::Angle(degrees),
+            target_format: "degrees-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["degrees-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "degrees-decimal".to_string(),
+                value: CoreValue::Angle(degrees),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Standard unit conversions
+        // All angle units are different measurement systems, so all are Conversions
+        // except degrees which is the base unit (Representation)
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = degrees / multiplier;
             let display = format!("{}{}", format_value(converted), abbrev);
+
+            let kind = if *name == "degrees" {
+                ConversionKind::Representation
+            } else {
+                ConversionKind::Conversion
+            };
 
             conversions.push(Conversion {
                 value: CoreValue::Angle(degrees),
@@ -149,15 +176,13 @@ impl Format for AngleFormat {
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Additional representations for base unit (degrees)
+        // Additional representation: scientific notation
         let sci_display = format!("{}°", format_scientific(degrees));
-        let dec_display = format!("{}°", format_decimal(degrees));
-
         conversions.push(Conversion {
             value: CoreValue::Angle(degrees),
             target_format: "degrees-scientific".to_string(),
@@ -167,22 +192,6 @@ impl Format for AngleFormat {
                 format: "degrees-scientific".to_string(),
                 value: CoreValue::Angle(degrees),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        conversions.push(Conversion {
-            value: CoreValue::Angle(degrees),
-            target_format: "degrees-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["degrees-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "degrees-decimal".to_string(),
-                value: CoreValue::Angle(degrees),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,

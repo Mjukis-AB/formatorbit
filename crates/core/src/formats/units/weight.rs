@@ -172,9 +172,37 @@ impl Format for WeightFormat {
 
         let mut conversions = Vec::new();
 
+        // Primary result: decimal grams (canonical base unit value)
+        let dec_display = format!("{} g", format_decimal(grams));
+        conversions.push(Conversion {
+            value: CoreValue::Weight(grams),
+            target_format: "grams-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["grams-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "grams-decimal".to_string(),
+                value: CoreValue::Weight(grams),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = grams / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
+
+            // Imperial units (pounds, ounces) are true conversions
+            // Metric units (grams, kg, mg) are representations
+            let is_imperial = matches!(*name, "pounds" | "ounces");
+            let kind = if is_imperial {
+                ConversionKind::Conversion
+            } else {
+                ConversionKind::Representation
+            };
 
             conversions.push(Conversion {
                 value: CoreValue::Weight(grams),
@@ -187,15 +215,14 @@ impl Format for WeightFormat {
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Multiple representations for the base unit (grams)
+        // Additional representations for the base unit (grams)
         let si_display = format_with_si_prefix(grams, "g");
         let sci_display = format!("{} g", format_scientific(grams));
-        let dec_display = format!("{} g", format_decimal(grams));
 
         conversions.push(Conversion {
             value: CoreValue::Weight(grams),
@@ -222,22 +249,6 @@ impl Format for WeightFormat {
                 format: "grams-scientific".to_string(),
                 value: CoreValue::Weight(grams),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        conversions.push(Conversion {
-            value: CoreValue::Weight(grams),
-            target_format: "grams-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["grams-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "grams-decimal".to_string(),
-                value: CoreValue::Weight(grams),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,

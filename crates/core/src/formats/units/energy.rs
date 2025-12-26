@@ -182,9 +182,37 @@ impl Format for EnergyFormat {
 
         let mut conversions = Vec::new();
 
+        // Primary result: decimal joules (canonical base unit value)
+        let dec_display = format!("{} J", format_decimal(joules));
+        conversions.push(Conversion {
+            value: CoreValue::Energy(joules),
+            target_format: "joules-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["joules-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "joules-decimal".to_string(),
+                value: CoreValue::Energy(joules),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = joules / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
+
+            // calories, kcal, kWh are true conversions (different systems)
+            // joules, kJ, MJ are metric representations
+            let is_non_si = matches!(*name, "calories" | "kilocalories" | "kilowatt-hours");
+            let kind = if is_non_si {
+                ConversionKind::Conversion
+            } else {
+                ConversionKind::Representation
+            };
 
             conversions.push(Conversion {
                 value: CoreValue::Energy(joules),
@@ -197,15 +225,14 @@ impl Format for EnergyFormat {
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Multiple representations for the base unit (joules)
+        // Additional representations for the base unit (joules)
         let si_display = format_with_si_prefix(joules, "J");
         let sci_display = format!("{} J", format_scientific(joules));
-        let dec_display = format!("{} J", format_decimal(joules));
 
         conversions.push(Conversion {
             value: CoreValue::Energy(joules),
@@ -232,22 +259,6 @@ impl Format for EnergyFormat {
                 format: "joules-scientific".to_string(),
                 value: CoreValue::Energy(joules),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        conversions.push(Conversion {
-            value: CoreValue::Energy(joules),
-            target_format: "joules-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["joules-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "joules-decimal".to_string(),
-                value: CoreValue::Energy(joules),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,

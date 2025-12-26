@@ -187,10 +187,37 @@ impl Format for LengthFormat {
 
         let mut conversions = Vec::new();
 
+        // Primary result: decimal meters (canonical base unit value)
+        let dec_display = format!("{} m", format_decimal(meters));
+        conversions.push(Conversion {
+            value: CoreValue::Length(meters),
+            target_format: "meters-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["meters-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "meters-decimal".to_string(),
+                value: CoreValue::Length(meters),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = meters / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
+
+            // Imperial units (feet, miles, inches) are true conversions
+            // Metric units (meters, km, cm, mm) are representations
+            let is_imperial = matches!(*name, "feet" | "miles" | "inches");
+            let kind = if is_imperial {
+                ConversionKind::Conversion
+            } else {
+                ConversionKind::Representation
+            };
 
             conversions.push(Conversion {
                 value: CoreValue::Length(converted * multiplier), // Keep in meters
@@ -203,16 +230,15 @@ impl Format for LengthFormat {
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Multiple representations for the base unit (meters)
+        // Additional representations for the base unit (meters)
         // These show the same value in different notations
         let si_display = format_with_si_prefix(meters, "m");
         let sci_display = format!("{} m", format_scientific(meters));
-        let dec_display = format!("{} m", format_decimal(meters));
 
         // SI prefix representation (e.g., "5 nm", "2.5 µm", "3 km")
         conversions.push(Conversion {
@@ -241,23 +267,6 @@ impl Format for LengthFormat {
                 format: "meters-scientific".to_string(),
                 value: CoreValue::Length(meters),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        // Full decimal representation (e.g., "0.[8zeros]5 m")
-        conversions.push(Conversion {
-            value: CoreValue::Length(meters),
-            target_format: "meters-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["meters-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "meters-decimal".to_string(),
-                value: CoreValue::Length(meters),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,

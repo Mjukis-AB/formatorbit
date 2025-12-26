@@ -181,30 +181,57 @@ impl Format for VolumeFormat {
 
         let mut conversions = Vec::new();
 
+        // Primary result: decimal milliliters (canonical base unit value)
+        let dec_display = format!("{} mL", format_decimal(ml));
+        conversions.push(Conversion {
+            value: CoreValue::Volume(ml),
+            target_format: "milliliters-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["milliliters-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "milliliters-decimal".to_string(),
+                value: CoreValue::Volume(ml),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = ml / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
 
+            // Imperial units (gallons, fl oz, cups) are true conversions
+            // Metric units (mL, L) are representations
+            let is_imperial = matches!(*name, "gallons" | "fluid ounces" | "cups");
+            let kind = if is_imperial {
+                ConversionKind::Conversion
+            } else {
+                ConversionKind::Representation
+            };
+
             conversions.push(Conversion {
-                value: CoreValue::Float(converted),
+                value: CoreValue::Volume(ml),
                 target_format: (*name).to_string(),
                 display: display.clone(),
                 path: vec![(*name).to_string()],
                 steps: vec![ConversionStep {
                     format: (*name).to_string(),
-                    value: CoreValue::Float(converted),
+                    value: CoreValue::Volume(ml),
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Multiple representations for the base unit (milliliters)
+        // Additional representations for the base unit
         let si_display = format_with_si_prefix(ml / 1000.0, "L"); // Convert mL to L for SI prefix
         let sci_display = format!("{} mL", format_scientific(ml));
-        let dec_display = format!("{} mL", format_decimal(ml));
 
         conversions.push(Conversion {
             value: CoreValue::Volume(ml),
@@ -231,22 +258,6 @@ impl Format for VolumeFormat {
                 format: "milliliters-scientific".to_string(),
                 value: CoreValue::Volume(ml),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        conversions.push(Conversion {
-            value: CoreValue::Volume(ml),
-            target_format: "milliliters-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["milliliters-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "milliliters-decimal".to_string(),
-                value: CoreValue::Volume(ml),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,

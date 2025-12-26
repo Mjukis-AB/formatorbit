@@ -128,9 +128,37 @@ impl Format for SpeedFormat {
 
         let mut conversions = Vec::new();
 
+        // Primary result: decimal m/s (canonical base unit value)
+        let dec_display = format!("{} m/s", format_decimal(mps));
+        conversions.push(Conversion {
+            value: CoreValue::Speed(mps),
+            target_format: "m/s-decimal".to_string(),
+            display: dec_display.clone(),
+            path: vec!["m/s-decimal".to_string()],
+            steps: vec![ConversionStep {
+                format: "m/s-decimal".to_string(),
+                value: CoreValue::Speed(mps),
+                display: dec_display,
+            }],
+            priority: ConversionPriority::Primary,
+            kind: ConversionKind::Representation,
+            display_only: true,
+            ..Default::default()
+        });
+
+        // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
             let converted = mps / multiplier;
             let display = format!("{} {}", format_value(converted), abbrev);
+
+            // mph and knots are true conversions (different systems)
+            // m/s and km/h are metric representations
+            let is_non_metric = matches!(*name, "mph" | "knots");
+            let kind = if is_non_metric {
+                ConversionKind::Conversion
+            } else {
+                ConversionKind::Representation
+            };
 
             conversions.push(Conversion {
                 value: CoreValue::Speed(mps),
@@ -143,15 +171,13 @@ impl Format for SpeedFormat {
                     display,
                 }],
                 priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
+                kind,
                 ..Default::default()
             });
         }
 
-        // Additional representations for base unit (m/s)
+        // Additional representation: scientific notation
         let sci_display = format!("{} m/s", format_scientific(mps));
-        let dec_display = format!("{} m/s", format_decimal(mps));
-
         conversions.push(Conversion {
             value: CoreValue::Speed(mps),
             target_format: "m/s-scientific".to_string(),
@@ -161,22 +187,6 @@ impl Format for SpeedFormat {
                 format: "m/s-scientific".to_string(),
                 value: CoreValue::Speed(mps),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
-
-        conversions.push(Conversion {
-            value: CoreValue::Speed(mps),
-            target_format: "m/s-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["m/s-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "m/s-decimal".to_string(),
-                value: CoreValue::Speed(mps),
-                display: dec_display,
             }],
             priority: ConversionPriority::Semantic,
             kind: ConversionKind::Representation,
