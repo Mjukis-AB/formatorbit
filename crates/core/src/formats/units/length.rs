@@ -1,35 +1,23 @@
 //! Length/distance format.
 //!
-//! Parses and converts between metric and imperial length units:
-//! mm, cm, m, km, in, ft, yd, mi
+//! Parses and converts between metric and imperial length units.
+//! Supports all SI prefixes for meters (nm, µm, mm, cm, m, km, Mm, etc.)
+//! plus imperial units (in, ft, yd, mi).
+
+use std::sync::OnceLock;
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number};
+use super::{format_value, parse_number, SI_PREFIXES};
 
 pub struct LengthFormat;
 
-/// Units with multiplier to convert to meters (base unit).
-/// Sorted longest-first to avoid partial matches.
-const UNITS: &[(&str, f64)] = &[
-    // Metric - full names
-    ("kilometers", 1000.0),
-    ("kilometer", 1000.0),
-    ("centimeters", 0.01),
-    ("centimeter", 0.01),
-    ("millimeters", 0.001),
-    ("millimeter", 0.001),
-    ("meters", 1.0),
-    ("meter", 1.0),
-    // Metric - abbreviations
-    ("km", 1000.0),
-    ("cm", 0.01),
-    ("mm", 0.001),
-    ("m", 1.0),
-    // Imperial - full names
+/// Imperial units with multiplier to meters.
+const IMPERIAL_UNITS: &[(&str, f64)] = &[
+    // Full names (longest first)
     ("miles", 1609.344),
     ("mile", 1609.344),
     ("yards", 0.9144),
@@ -38,7 +26,7 @@ const UNITS: &[(&str, f64)] = &[
     ("inch", 0.0254),
     ("feet", 0.3048),
     ("foot", 0.3048),
-    // Imperial - abbreviations
+    // Abbreviations
     ("mi", 1609.344),
     ("yd", 0.9144),
     ("in", 0.0254),
@@ -49,37 +37,79 @@ const UNITS: &[(&str, f64)] = &[
 const DISPLAY_UNITS: &[(&str, &str, f64)] = &[
     ("meters", "m", 1.0),
     ("kilometers", "km", 1000.0),
+    ("centimeters", "cm", 0.01),
+    ("millimeters", "mm", 0.001),
     ("feet", "ft", 0.3048),
     ("miles", "mi", 1609.344),
     ("inches", "in", 0.0254),
-    ("centimeters", "cm", 0.01),
 ];
 
-impl LengthFormat {
-    fn parse_length(input: &str) -> Option<(f64, &'static str)> {
-        let input = input.trim();
+/// Get all length units (SI-prefixed meters + imperial).
+/// Generated once and cached.
+fn get_units() -> &'static Vec<(String, f64)> {
+    static UNITS: OnceLock<Vec<(String, f64)>> = OnceLock::new();
+    UNITS.get_or_init(|| {
+        // Base meter unit
+        let mut units = vec![
+            ("m".to_string(), 1.0),
+            ("meter".to_string(), 1.0),
+            ("meters".to_string(), 1.0),
+            ("metre".to_string(), 1.0),
+            ("metres".to_string(), 1.0),
+        ];
 
-        for (suffix, multiplier) in UNITS {
+        // All SI prefixes for meter
+        for prefix in SI_PREFIXES {
+            let factor = prefix.factor();
+
+            // Symbol form (km, mm, µm, nm, etc.)
+            units.push((format!("{}m", prefix.symbol), factor));
+
+            // Full name forms (kilometer, millimeter, etc.)
+            units.push((format!("{}meter", prefix.name), factor));
+            units.push((format!("{}meters", prefix.name), factor));
+            units.push((format!("{}metre", prefix.name), factor));
+            units.push((format!("{}metres", prefix.name), factor));
+        }
+
+        // Imperial units
+        for (suffix, multiplier) in IMPERIAL_UNITS {
+            units.push((suffix.to_string(), *multiplier));
+        }
+
+        // Sort by length descending to match longest first
+        units.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+
+        units
+    })
+}
+
+impl LengthFormat {
+    fn parse_length(input: &str) -> Option<(f64, String)> {
+        let input = input.trim();
+        let units = get_units();
+
+        for (suffix, multiplier) in units {
             // Try exact suffix match
-            if let Some(num_str) = input.strip_suffix(suffix) {
-                // For short units (m, in), require number attached
+            if let Some(num_str) = input.strip_suffix(suffix.as_str()) {
+                // For short units (≤2 chars), require number attached
                 if suffix.len() <= 2 && num_str.trim().is_empty() {
                     continue;
                 }
                 if let Some(value) = parse_number(num_str) {
                     let meters = value * multiplier;
-                    return Some((meters, suffix));
+                    return Some((meters, suffix.clone()));
                 }
             }
 
             // Try case-insensitive for longer suffixes
             if suffix.len() > 2 {
                 let input_lower = input.to_lowercase();
-                if input_lower.ends_with(*suffix) {
+                if input_lower.ends_with(&suffix.to_lowercase()) {
                     let num_str = &input[..input.len() - suffix.len()];
                     if let Some(value) = parse_number(num_str) {
                         let meters = value * multiplier;
-                        return Some((meters, suffix));
+                        return Some((meters, suffix.clone()));
                     }
                 }
             }
@@ -102,8 +132,8 @@ impl Format for LengthFormat {
             id: self.id(),
             name: self.name(),
             category: "Units",
-            description: "Length/distance (m, km, ft, mi, in)",
-            examples: &["5km", "100m", "3.5 miles", "12 inches"],
+            description: "Length/distance with SI prefixes (nm, µm, mm, m, km, etc.)",
+            examples: &["5km", "100m", "3.5 miles", "500nm", "2.5µm"],
             aliases: self.aliases(),
         }
     }
@@ -118,7 +148,7 @@ impl Format for LengthFormat {
             return vec![];
         }
 
-        let description = format!("{} {}", format_value(meters), "m");
+        let description = format!("{} m", format_value(meters));
 
         vec![Interpretation {
             value: CoreValue::Float(meters),
@@ -129,7 +159,6 @@ impl Format for LengthFormat {
     }
 
     fn can_format(&self, _value: &CoreValue) -> bool {
-        // Don't claim to format generic floats - conversions handle display
         false
     }
 
@@ -202,6 +231,19 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_si_prefixes() {
+        // Nanometers
+        assert!((parse_to_meters("500nm").unwrap() - 5e-7).abs() < 1e-10);
+        // Micrometers
+        assert!((parse_to_meters("2µm").unwrap() - 2e-6).abs() < 1e-10);
+        assert!((parse_to_meters("2um").unwrap() - 2e-6).abs() < 1e-10);
+        // Megameters
+        assert!((parse_to_meters("1Mm").unwrap() - 1e6).abs() < 0.01);
+        // Gigameters
+        assert!((parse_to_meters("1Gm").unwrap() - 1e9).abs() < 0.01);
+    }
+
+    #[test]
     fn test_parse_imperial() {
         assert!((parse_to_meters("1mi").unwrap() - 1609.344).abs() < 0.01);
         assert!((parse_to_meters("3ft").unwrap() - 0.9144).abs() < 0.01);
@@ -214,6 +256,9 @@ mod tests {
         assert!((parse_to_meters("10 meters").unwrap() - 10.0).abs() < 0.01);
         assert!((parse_to_meters("3 miles").unwrap() - 4828.032).abs() < 0.01);
         assert!((parse_to_meters("6 feet").unwrap() - 1.8288).abs() < 0.01);
+        // SI prefix full names
+        assert!((parse_to_meters("5 nanometers").unwrap() - 5e-9).abs() < 1e-12);
+        assert!((parse_to_meters("100 micrometers").unwrap() - 1e-4).abs() < 1e-8);
     }
 
     #[test]
@@ -224,9 +269,9 @@ mod tests {
 
     #[test]
     fn test_unit_alone_rejected() {
-        // Short units alone should not parse
         assert!(parse_to_meters("m").is_none());
         assert!(parse_to_meters("in").is_none());
+        assert!(parse_to_meters("nm").is_none());
     }
 
     #[test]

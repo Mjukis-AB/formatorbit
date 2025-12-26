@@ -1,24 +1,23 @@
 //! Pressure format.
 //!
-//! Parses and converts between pressure units:
-//! Pa, kPa, bar, mbar, atm, psi, mmHg
+//! Parses and converts between pressure units.
+//! Supports all SI prefixes for pascals (nPa, µPa, mPa, Pa, kPa, MPa, GPa, etc.)
+//! plus other common units (bar, atm, psi, mmHg).
+
+use std::sync::OnceLock;
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number};
+use super::{format_value, parse_number, SI_PREFIXES};
 
 pub struct PressureFormat;
 
-/// Units with multiplier to convert to pascals (base unit).
-const UNITS: &[(&str, f64)] = &[
+/// Non-SI units with multiplier to pascals (base unit).
+const OTHER_UNITS: &[(&str, f64)] = &[
     // Full names
-    ("kilopascals", 1000.0),
-    ("kilopascal", 1000.0),
-    ("pascals", 1.0),
-    ("pascal", 1.0),
     ("atmospheres", 101325.0),
     ("atmosphere", 101325.0),
     ("millibars", 100.0),
@@ -26,9 +25,6 @@ const UNITS: &[(&str, f64)] = &[
     ("bars", 100000.0),
     ("bar", 100000.0),
     // Abbreviations
-    ("kPa", 1000.0),
-    ("hPa", 100.0), // hectopascal = millibar
-    ("Pa", 1.0),
     ("atm", 101325.0),
     ("mbar", 100.0),
     ("psi", 6894.76),
@@ -37,23 +33,65 @@ const UNITS: &[(&str, f64)] = &[
     ("inHg", 3386.39),
 ];
 
+/// Units to display in conversions (most useful subset).
 const DISPLAY_UNITS: &[(&str, &str, f64)] = &[
     ("pascals", "Pa", 1.0),
     ("kilopascals", "kPa", 1000.0),
+    ("megapascals", "MPa", 1e6),
     ("bar", "bar", 100000.0),
     ("psi", "psi", 6894.76),
     ("atmospheres", "atm", 101325.0),
 ];
 
-impl PressureFormat {
-    fn parse_pressure(input: &str) -> Option<(f64, &'static str)> {
-        let input = input.trim();
+/// Get all pressure units (SI-prefixed pascals + others).
+fn get_units() -> &'static Vec<(String, f64)> {
+    static UNITS: OnceLock<Vec<(String, f64)>> = OnceLock::new();
+    UNITS.get_or_init(|| {
+        let mut units = Vec::new();
 
-        for (suffix, multiplier) in UNITS {
-            if let Some(num_str) = input.strip_suffix(suffix) {
+        // Base pascal unit
+        units.push(("Pa".to_string(), 1.0));
+        units.push(("pascal".to_string(), 1.0));
+        units.push(("pascals".to_string(), 1.0));
+
+        // All SI prefixes for pascal
+        for prefix in SI_PREFIXES {
+            let factor = prefix.factor();
+
+            // Symbol form (kPa, MPa, GPa, etc.)
+            units.push((format!("{}Pa", prefix.symbol), factor));
+
+            // Full name forms (kilopascal, megapascal, etc.)
+            units.push((format!("{}pascal", prefix.name), factor));
+            units.push((format!("{}pascals", prefix.name), factor));
+        }
+
+        // Other units
+        for (suffix, multiplier) in OTHER_UNITS {
+            units.push((suffix.to_string(), *multiplier));
+        }
+
+        // Sort by length descending to match longest first
+        units.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+
+        units
+    })
+}
+
+impl PressureFormat {
+    fn parse_pressure(input: &str) -> Option<(f64, String)> {
+        let input = input.trim();
+        let units = get_units();
+
+        for (suffix, multiplier) in units {
+            if let Some(num_str) = input.strip_suffix(suffix.as_str()) {
+                // For short units (Pa), require number attached
+                if suffix.len() <= 2 && num_str.trim().is_empty() {
+                    continue;
+                }
                 if let Some(value) = parse_number(num_str) {
                     let pa = value * multiplier;
-                    return Some((pa, suffix));
+                    return Some((pa, suffix.clone()));
                 }
             }
 
@@ -63,7 +101,7 @@ impl PressureFormat {
                     let num_str = &input[..input.len() - suffix.len()];
                     if let Some(value) = parse_number(num_str) {
                         let pa = value * multiplier;
-                        return Some((pa, suffix));
+                        return Some((pa, suffix.clone()));
                     }
                 }
             }
@@ -86,8 +124,8 @@ impl Format for PressureFormat {
             id: self.id(),
             name: self.name(),
             category: "Units",
-            description: "Pressure (Pa, kPa, bar, psi, atm)",
-            examples: &["101.3kPa", "14.7psi", "1 atm", "1013 mbar"],
+            description: "Pressure with SI prefixes (Pa, kPa, MPa, GPa, etc.)",
+            examples: &["101.3kPa", "14.7psi", "1 atm", "1 GPa"],
             aliases: self.aliases(),
         }
     }
@@ -180,6 +218,16 @@ mod tests {
         assert!((parse_to_pa("1000Pa").unwrap() - 1000.0).abs() < 0.01);
         assert!((parse_to_pa("101.3kPa").unwrap() - 101300.0).abs() < 1.0);
         assert!((parse_to_pa("1 bar").unwrap() - 100000.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_parse_si_prefixes() {
+        // Megapascals
+        assert!((parse_to_pa("1MPa").unwrap() - 1e6).abs() < 0.01);
+        // Gigapascals
+        assert!((parse_to_pa("1GPa").unwrap() - 1e9).abs() < 0.01);
+        // Hectopascals (millibar equivalent)
+        assert!((parse_to_pa("1013hPa").unwrap() - 101300.0).abs() < 1.0);
     }
 
     #[test]

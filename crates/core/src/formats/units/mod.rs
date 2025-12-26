@@ -2,6 +2,8 @@
 //!
 //! Provides parsing and conversion for physical units:
 //! length, weight, volume, speed, pressure, angle, area, energy.
+//!
+//! Supports all SI prefixes from quecto (10⁻³⁰) to quetta (10³⁰).
 
 pub mod angle;
 pub mod area;
@@ -20,6 +22,155 @@ pub use pressure::PressureFormat;
 pub use speed::SpeedFormat;
 pub use volume::VolumeFormat;
 pub use weight::WeightFormat;
+
+/// SI prefix definition: (symbol, full name, exponent)
+/// The factor is 10^exponent.
+#[derive(Clone, Copy)]
+pub struct SiPrefix {
+    pub symbol: &'static str,
+    pub name: &'static str,
+    pub exponent: i32,
+}
+
+impl SiPrefix {
+    /// Get the multiplication factor for this prefix.
+    #[must_use]
+    pub fn factor(&self) -> f64 {
+        10_f64.powi(self.exponent)
+    }
+}
+
+/// All SI prefixes, from largest to smallest.
+/// Ordered by symbol length (longer first) for parsing.
+pub const SI_PREFIXES: &[SiPrefix] = &[
+    // Large prefixes
+    SiPrefix {
+        symbol: "Q",
+        name: "quetta",
+        exponent: 30,
+    },
+    SiPrefix {
+        symbol: "R",
+        name: "ronna",
+        exponent: 27,
+    },
+    SiPrefix {
+        symbol: "Y",
+        name: "yotta",
+        exponent: 24,
+    },
+    SiPrefix {
+        symbol: "Z",
+        name: "zetta",
+        exponent: 21,
+    },
+    SiPrefix {
+        symbol: "E",
+        name: "exa",
+        exponent: 18,
+    },
+    SiPrefix {
+        symbol: "P",
+        name: "peta",
+        exponent: 15,
+    },
+    SiPrefix {
+        symbol: "T",
+        name: "tera",
+        exponent: 12,
+    },
+    SiPrefix {
+        symbol: "G",
+        name: "giga",
+        exponent: 9,
+    },
+    SiPrefix {
+        symbol: "M",
+        name: "mega",
+        exponent: 6,
+    },
+    SiPrefix {
+        symbol: "k",
+        name: "kilo",
+        exponent: 3,
+    },
+    SiPrefix {
+        symbol: "h",
+        name: "hecto",
+        exponent: 2,
+    },
+    SiPrefix {
+        symbol: "da",
+        name: "deca",
+        exponent: 1,
+    },
+    // Small prefixes
+    SiPrefix {
+        symbol: "d",
+        name: "deci",
+        exponent: -1,
+    },
+    SiPrefix {
+        symbol: "c",
+        name: "centi",
+        exponent: -2,
+    },
+    SiPrefix {
+        symbol: "m",
+        name: "milli",
+        exponent: -3,
+    },
+    SiPrefix {
+        symbol: "µ",
+        name: "micro",
+        exponent: -6,
+    },
+    SiPrefix {
+        symbol: "u",
+        name: "micro",
+        exponent: -6,
+    }, // ASCII alternative
+    SiPrefix {
+        symbol: "n",
+        name: "nano",
+        exponent: -9,
+    },
+    SiPrefix {
+        symbol: "p",
+        name: "pico",
+        exponent: -12,
+    },
+    SiPrefix {
+        symbol: "f",
+        name: "femto",
+        exponent: -15,
+    },
+    SiPrefix {
+        symbol: "a",
+        name: "atto",
+        exponent: -18,
+    },
+    SiPrefix {
+        symbol: "z",
+        name: "zepto",
+        exponent: -21,
+    },
+    SiPrefix {
+        symbol: "y",
+        name: "yocto",
+        exponent: -24,
+    },
+    SiPrefix {
+        symbol: "r",
+        name: "ronto",
+        exponent: -27,
+    },
+    SiPrefix {
+        symbol: "q",
+        name: "quecto",
+        exponent: -30,
+    },
+];
 
 /// Parse a number with decimal separator heuristics.
 ///

@@ -26,13 +26,15 @@ const UNIT_TARGETS: &[&str] = &[
     // Length
     "meters",
     "kilometers",
+    "centimeters",
+    "millimeters",
     "feet",
     "miles",
     "inches",
-    "centimeters",
     // Weight
     "grams",
     "kilograms",
+    "milligrams",
     "pounds",
     "ounces",
     // Volume
@@ -49,6 +51,7 @@ const UNIT_TARGETS: &[&str] = &[
     // Pressure
     "pascals",
     "kilopascals",
+    "megapascals",
     "bar",
     "psi",
     "atmospheres",
@@ -59,13 +62,15 @@ const UNIT_TARGETS: &[&str] = &[
     "turns",
     // Area
     "square meters",
+    "square kilometers",
+    "square centimeters",
     "square feet",
     "acres",
     "hectares",
-    "square kilometers",
     // Energy
     "joules",
     "kilojoules",
+    "megajoules",
     "calories",
     "kilocalories",
     "kilowatt-hours",
@@ -113,9 +118,18 @@ fn is_blocked_path(source_format: &str, target_format: &str) -> bool {
         let source_owns_target = match source_format {
             "length" => matches!(
                 target_format,
-                "meters" | "kilometers" | "feet" | "miles" | "inches" | "centimeters"
+                "meters"
+                    | "kilometers"
+                    | "centimeters"
+                    | "millimeters"
+                    | "feet"
+                    | "miles"
+                    | "inches"
             ),
-            "weight" => matches!(target_format, "grams" | "kilograms" | "pounds" | "ounces"),
+            "weight" => matches!(
+                target_format,
+                "grams" | "kilograms" | "milligrams" | "pounds" | "ounces"
+            ),
             "volume" => matches!(
                 target_format,
                 "milliliters" | "liters" | "gallons" | "fluid ounces" | "cups"
@@ -123,16 +137,26 @@ fn is_blocked_path(source_format: &str, target_format: &str) -> bool {
             "speed" => matches!(target_format, "m/s" | "km/h" | "mph" | "knots"),
             "pressure" => matches!(
                 target_format,
-                "pascals" | "kilopascals" | "bar" | "psi" | "atmospheres"
+                "pascals" | "kilopascals" | "megapascals" | "bar" | "psi" | "atmospheres"
             ),
             "angle" => matches!(target_format, "degrees" | "radians" | "gradians" | "turns"),
             "area" => matches!(
                 target_format,
-                "square meters" | "square feet" | "acres" | "hectares" | "square kilometers"
+                "square meters"
+                    | "square kilometers"
+                    | "square centimeters"
+                    | "square feet"
+                    | "acres"
+                    | "hectares"
             ),
             "energy" => matches!(
                 target_format,
-                "joules" | "kilojoules" | "calories" | "kilocalories" | "kilowatt-hours"
+                "joules"
+                    | "kilojoules"
+                    | "megajoules"
+                    | "calories"
+                    | "kilocalories"
+                    | "kilowatt-hours"
             ),
             "temperature" => matches!(target_format, "celsius" | "fahrenheit" | "kelvin"),
             _ => false,
