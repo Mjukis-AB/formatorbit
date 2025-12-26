@@ -196,6 +196,11 @@ impl ColorFormat {
     fn parse_hex_color(s: &str) -> Option<(Rgba, &'static str)> {
         let hex = s.strip_prefix('#').unwrap_or(s);
 
+        // Hex colors must be ASCII - early exit if not to avoid panics on non-ASCII slicing
+        if !hex.is_ascii() {
+            return None;
+        }
+
         match hex.len() {
             // #RGB -> expand to #RRGGBB
             3 => {
