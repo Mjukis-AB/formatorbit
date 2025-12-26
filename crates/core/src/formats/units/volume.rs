@@ -1,34 +1,25 @@
 //! Volume format.
 //!
-//! Parses and converts between metric and imperial volume units:
-//! ml, L, fl oz, cup, pt, qt, gal
+//! Parses and converts between metric and imperial volume units.
+//! Supports all SI prefixes for liters (nL, µL, mL, L, kL, etc.)
+//! plus imperial units (fl oz, cup, pt, qt, gal).
+
+use std::sync::OnceLock;
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
-use super::{format_value, parse_number};
+use super::{format_value, parse_number, SI_PREFIXES};
 
 pub struct VolumeFormat;
 
-/// Units with multiplier to convert to milliliters (base unit).
-const UNITS: &[(&str, f64)] = &[
-    // Metric - full names
-    ("milliliters", 1.0),
-    ("milliliter", 1.0),
-    ("millilitres", 1.0),
-    ("millilitre", 1.0),
-    ("liters", 1000.0),
-    ("liter", 1000.0),
-    ("litres", 1000.0),
-    ("litre", 1000.0),
-    // Metric - abbreviations
-    ("mL", 1.0),
-    ("ml", 1.0),
-    ("L", 1000.0),
-    ("l", 1000.0),
-    // Imperial - full names
+/// Imperial units with multiplier to milliliters (base unit).
+const IMPERIAL_UNITS: &[(&str, f64)] = &[
+    // Full names (longest first)
+    ("fluid ounces", 29.5735),
+    ("fluid ounce", 29.5735),
     ("gallons", 3785.41),
     ("gallon", 3785.41),
     ("quarts", 946.353),
@@ -37,36 +28,79 @@ const UNITS: &[(&str, f64)] = &[
     ("pint", 473.176),
     ("cups", 236.588),
     ("cup", 236.588),
-    ("fluid ounces", 29.5735),
-    ("fluid ounce", 29.5735),
-    // Imperial - abbreviations
+    // Abbreviations
+    ("fl oz", 29.5735),
+    ("floz", 29.5735),
     ("gal", 3785.41),
     ("qt", 946.353),
     ("pt", 473.176),
-    ("fl oz", 29.5735),
-    ("floz", 29.5735),
 ];
 
+/// Units to display in conversions (most useful subset).
 const DISPLAY_UNITS: &[(&str, &str, f64)] = &[
-    ("milliliters", "ml", 1.0),
+    ("milliliters", "mL", 1.0),
     ("liters", "L", 1000.0),
     ("gallons", "gal", 3785.41),
     ("fluid ounces", "fl oz", 29.5735),
     ("cups", "cups", 236.588),
 ];
 
-impl VolumeFormat {
-    fn parse_volume(input: &str) -> Option<(f64, &'static str)> {
-        let input = input.trim();
+/// Get all volume units (SI-prefixed liters + imperial).
+fn get_units() -> &'static Vec<(String, f64)> {
+    static UNITS: OnceLock<Vec<(String, f64)>> = OnceLock::new();
+    UNITS.get_or_init(|| {
+        // Base liter unit (milliliter is our internal base)
+        // 1 L = 1000 mL
+        let mut units = vec![
+            ("L".to_string(), 1000.0),
+            ("l".to_string(), 1000.0),
+            ("liter".to_string(), 1000.0),
+            ("liters".to_string(), 1000.0),
+            ("litre".to_string(), 1000.0),
+            ("litres".to_string(), 1000.0),
+        ];
 
-        for (suffix, multiplier) in UNITS {
-            if let Some(num_str) = input.strip_suffix(suffix) {
+        // All SI prefixes for liter
+        for prefix in SI_PREFIXES {
+            // Factor relative to base liter, then multiply by 1000 to get mL
+            let factor = prefix.factor() * 1000.0;
+
+            // Symbol forms (kL, mL, µL, nL, etc.)
+            units.push((format!("{}L", prefix.symbol), factor));
+            units.push((format!("{}l", prefix.symbol), factor));
+
+            // Full name forms (kiloliter, milliliter, etc.)
+            units.push((format!("{}liter", prefix.name), factor));
+            units.push((format!("{}liters", prefix.name), factor));
+            units.push((format!("{}litre", prefix.name), factor));
+            units.push((format!("{}litres", prefix.name), factor));
+        }
+
+        // Imperial units
+        for (suffix, multiplier) in IMPERIAL_UNITS {
+            units.push((suffix.to_string(), *multiplier));
+        }
+
+        // Sort by length descending to match longest first
+        units.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+
+        units
+    })
+}
+
+impl VolumeFormat {
+    fn parse_volume(input: &str) -> Option<(f64, String)> {
+        let input = input.trim();
+        let units = get_units();
+
+        for (suffix, multiplier) in units {
+            if let Some(num_str) = input.strip_suffix(suffix.as_str()) {
                 if suffix.len() <= 2 && num_str.trim().is_empty() {
                     continue;
                 }
                 if let Some(value) = parse_number(num_str) {
                     let ml = value * multiplier;
-                    return Some((ml, suffix));
+                    return Some((ml, suffix.clone()));
                 }
             }
 
@@ -76,7 +110,7 @@ impl VolumeFormat {
                     let num_str = &input[..input.len() - suffix.len()];
                     if let Some(value) = parse_number(num_str) {
                         let ml = value * multiplier;
-                        return Some((ml, suffix));
+                        return Some((ml, suffix.clone()));
                     }
                 }
             }
@@ -99,8 +133,8 @@ impl Format for VolumeFormat {
             id: self.id(),
             name: self.name(),
             category: "Units",
-            description: "Volume (ml, L, gal, fl oz)",
-            examples: &["500ml", "2L", "1 gallon", "8 fl oz"],
+            description: "Volume with SI prefixes (nL, µL, mL, L, kL, etc.)",
+            examples: &["500mL", "2L", "1 gallon", "8 fl oz", "100µL"],
             aliases: self.aliases(),
         }
     }
@@ -114,7 +148,7 @@ impl Format for VolumeFormat {
             return vec![];
         }
 
-        let description = format!("{} ml", format_value(ml));
+        let description = format!("{} mL", format_value(ml));
 
         vec![Interpretation {
             value: CoreValue::Float(ml),
@@ -190,9 +224,20 @@ mod tests {
 
     #[test]
     fn test_parse_metric() {
-        assert!((parse_to_ml("500ml").unwrap() - 500.0).abs() < 0.01);
+        assert!((parse_to_ml("500mL").unwrap() - 500.0).abs() < 0.01);
         assert!((parse_to_ml("2L").unwrap() - 2000.0).abs() < 0.01);
         assert!((parse_to_ml("1.5 liters").unwrap() - 1500.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_parse_si_prefixes() {
+        // Microliters
+        assert!((parse_to_ml("100µL").unwrap() - 0.1).abs() < 1e-6);
+        assert!((parse_to_ml("100uL").unwrap() - 0.1).abs() < 1e-6);
+        // Nanoliters
+        assert!((parse_to_ml("1000nL").unwrap() - 0.001).abs() < 1e-9);
+        // Kiloliters
+        assert!((parse_to_ml("1kL").unwrap() - 1e6).abs() < 0.01);
     }
 
     #[test]
@@ -200,5 +245,11 @@ mod tests {
         assert!((parse_to_ml("1gal").unwrap() - 3785.41).abs() < 0.01);
         assert!((parse_to_ml("8 fl oz").unwrap() - 236.588).abs() < 0.01);
         assert!((parse_to_ml("2 cups").unwrap() - 473.176).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_unit_alone_rejected() {
+        assert!(parse_to_ml("L").is_none());
+        assert!(parse_to_ml("mL").is_none());
     }
 }
