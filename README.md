@@ -13,9 +13,9 @@ $ forb 691E01B8
   4 bytes
   → ipv4: 105.30.1.184
   → epoch-seconds: 2025-11-19T17:43:20+00:00
-  → binary: 01101001 00011110 00000001 10111000
-  → base64: aR4BuA==
-  → int-be: 1763574200
+  ≈ binary: 01101001 00011110 00000001 10111000
+  ≈ base64: aR4BuA==
+  ≈ int-be: 1763574200
   … (8 more, use -l 0 to show all)
 ```
 
@@ -392,9 +392,10 @@ $ forb '0xFF + 1'
 
 ▶ expr (60% confidence)
   0xFF + 1 = 256
-  → hex-int: 0x100
-  → binary-int: 0b100000000
-  → power-of-2: 2^8
+  ≈ result: 256
+  ≈ hex-int: 0x100
+  ≈ binary-int: 0b100000000
+  ✓ power-of-2: 2^8
 ```
 
 ### Durations & Data Sizes
@@ -464,7 +465,8 @@ $ forb '5km'
 
 ▶ length (85% confidence)
   5 km
-  → meters: 5000 m
+  ≈ meters-decimal: 5000 m
+  ≈ meters: 5000 m
   → feet: 16404.20 ft
   → miles: 3.11 mi
 ```
@@ -537,10 +539,10 @@ $ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655
 3. Encodings (hex, base64, url-encoded)
 4. Raw values (integers, bytes)
 
-**Conversion kinds** - different types of output:
-- **Conversions**: Actual data transformations (bytes → integer, epoch → datetime)
-- **Representations**: Same value in different notation (1024 → 0x400, 5e-9 m → 5 nm)
-- **Traits**: Observations about the value (is power-of-2, is prime)
+**Conversion kinds** - shown with different symbols in CLI:
+- `→` **Conversion**: Actual data transformation (metric → imperial, epoch → datetime)
+- `≈` **Representation**: Same value in different notation (256 → 0x100, 5e-9 m → 5 nm)
+- `✓` **Trait**: Property of the value (is power-of-2, is prime)
 
 Use `-l 0` to show all conversions, or `-l N` to show top N.
 

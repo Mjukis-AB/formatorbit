@@ -46,6 +46,11 @@ OUTPUT:
   Use -l to change how many conversions are shown (default: 5, use -l 0 for all).
   Use --formats to see all supported formats and aliases.
 
+  Conversion symbols:
+    →  Conversion     Actual transformation (e.g., metric → imperial)
+    ≈  Representation Same value, different notation (e.g., 256 → 0x100)
+    ✓  Trait          Property of the value (e.g., power-of-2, prime)
+
 PIPE MODE:
   Pipe logs through forb to annotate interesting values:
     cat server.log | forb              Annotate log lines
