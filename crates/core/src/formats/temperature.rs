@@ -190,18 +190,12 @@ impl Format for TemperatureFormat {
         }]
     }
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::Float(_))
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        false
     }
 
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        match value {
-            CoreValue::Float(k) => {
-                let c = Self::k_to_c(*k);
-                Some(format!("{}°C", Self::format_value(c)))
-            }
-            _ => None,
-        }
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        None
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {

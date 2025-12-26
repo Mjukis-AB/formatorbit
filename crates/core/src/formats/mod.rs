@@ -23,6 +23,7 @@ mod plist;
 mod protobuf;
 mod temperature;
 mod ulid;
+mod units;
 mod url;
 mod utf8;
 mod uuid;
@@ -50,6 +51,10 @@ pub use plist::PlistFormat;
 pub use protobuf::ProtobufFormat;
 pub use temperature::TemperatureFormat;
 pub use ulid::UlidFormat;
+pub use units::{
+    AngleFormat, AreaFormat, EnergyFormat, LengthFormat, PressureFormat, SpeedFormat, VolumeFormat,
+    WeightFormat,
+};
 pub use url::UrlEncodingFormat;
 pub use utf8::Utf8Format;
 pub use uuid::UuidFormat;

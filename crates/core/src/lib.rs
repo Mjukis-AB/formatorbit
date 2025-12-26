@@ -12,11 +12,12 @@ pub use format::{Format, FormatInfo};
 pub use types::*;
 
 use formats::{
-    Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat, DataSizeFormat,
-    DateTimeFormat, DecimalFormat, DurationFormat, EscapeFormat, ExprFormat, HashFormat, HexFormat,
-    HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat, MsgPackFormat, NanoIdFormat, OctalFormat,
-    PlistFormat, ProtobufFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
-    UuidFormat,
+    AngleFormat, AreaFormat, Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat,
+    DataSizeFormat, DateTimeFormat, DecimalFormat, DurationFormat, EnergyFormat, EscapeFormat,
+    ExprFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat,
+    LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, PressureFormat,
+    ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
+    UuidFormat, VolumeFormat, WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -49,6 +50,15 @@ impl Formatorbit {
                 Box::new(DecimalFormat),
                 Box::new(DataSizeFormat),
                 Box::new(TemperatureFormat),
+                // Unit conversions
+                Box::new(LengthFormat),
+                Box::new(WeightFormat),
+                Box::new(VolumeFormat),
+                Box::new(SpeedFormat),
+                Box::new(PressureFormat),
+                Box::new(AngleFormat),
+                Box::new(AreaFormat),
+                Box::new(EnergyFormat),
                 Box::new(ExprFormat),
                 Box::new(EscapeFormat),
                 Box::new(DurationFormat),

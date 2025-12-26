@@ -1,0 +1,211 @@
+//! Energy format.
+//!
+//! Parses and converts between energy units:
+//! J, kJ, cal, kcal, Wh, kWh, BTU
+
+use crate::format::{Format, FormatInfo};
+use crate::types::{
+    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
+
+use super::{format_value, parse_number};
+
+pub struct EnergyFormat;
+
+/// Units with multiplier to convert to joules (base unit).
+const UNITS: &[(&str, f64)] = &[
+    // Full names
+    ("kilojoules", 1000.0),
+    ("kilojoule", 1000.0),
+    ("joules", 1.0),
+    ("joule", 1.0),
+    ("kilocalories", 4184.0),
+    ("kilocalorie", 4184.0),
+    ("calories", 4.184),
+    ("calorie", 4.184),
+    ("kilowatt-hours", 3.6e6),
+    ("kilowatt-hour", 3.6e6),
+    ("kilowatthours", 3.6e6),
+    ("kilowatthour", 3.6e6),
+    ("watt-hours", 3600.0),
+    ("watt-hour", 3600.0),
+    ("watthours", 3600.0),
+    ("watthour", 3600.0),
+    // Abbreviations
+    ("kJ", 1000.0),
+    ("J", 1.0),
+    ("kcal", 4184.0),
+    ("Cal", 4184.0), // Food calorie = kcal
+    ("cal", 4.184),
+    ("kWh", 3.6e6),
+    ("Wh", 3600.0),
+    ("BTU", 1055.06),
+    ("btu", 1055.06),
+];
+
+const DISPLAY_UNITS: &[(&str, &str, f64)] = &[
+    ("joules", "J", 1.0),
+    ("kilojoules", "kJ", 1000.0),
+    ("calories", "cal", 4.184),
+    ("kilocalories", "kcal", 4184.0),
+    ("kilowatt-hours", "kWh", 3.6e6),
+];
+
+impl EnergyFormat {
+    fn parse_energy(input: &str) -> Option<(f64, &'static str)> {
+        let input = input.trim();
+
+        for (suffix, multiplier) in UNITS {
+            if let Some(num_str) = input.strip_suffix(suffix) {
+                // For single letter J, require number attached
+                if *suffix == "J" && num_str.trim().is_empty() {
+                    continue;
+                }
+                if let Some(value) = parse_number(num_str) {
+                    let joules = value * multiplier;
+                    return Some((joules, suffix));
+                }
+            }
+
+            if suffix.len() > 3 {
+                let input_lower = input.to_lowercase();
+                if input_lower.ends_with(&suffix.to_lowercase()) {
+                    let num_str = &input[..input.len() - suffix.len()];
+                    if let Some(value) = parse_number(num_str) {
+                        let joules = value * multiplier;
+                        return Some((joules, suffix));
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+impl Format for EnergyFormat {
+    fn id(&self) -> &'static str {
+        "energy"
+    }
+
+    fn name(&self) -> &'static str {
+        "Energy"
+    }
+
+    fn info(&self) -> FormatInfo {
+        FormatInfo {
+            id: self.id(),
+            name: self.name(),
+            category: "Units",
+            description: "Energy (J, kJ, cal, kcal, kWh)",
+            examples: &["100kJ", "500 calories", "1 kWh", "1000 BTU"],
+            aliases: self.aliases(),
+        }
+    }
+
+    fn parse(&self, input: &str) -> Vec<Interpretation> {
+        let Some((joules, _unit)) = Self::parse_energy(input) else {
+            return vec![];
+        };
+
+        if joules < 0.0 {
+            return vec![];
+        }
+
+        let description = format!("{} J", format_value(joules));
+
+        vec![Interpretation {
+            value: CoreValue::Float(joules),
+            source_format: "energy".to_string(),
+            confidence: 0.85,
+            description,
+        }]
+    }
+
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        false
+    }
+
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        None
+    }
+
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        let CoreValue::Float(joules) = value else {
+            return vec![];
+        };
+
+        let joules = *joules;
+        if joules < 0.0 {
+            return vec![];
+        }
+
+        let mut conversions = Vec::new();
+
+        for (name, abbrev, multiplier) in DISPLAY_UNITS {
+            let converted = joules / multiplier;
+            let display = format!("{} {}", format_value(converted), abbrev);
+
+            conversions.push(Conversion {
+                value: CoreValue::Float(converted),
+                target_format: (*name).to_string(),
+                display: display.clone(),
+                path: vec![(*name).to_string()],
+                steps: vec![ConversionStep {
+                    format: (*name).to_string(),
+                    value: CoreValue::Float(converted),
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Representation,
+                ..Default::default()
+            });
+        }
+
+        conversions
+    }
+
+    fn aliases(&self) -> &'static [&'static str] {
+        &[]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_to_joules(input: &str) -> Option<f64> {
+        let format = EnergyFormat;
+        let results = format.parse(input);
+        if results.is_empty() {
+            return None;
+        }
+        match &results[0].value {
+            CoreValue::Float(j) => Some(*j),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn test_parse_joules() {
+        assert!((parse_to_joules("1000J").unwrap() - 1000.0).abs() < 0.01);
+        assert!((parse_to_joules("1kJ").unwrap() - 1000.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_parse_calories() {
+        assert!((parse_to_joules("1cal").unwrap() - 4.184).abs() < 0.01);
+        assert!((parse_to_joules("1kcal").unwrap() - 4184.0).abs() < 0.01);
+        assert!((parse_to_joules("100 calories").unwrap() - 418.4).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_parse_kwh() {
+        assert!((parse_to_joules("1kWh").unwrap() - 3.6e6).abs() < 1.0);
+        assert!((parse_to_joules("1 Wh").unwrap() - 3600.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_parse_btu() {
+        assert!((parse_to_joules("1BTU").unwrap() - 1055.06).abs() < 0.1);
+    }
+}
