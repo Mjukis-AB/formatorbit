@@ -13,9 +13,9 @@ pub use types::*;
 
 use formats::{
     AngleFormat, AreaFormat, Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat,
-    DataSizeFormat, DateTimeFormat, DecimalFormat, DurationFormat, EnergyFormat, EscapeFormat,
-    ExprFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat,
-    LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, PressureFormat,
+    CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat, DurationFormat, EnergyFormat,
+    EscapeFormat, ExprFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat, JsonFormat,
+    JwtFormat, LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, PressureFormat,
     ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
     UuidFormat, VolumeFormat, WeightFormat,
 };
@@ -59,6 +59,7 @@ impl Formatorbit {
                 Box::new(AngleFormat),
                 Box::new(AreaFormat),
                 Box::new(EnergyFormat),
+                Box::new(CurrencyFormat),
                 Box::new(ExprFormat),
                 Box::new(EscapeFormat),
                 Box::new(DurationFormat),

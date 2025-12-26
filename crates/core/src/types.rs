@@ -60,6 +60,12 @@ pub enum CoreValue {
     Area(f64),
     /// Temperature in Kelvin (base SI unit).
     Temperature(f64),
+    /// Currency amount with ISO 4217 code.
+    /// Amount is in base units (not cents).
+    Currency {
+        amount: f64,
+        code: String,
+    },
 }
 
 /// A decoded protobuf field.
@@ -136,6 +142,7 @@ impl CoreValue {
             Self::Angle(_) => "angle",
             Self::Area(_) => "area",
             Self::Temperature(_) => "temperature",
+            Self::Currency { .. } => "currency",
         }
     }
 }
