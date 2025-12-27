@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2025-12-26
+
+### Added
+- **CLI conversion kind symbols** - visual distinction between conversion types:
+  - `→` Conversion (cyan) - actual transformation (metric → imperial)
+  - `≈` Representation (blue) - same value, different notation (256 → 0x100)
+  - `✓` Trait (magenta) - property of the value (power-of-2, prime)
+- **Unit format improvements** - all unit formats now:
+  - Show decimal base unit as Primary result (first conversion)
+  - Correctly distinguish Conversion vs Representation kinds
+- **Expression hex/binary/octal** - math expressions now show integer representations
+
+### Changed
+- `display_only` field hidden from JSON API (internal implementation detail)
+- `--help` and README updated to document conversion kind symbols
+
+### Fixed
+- **Base64/NanoID false positives** - camelCase identifiers like `aspectButton` no longer match
+
 ## [0.5.1] - 2025-12-26
 
 ### Added
