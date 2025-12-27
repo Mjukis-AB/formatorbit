@@ -1,6 +1,7 @@
 //! Base64 format.
 
 use base64::{engine::general_purpose::STANDARD, Engine};
+use tracing::{debug, trace};
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{CoreValue, Interpretation};
@@ -73,23 +74,29 @@ impl Format for Base64Format {
     }
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
+        trace!(input_len = input.len(), "base64: checking input");
+
         // Quick validation of characters
         if !Self::is_valid_base64_chars(input) {
+            trace!("base64: rejected - invalid characters");
             return vec![];
         }
 
         // Skip things that look like code identifiers (camelCase, etc.)
         if Self::looks_like_word_or_identifier(input) {
+            debug!(input, "base64: rejected - looks like word/identifier");
             return vec![];
         }
 
         // Try to decode
         let Ok(bytes) = STANDARD.decode(input) else {
+            trace!("base64: rejected - decode failed");
             return vec![];
         };
 
         // Empty decode is not useful
         if bytes.is_empty() {
+            trace!("base64: rejected - empty decode");
             return vec![];
         }
 
@@ -103,6 +110,8 @@ impl Format for Base64Format {
         } else {
             0.5
         };
+
+        debug!(bytes_len = bytes.len(), confidence, "base64: matched");
 
         vec![Interpretation {
             value: CoreValue::Bytes(bytes.clone()),

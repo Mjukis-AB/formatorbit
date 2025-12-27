@@ -28,6 +28,7 @@ plist = "1"
 evalexpr = "13"
 ureq = { version = "2", features = ["json"] }
 dirs = "5"
+tracing = { workspace = true }
 
 [dependencies.pyo3]
 version = "0.23"

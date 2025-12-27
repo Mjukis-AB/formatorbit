@@ -6,6 +6,8 @@
 //! - `\110\145\154\154\157` → "Hello" (octal escapes)
 //! - `\n\t\r` → newline, tab, carriage return
 
+use tracing::{debug, trace};
+
 use crate::format::{Format, FormatInfo};
 use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
 
@@ -163,7 +165,10 @@ impl Format for EscapeFormat {
     }
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
+        trace!(input_len = input.len(), "escape: checking input");
+
         if !Self::has_escapes(input) {
+            trace!("escape: rejected - no escape sequences found");
             return vec![];
         }
 
@@ -180,12 +185,19 @@ impl Format for EscapeFormat {
         let escape_ratio = escape_chars as f32 / input_len as f32;
 
         if escape_ratio < min_escape_ratio && input_len > 20 {
+            debug!(
+                escape_count,
+                escape_ratio, input_len, "escape: rejected - escape density too low"
+            );
             return vec![];
         }
 
         let Some(decoded) = Self::decode_escapes(input) else {
+            trace!("escape: rejected - decode failed");
             return vec![];
         };
+
+        debug!(decoded_len = decoded.len(), escape_count, "escape: matched");
 
         // Try to interpret as UTF-8 string
         let (value, description) = if let Ok(s) = std::str::from_utf8(&decoded) {
