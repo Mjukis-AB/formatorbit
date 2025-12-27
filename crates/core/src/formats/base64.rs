@@ -15,13 +15,21 @@ impl Base64Format {
                 .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=')
     }
 
-    /// Check if the string looks like a code identifier (camelCase, snake_case, etc.)
+    /// Check if the string looks like a word or identifier rather than base64 data.
     /// These are almost never base64-encoded data.
-    fn looks_like_identifier(s: &str) -> bool {
-        // Must be letters only (no digits, +, /, =) to be an identifier
+    fn looks_like_word_or_identifier(s: &str) -> bool {
+        // Must be letters only (no digits, +, /, =) to be a word/identifier
         let letters_only = s.chars().all(|c| c.is_ascii_alphabetic());
         if !letters_only {
             return false;
+        }
+
+        // All-lowercase letters-only strings are likely words or tool names
+        // e.g., "xcodegen", "rustfmt", "prettier"
+        // Real base64 data almost always has mixed case, digits, or special chars
+        let all_lowercase = s.chars().all(|c| c.is_ascii_lowercase());
+        if all_lowercase && s.len() >= 4 && s.len() <= 20 {
+            return true;
         }
 
         // camelCase: lowercase followed by uppercase somewhere
@@ -71,7 +79,7 @@ impl Format for Base64Format {
         }
 
         // Skip things that look like code identifiers (camelCase, etc.)
-        if Self::looks_like_identifier(input) {
+        if Self::looks_like_word_or_identifier(input) {
             return vec![];
         }
 
