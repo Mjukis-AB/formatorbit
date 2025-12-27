@@ -7,6 +7,7 @@ use std::io::IsTerminal;
 use clap::Parser;
 use colored::{control::set_override, Colorize};
 use formatorbit_core::{ConversionKind, ConversionMetadata, CoreValue, Formatorbit};
+use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
 use crate::pretty::{PacketMode, PrettyConfig};
 
@@ -157,6 +158,13 @@ struct Cli {
     /// Use --packet=compact for inline horizontal format or --packet=detailed for table format.
     #[arg(long, short = 'p', value_name = "MODE", num_args = 0..=1, default_missing_value = "compact")]
     packet: Option<String>,
+
+    /// Enable verbose logging (use multiple times for more detail)
+    ///
+    /// -v shows debug messages, -vv shows trace messages.
+    /// Useful for understanding why something was or wasn't matched.
+    #[arg(long, short = 'v', action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
 fn print_formats() {
@@ -253,6 +261,23 @@ fn print_formats() {
 
 fn main() {
     let cli = Cli::parse();
+
+    // Initialize tracing based on verbosity level
+    let level = match cli.verbose {
+        0 => LevelFilter::OFF,
+        1 => LevelFilter::DEBUG,
+        _ => LevelFilter::TRACE,
+    };
+    if level != LevelFilter::OFF {
+        let filter = EnvFilter::builder()
+            .with_default_directive(level.into())
+            .from_env_lossy();
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_target(false)
+            .with_writer(std::io::stderr)
+            .init();
+    }
 
     if cli.formats {
         print_formats();

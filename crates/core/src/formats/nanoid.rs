@@ -3,6 +3,8 @@
 //! NanoID is a tiny, secure, URL-friendly unique string ID.
 //! Default: 21 characters using alphabet A-Za-z0-9_-
 
+use tracing::{debug, trace};
+
 use crate::format::{Format, FormatInfo};
 use crate::types::{CoreValue, Interpretation};
 
@@ -78,19 +80,23 @@ impl Format for NanoIdFormat {
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
         let trimmed = input.trim();
+        trace!(input_len = trimmed.len(), "nanoid: checking input");
 
         // Reasonable length range for NanoID
         if trimmed.len() < 10 || trimmed.len() > 36 {
+            trace!("nanoid: rejected - length out of range");
             return vec![];
         }
 
         // Must be valid NanoID alphabet
         if !Self::is_valid_nanoid(trimmed) {
+            trace!("nanoid: rejected - invalid characters");
             return vec![];
         }
 
         // Skip camelCase identifiers - they're not NanoIDs
         if Self::looks_like_identifier(trimmed) {
+            debug!(input = trimmed, "nanoid: rejected - looks like identifier");
             return vec![];
         }
 
@@ -98,9 +104,11 @@ impl Format for NanoIdFormat {
 
         // Skip if confidence is too low
         if confidence < 0.30 {
+            trace!(confidence, "nanoid: rejected - confidence too low");
             return vec![];
         }
 
+        debug!(len = trimmed.len(), confidence, "nanoid: matched");
         let description = format!("NanoID ({} chars)", trimmed.len());
 
         vec![Interpretation {
