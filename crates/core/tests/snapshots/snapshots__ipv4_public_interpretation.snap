@@ -1,0 +1,48 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 50
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      8,
+      8,
+      8,
+      8
+    ]
+  },
+  "source_format": "ipv4",
+  "confidence": 0.9,
+  "description": "IPv4: 8.8.8.8 (Public)",
+  "rich_display": [
+    {
+      "preferred": {
+        "type": "KeyValue",
+        "pairs": [
+          [
+            "Class",
+            "A"
+          ],
+          [
+            "Scope",
+            "Public"
+          ],
+          [
+            "Binary",
+            "00001000.00001000.00001000.00001000"
+          ],
+          [
+            "Integer",
+            "134744072"
+          ],
+          [
+            "Hex",
+            "0x08080808"
+          ]
+        ]
+      }
+    }
+  ]
+}

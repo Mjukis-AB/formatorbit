@@ -137,6 +137,7 @@ impl Format for JwtFormat {
             source_format: "jwt".to_string(),
             confidence,
             description,
+            rich_display: vec![],
         }]
     }
 

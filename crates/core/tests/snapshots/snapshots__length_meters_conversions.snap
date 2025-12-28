@@ -1,0 +1,257 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 173
+expression: "&result.conversions"
+---
+[
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "meters-decimal",
+    "display": "5 m",
+    "path": [
+      "length",
+      "meters-decimal"
+    ],
+    "steps": [
+      {
+        "format": "meters-decimal",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "5 m"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Primary",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "meters",
+    "display": "5 m",
+    "path": [
+      "length",
+      "meters"
+    ],
+    "steps": [
+      {
+        "format": "meters",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "5 m"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "kilometers",
+    "display": "5e-3 km",
+    "path": [
+      "length",
+      "kilometers"
+    ],
+    "steps": [
+      {
+        "format": "kilometers",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "5e-3 km"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "centimeters",
+    "display": "500 cm",
+    "path": [
+      "length",
+      "centimeters"
+    ],
+    "steps": [
+      {
+        "format": "centimeters",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "500 cm"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "millimeters",
+    "display": "5000 mm",
+    "path": [
+      "length",
+      "millimeters"
+    ],
+    "steps": [
+      {
+        "format": "millimeters",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "5000 mm"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "feet",
+    "display": "16.40 ft",
+    "path": [
+      "length",
+      "feet"
+    ],
+    "steps": [
+      {
+        "format": "feet",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "16.40 ft"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "miles",
+    "display": "3.11e-3 mi",
+    "path": [
+      "length",
+      "miles"
+    ],
+    "steps": [
+      {
+        "format": "miles",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "3.11e-3 mi"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "inches",
+    "display": "196.85 in",
+    "path": [
+      "length",
+      "inches"
+    ],
+    "steps": [
+      {
+        "format": "inches",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "196.85 in"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "meters-si",
+    "display": "5 m",
+    "path": [
+      "length",
+      "meters-si"
+    ],
+    "steps": [
+      {
+        "format": "meters-si",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "5 m"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "meters-scientific",
+    "display": "5e0 m",
+    "path": [
+      "length",
+      "meters-scientific"
+    ],
+    "steps": [
+      {
+        "format": "meters-scientific",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "5e0 m"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  }
+]

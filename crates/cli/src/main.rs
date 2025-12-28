@@ -6,7 +6,7 @@ use std::io::IsTerminal;
 
 use clap::Parser;
 use colored::{control::set_override, Colorize};
-use formatorbit_core::{ConversionKind, ConversionMetadata, CoreValue, Formatorbit};
+use formatorbit_core::{ConversionKind, CoreValue, Formatorbit, RichDisplay, RichDisplayOption};
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
 use crate::pretty::{PacketMode, PrettyConfig};
@@ -424,7 +424,7 @@ fn main() {
                 let display = format_conversion_display(
                     &conv.value,
                     &conv.display,
-                    conv.metadata.as_ref(),
+                    &conv.rich_display,
                     &pretty_config,
                 );
                 println!("{}", display);
@@ -465,7 +465,7 @@ fn main() {
                 let display = format_conversion_display(
                     &conv.value,
                     &conv.display,
-                    conv.metadata.as_ref(),
+                    &conv.rich_display,
                     &pretty_config,
                 );
 
@@ -523,17 +523,19 @@ fn main() {
 fn format_conversion_display(
     value: &CoreValue,
     original_display: &str,
-    metadata: Option<&ConversionMetadata>,
+    rich_display: &[RichDisplayOption],
     config: &PrettyConfig,
 ) -> String {
-    // If packet mode is enabled and we have PacketLayout metadata, show that
+    // If packet mode is enabled and we have PacketLayout in rich_display, show that
     if config.packet_mode != PacketMode::None {
-        if let Some(ConversionMetadata::PacketLayout { segments, .. }) = metadata {
-            return match config.packet_mode {
-                PacketMode::Compact => pretty::pretty_packet_compact(segments, config),
-                PacketMode::Detailed => pretty::pretty_packet_detailed(segments, config),
-                PacketMode::None => unreachable!(),
-            };
+        for opt in rich_display {
+            if let RichDisplay::PacketLayout { segments, .. } = &opt.preferred {
+                return match config.packet_mode {
+                    PacketMode::Compact => pretty::pretty_packet_compact(segments, config),
+                    PacketMode::Detailed => pretty::pretty_packet_detailed(segments, config),
+                    PacketMode::None => unreachable!(),
+                };
+            }
         }
     }
 

@@ -156,6 +156,7 @@ impl Format for UlidFormat {
             source_format: "ulid".to_string(),
             confidence,
             description,
+            rich_display: vec![],
         }]
     }
 

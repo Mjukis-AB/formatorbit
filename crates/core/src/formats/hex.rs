@@ -289,6 +289,7 @@ impl Format for HexFormat {
             source_format: "hex".to_string(),
             confidence,
             description,
+            rich_display: vec![],
         }]
     }
 

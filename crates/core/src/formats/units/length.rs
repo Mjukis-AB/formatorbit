@@ -164,6 +164,7 @@ impl Format for LengthFormat {
             source_format: "length".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

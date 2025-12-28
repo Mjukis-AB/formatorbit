@@ -1,0 +1,47 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 235
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      44,
+      242,
+      77,
+      186,
+      95,
+      176,
+      163,
+      14,
+      38,
+      232,
+      59,
+      42,
+      197,
+      185,
+      226,
+      158,
+      27,
+      22,
+      30,
+      92,
+      31,
+      167,
+      66,
+      94,
+      115,
+      4,
+      51,
+      98,
+      147,
+      139,
+      152,
+      36
+    ]
+  },
+  "source_format": "hash",
+  "confidence": 0.5,
+  "description": "Possible SHA-256 or SHA-512/256 or BLAKE2s-256 hash (256-bit)"
+}

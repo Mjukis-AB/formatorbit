@@ -124,6 +124,7 @@ impl Format for EpochFormat {
                     source_format: "epoch-seconds".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
+                    rich_display: vec![],
                 });
             }
         }
@@ -150,6 +151,7 @@ impl Format for EpochFormat {
                     source_format: "epoch-millis".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
+                    rich_display: vec![],
                 });
             }
         }
@@ -174,6 +176,7 @@ impl Format for EpochFormat {
                     source_format: "epoch-micros".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
+                    rich_display: vec![],
                 });
             }
         }
@@ -198,6 +201,7 @@ impl Format for EpochFormat {
                     source_format: "epoch-nanos".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
+                    rich_display: vec![],
                 });
             }
         }

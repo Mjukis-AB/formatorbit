@@ -58,7 +58,7 @@ impl Format for Utf8Format {
                         priority: ConversionPriority::Encoding,
                         display_only: false,
                         kind: ConversionKind::default(),
-                        metadata: None,
+                        rich_display: vec![],
                     }]
                 } else {
                     vec![]
@@ -76,7 +76,7 @@ impl Format for Utf8Format {
                     priority: ConversionPriority::Raw,
                     display_only: false,
                     kind: ConversionKind::default(),
-                    metadata: None,
+                    rich_display: vec![],
                 }]
             }
             _ => vec![],

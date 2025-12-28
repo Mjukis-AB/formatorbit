@@ -159,6 +159,7 @@ impl Format for EnergyFormat {
             source_format: "energy".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

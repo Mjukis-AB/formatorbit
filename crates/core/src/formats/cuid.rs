@@ -90,6 +90,7 @@ impl Format for CuidFormat {
             source_format: "cuid".to_string(),
             confidence,
             description,
+            rich_display: vec![],
         }]
     }
 

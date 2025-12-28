@@ -2,7 +2,8 @@
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionMetadata, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+    Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation, RichDisplay,
+    RichDisplayOption,
 };
 
 /// Represents a parsed color with RGBA components.
@@ -294,6 +295,7 @@ impl ColorFormat {
             source_format: source_format.to_string(),
             confidence: if high_confidence { 0.95 } else { 0.6 },
             description,
+            rich_display: vec![],
         }
     }
 
@@ -426,13 +428,13 @@ impl Format for ColorFormat {
 
         let mut conversions = Vec::new();
 
-        // Color metadata for all conversions
-        let color_metadata = Some(ConversionMetadata::Color {
+        // Color rich display for all conversions
+        let color_display = vec![RichDisplayOption::new(RichDisplay::Color {
             r,
             g,
             b,
             a: a.unwrap_or(255),
-        });
+        })];
 
         // Hex format
         let hex_display = if let Some(alpha) = a {
@@ -452,7 +454,7 @@ impl Format for ColorFormat {
             }],
             priority: ConversionPriority::Semantic,
             display_only: true,
-            metadata: color_metadata.clone(),
+            rich_display: color_display.clone(),
             ..Default::default()
         });
 
@@ -475,7 +477,7 @@ impl Format for ColorFormat {
             }],
             priority: ConversionPriority::Semantic,
             display_only: true,
-            metadata: color_metadata.clone(),
+            rich_display: color_display.clone(),
             ..Default::default()
         });
 
@@ -499,7 +501,7 @@ impl Format for ColorFormat {
             }],
             priority: ConversionPriority::Semantic,
             display_only: true,
-            metadata: color_metadata,
+            rich_display: color_display,
             ..Default::default()
         });
 

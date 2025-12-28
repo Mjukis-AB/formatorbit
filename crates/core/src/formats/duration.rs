@@ -15,7 +15,8 @@ use chrono::Utc;
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionMetadata, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+    Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation, RichDisplay,
+    RichDisplayOption,
 };
 
 pub struct DurationFormat;
@@ -369,6 +370,7 @@ impl Format for DurationFormat {
             source_format: "duration".to_string(),
             confidence: 0.90,
             description,
+            rich_display: vec![],
         }]
     }
 
@@ -423,7 +425,10 @@ impl Format for DurationFormat {
                 }],
                 priority: ConversionPriority::Semantic,
                 display_only: true,
-                metadata: Some(ConversionMetadata::Duration { human, detail }),
+                rich_display: vec![RichDisplayOption::new(RichDisplay::Duration {
+                    millis: val.saturating_mul(1000),
+                    human,
+                })],
                 ..Default::default()
             });
         }
@@ -449,7 +454,10 @@ impl Format for DurationFormat {
                     }],
                     priority: ConversionPriority::Semantic,
                     display_only: true,
-                    metadata: Some(ConversionMetadata::Duration { human, detail }),
+                    rich_display: vec![RichDisplayOption::new(RichDisplay::Duration {
+                        millis: val,
+                        human,
+                    })],
                     ..Default::default()
                 });
             }

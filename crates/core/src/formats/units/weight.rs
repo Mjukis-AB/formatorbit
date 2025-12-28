@@ -149,6 +149,7 @@ impl Format for WeightFormat {
             source_format: "weight".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

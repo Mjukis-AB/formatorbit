@@ -158,6 +158,7 @@ impl Format for VolumeFormat {
             source_format: "volume".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

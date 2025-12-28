@@ -1,0 +1,42 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 132
+expression: utf8_conv
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      72,
+      101,
+      108,
+      108,
+      111
+    ]
+  },
+  "target_format": "utf8",
+  "display": "Hello",
+  "path": [
+    "hex",
+    "utf8"
+  ],
+  "steps": [
+    {
+      "format": "utf8",
+      "value": {
+        "type": "Bytes",
+        "value": [
+          72,
+          101,
+          108,
+          108,
+          111
+        ]
+      },
+      "display": "Hello"
+    }
+  ],
+  "is_lossy": false,
+  "priority": "Encoding",
+  "kind": "Conversion"
+}

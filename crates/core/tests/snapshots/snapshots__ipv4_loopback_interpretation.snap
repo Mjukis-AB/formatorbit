@@ -1,0 +1,48 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 59
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      127,
+      0,
+      0,
+      1
+    ]
+  },
+  "source_format": "ipv4",
+  "confidence": 0.9,
+  "description": "IPv4: 127.0.0.1 (Loopback)",
+  "rich_display": [
+    {
+      "preferred": {
+        "type": "KeyValue",
+        "pairs": [
+          [
+            "Class",
+            "A"
+          ],
+          [
+            "Scope",
+            "Loopback"
+          ],
+          [
+            "Binary",
+            "01111111.00000000.00000000.00000001"
+          ],
+          [
+            "Integer",
+            "2130706433"
+          ],
+          [
+            "Hex",
+            "0x7F000001"
+          ]
+        ]
+      }
+    }
+  ]
+}

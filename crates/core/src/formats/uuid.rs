@@ -54,6 +54,7 @@ impl Format for UuidFormat {
             source_format: "uuid".to_string(),
             confidence: 0.95,
             description: version_desc.to_string(),
+            rich_display: vec![],
         }]
     }
 
@@ -97,7 +98,7 @@ impl Format for UuidFormat {
             priority: ConversionPriority::Semantic,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: None,
+            rich_display: vec![],
         }]
     }
 

@@ -1,0 +1,16 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 207
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Int",
+    "value": {
+      "value": 9000
+    }
+  },
+  "source_format": "duration",
+  "confidence": 0.9,
+  "description": "[description with dynamic timestamp]"
+}

@@ -161,6 +161,7 @@ impl Format for CharFormat {
             source_format: "char".to_string(),
             confidence: 0.90,
             description,
+            rich_display: vec![],
         }]
     }
 

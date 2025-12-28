@@ -110,6 +110,7 @@ impl Format for OctalFormat {
                 "Octal {} = {} decimal ({})",
                 normalized.digits, value, normalized.format_hint
             ),
+            rich_display: vec![],
         }]
     }
 

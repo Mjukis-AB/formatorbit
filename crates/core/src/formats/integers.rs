@@ -288,6 +288,7 @@ impl Format for DecimalFormat {
             source_format: "decimal".to_string(),
             confidence,
             description: format!("Integer: {value}"),
+            rich_display: vec![],
         }]
     }
 
@@ -695,7 +696,7 @@ impl Format for BytesToIntFormat {
             priority: ConversionPriority::Raw,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: None,
+            rich_display: vec![],
         }];
 
         // Only add little-endian if it's different
@@ -720,7 +721,7 @@ impl Format for BytesToIntFormat {
                 priority: ConversionPriority::Raw,
                 display_only: false,
                 kind: ConversionKind::default(),
-                metadata: None,
+                rich_display: vec![],
             });
         }
 

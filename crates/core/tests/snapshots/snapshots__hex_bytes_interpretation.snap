@@ -1,0 +1,20 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 126
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      72,
+      101,
+      108,
+      108,
+      111
+    ]
+  },
+  "source_format": "hex",
+  "confidence": 0.92,
+  "description": "5 bytes"
+}
