@@ -1,0 +1,207 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 249
+expression: "&result.conversions"
+---
+[
+  {
+    "value": {
+      "type": "String",
+      "value": "4"
+    },
+    "target_format": "result",
+    "display": "4",
+    "path": [
+      "expr",
+      "result"
+    ],
+    "steps": [
+      {
+        "format": "result",
+        "value": {
+          "type": "String",
+          "value": "4"
+        },
+        "display": "4"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Primary",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0x4"
+    },
+    "target_format": "hex-int",
+    "display": "0x4",
+    "path": [
+      "expr",
+      "hex-int"
+    ],
+    "steps": [
+      {
+        "format": "hex-int",
+        "value": {
+          "type": "String",
+          "value": "0x4"
+        },
+        "display": "0x4"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0b100"
+    },
+    "target_format": "binary-int",
+    "display": "0b100",
+    "path": [
+      "expr",
+      "binary-int"
+    ],
+    "steps": [
+      {
+        "format": "binary-int",
+        "value": {
+          "type": "String",
+          "value": "0b100"
+        },
+        "display": "0b100"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0o4"
+    },
+    "target_format": "octal-int",
+    "display": "0o4",
+    "path": [
+      "expr",
+      "octal-int"
+    ],
+    "steps": [
+      {
+        "format": "octal-int",
+        "value": {
+          "type": "String",
+          "value": "0o4"
+        },
+        "display": "0o4"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "\u0004"
+    },
+    "target_format": "char",
+    "display": "'\\u{4}' EOT (end of transmission)",
+    "path": [
+      "expr",
+      "char"
+    ],
+    "steps": [
+      {
+        "format": "char",
+        "value": {
+          "type": "String",
+          "value": "\u0004"
+        },
+        "display": "'\\u{4}' EOT (end of transmission)"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "2^2"
+    },
+    "target_format": "power-of-2",
+    "display": "2^2",
+    "path": [
+      "expr",
+      "power-of-2"
+    ],
+    "steps": [
+      {
+        "format": "power-of-2",
+        "value": {
+          "type": "String",
+          "value": "2^2"
+        },
+        "display": "2^2"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Trait"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "2²"
+    },
+    "target_format": "perfect-square",
+    "display": "2²",
+    "path": [
+      "expr",
+      "perfect-square"
+    ],
+    "steps": [
+      {
+        "format": "perfect-square",
+        "value": {
+          "type": "String",
+          "value": "2²"
+        },
+        "display": "2²"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Trait"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "04"
+    },
+    "target_format": "utf8-bytes",
+    "display": "04",
+    "path": [
+      "expr",
+      "utf8-bytes"
+    ],
+    "steps": [
+      {
+        "format": "utf8-bytes",
+        "value": {
+          "type": "String",
+          "value": "04"
+        },
+        "display": "04"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  }
+]

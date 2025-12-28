@@ -6,7 +6,7 @@
 use std::io::{self, BufRead, Write};
 
 use colored::Colorize;
-use formatorbit_core::{ConversionMetadata, ConversionResult, Formatorbit};
+use formatorbit_core::{ConversionResult, Formatorbit, RichDisplay};
 
 use crate::pretty::{self, PacketMode, PrettyConfig};
 use crate::tokenizer::{is_interesting_candidate, tokenize, Token};
@@ -167,7 +167,14 @@ fn print_annotation(
         .map(|c| {
             // Check if we should use packet layout for this conversion
             let display = if config.packet_mode != PacketMode::None {
-                if let Some(ConversionMetadata::PacketLayout { segments, .. }) = &c.metadata {
+                let packet_layout = c.rich_display.iter().find_map(|opt| {
+                    if let RichDisplay::PacketLayout { segments, .. } = &opt.preferred {
+                        Some(segments)
+                    } else {
+                        None
+                    }
+                });
+                if let Some(segments) = packet_layout {
                     let pretty_config = PrettyConfig {
                         color: true,
                         indent: "  ",

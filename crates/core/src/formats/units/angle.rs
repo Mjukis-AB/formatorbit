@@ -115,6 +115,7 @@ impl Format for AngleFormat {
             source_format: "angle".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

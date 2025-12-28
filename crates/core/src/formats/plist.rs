@@ -111,6 +111,7 @@ impl Format for PlistFormat {
             source_format: "plist".to_string(),
             confidence,
             description: "XML plist".to_string(),
+            rich_display: vec![],
         }]
     }
 
@@ -153,7 +154,7 @@ impl Format for PlistFormat {
             priority: ConversionPriority::Structured,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: None,
+            rich_display: vec![],
         }]
     }
 

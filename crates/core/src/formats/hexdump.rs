@@ -129,7 +129,7 @@ impl Format for HexdumpFormat {
             priority: ConversionPriority::Encoding,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: None,
+            rich_display: vec![],
         }]
     }
 

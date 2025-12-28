@@ -4,7 +4,8 @@ use chrono::{DateTime, TimeZone, Utc};
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionKind, ConversionMetadata, ConversionPriority, CoreValue, Interpretation,
+    Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation, RichDisplay,
+    RichDisplayOption,
 };
 
 /// Reasonable epoch range: 2000-01-01 to 2100-01-01
@@ -137,7 +138,7 @@ impl DateTimeFormat {
                 priority: ConversionPriority::Semantic,
                 display_only: true,
                 kind: ConversionKind::Conversion,
-                metadata: None,
+                rich_display: vec![],
             },
             Conversion {
                 value: CoreValue::Int {
@@ -152,7 +153,7 @@ impl DateTimeFormat {
                 priority: ConversionPriority::Semantic,
                 display_only: true,
                 kind: ConversionKind::Conversion,
-                metadata: None,
+                rich_display: vec![],
             },
             Conversion {
                 value: CoreValue::String(relative.clone()),
@@ -164,7 +165,7 @@ impl DateTimeFormat {
                 priority: ConversionPriority::Semantic,
                 display_only: true,
                 kind: ConversionKind::Representation,
-                metadata: None,
+                rich_display: vec![],
             },
         ]
     }
@@ -419,10 +420,10 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
-                        metadata: Some(ConversionMetadata::DateTime {
+                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,
-                        }),
+                        })],
                     });
                 }
             }
@@ -444,10 +445,10 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
-                        metadata: Some(ConversionMetadata::DateTime {
+                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,
-                        }),
+                        })],
                     });
                 }
             }
@@ -468,10 +469,10 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
-                        metadata: Some(ConversionMetadata::DateTime {
+                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,
-                        }),
+                        })],
                     });
                 }
             }
@@ -494,10 +495,10 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
-                        metadata: Some(ConversionMetadata::DateTime {
+                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,
-                        }),
+                        })],
                     });
                 }
             }
@@ -535,6 +536,7 @@ impl Format for DateTimeFormat {
                 source_format: "datetime".to_string(),
                 confidence: 0.95,
                 description: "ISO 8601 / RFC 3339 datetime".to_string(),
+                rich_display: vec![],
             }];
         }
 
@@ -545,6 +547,7 @@ impl Format for DateTimeFormat {
                 source_format: "datetime".to_string(),
                 confidence: 0.9,
                 description: "RFC 2822 datetime".to_string(),
+                rich_display: vec![],
             }];
         }
 
@@ -555,6 +558,7 @@ impl Format for DateTimeFormat {
                 source_format: "datetime".to_string(),
                 confidence: 0.85,
                 description: "US date with time (MM/DD/YYYY @ HH:MMam/pm)".to_string(),
+                rich_display: vec![],
             }];
         }
 
@@ -565,6 +569,7 @@ impl Format for DateTimeFormat {
                 source_format: "datetime".to_string(),
                 confidence: 0.80,
                 description: "Date (Month Day, Year)".to_string(),
+                rich_display: vec![],
             }];
         }
 
@@ -575,6 +580,7 @@ impl Format for DateTimeFormat {
                 source_format: "datetime".to_string(),
                 confidence: 0.80,
                 description: "Date (Day Month Year)".to_string(),
+                rich_display: vec![],
             }];
         }
 
@@ -588,6 +594,7 @@ impl Format for DateTimeFormat {
                     source_format: "datetime".to_string(),
                     confidence,
                     description: desc,
+                    rich_display: vec![],
                 })
                 .collect();
         }

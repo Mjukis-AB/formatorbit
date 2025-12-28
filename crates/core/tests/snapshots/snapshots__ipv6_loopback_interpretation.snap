@@ -1,0 +1,48 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 68
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ]
+  },
+  "source_format": "ipv6",
+  "confidence": 0.9,
+  "description": "IPv6: ::1 (Loopback)",
+  "rich_display": [
+    {
+      "preferred": {
+        "type": "KeyValue",
+        "pairs": [
+          [
+            "Scope",
+            "Loopback"
+          ],
+          [
+            "Expanded",
+            "0000:0000:0000:0000:0000:0000:0000:0001"
+          ]
+        ]
+      }
+    }
+  ]
+}

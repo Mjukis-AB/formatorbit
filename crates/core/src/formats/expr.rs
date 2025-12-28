@@ -156,6 +156,7 @@ impl Format for ExprFormat {
             source_format: "expr".to_string(),
             confidence,
             description,
+            rich_display: vec![],
         }]
     }
 

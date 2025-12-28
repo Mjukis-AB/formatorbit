@@ -6,6 +6,211 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+// ============================================================================
+// Rich Display Types
+// ============================================================================
+
+/// Rich display hints for UI rendering.
+///
+/// Each variant represents a different way to render data. UIs should handle
+/// each variant appropriately based on their capabilities (CLI renders as text,
+/// GUI can render maps, color swatches, etc.).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum RichDisplay {
+    /// Key-value pairs (IP parts, URL components, etc.)
+    KeyValue { pairs: Vec<(String, String)> },
+
+    /// Tabular data (packet layout, etc.)
+    Table {
+        headers: Vec<String>,
+        rows: Vec<Vec<String>>,
+    },
+
+    /// Tree structure (JSON, protobuf, nested data)
+    Tree { root: TreeNode },
+
+    /// Color swatch with RGBA components (0-255)
+    Color { r: u8, g: u8, b: u8, a: u8 },
+
+    /// Geographic coordinates (render as map or text)
+    Map {
+        lat: f64,
+        lon: f64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+    },
+
+    /// Mermaid diagram source
+    Mermaid { source: String },
+
+    /// Graphviz DOT diagram source
+    Dot { source: String },
+
+    /// Syntax-highlighted code block
+    Code { language: String, content: String },
+
+    /// Duration with human-readable form
+    Duration {
+        /// Total milliseconds
+        millis: u64,
+        /// Human-readable, e.g. "4h38m31s"
+        human: String,
+    },
+
+    /// DateTime with relative time
+    DateTime {
+        /// ISO 8601 timestamp
+        iso: String,
+        /// Relative time, e.g. "2 hours ago"
+        relative: String,
+    },
+
+    /// Data size with byte count
+    DataSize {
+        /// Raw byte count
+        bytes: u64,
+        /// Human-readable, e.g. "15.94 MiB"
+        human: String,
+    },
+
+    /// Packet/binary layout visualization
+    PacketLayout {
+        /// Structured segments for programmatic access
+        segments: Vec<PacketSegment>,
+        /// Compact inline display: `[08:tag₁][96 01:150]...`
+        compact: String,
+        /// Detailed table display (multi-line)
+        detailed: String,
+    },
+
+    /// Image data (QR codes, rendered diagrams, etc.)
+    Image {
+        /// Format: "png", "svg", "jpeg"
+        format: String,
+        /// Base64-encoded image data
+        data: String,
+    },
+
+    /// Progress/percentage indicator
+    Progress {
+        /// Value between 0.0 and 1.0
+        value: f64,
+        /// Optional label, e.g. "75%"
+        #[serde(skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+    },
+}
+
+/// A node in a tree structure for hierarchical data display.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TreeNode {
+    /// Label for this node (key name, index, etc.)
+    pub label: String,
+    /// Optional value (leaf nodes have values)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+    /// Child nodes (empty for leaf nodes)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<TreeNode>,
+}
+
+/// A display option with a preferred rendering and alternatives.
+///
+/// UIs should try to render the `preferred` variant first. If they don't
+/// support it (e.g., CLI can't render a Map), they should fall back to
+/// the first supported alternative.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RichDisplayOption {
+    /// Primary/preferred way to display this data
+    pub preferred: RichDisplay,
+    /// Alternative renderings (fallbacks for less capable UIs)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alternatives: Vec<RichDisplay>,
+}
+
+impl RichDisplayOption {
+    /// Create a display option with just a preferred variant, no alternatives.
+    pub fn new(preferred: RichDisplay) -> Self {
+        Self {
+            preferred,
+            alternatives: vec![],
+        }
+    }
+
+    /// Create a display option with a preferred variant and alternatives.
+    pub fn with_alternatives(preferred: RichDisplay, alternatives: Vec<RichDisplay>) -> Self {
+        Self {
+            preferred,
+            alternatives,
+        }
+    }
+}
+
+impl RichDisplay {
+    /// Get a compact single-line representation for compact/pipe mode.
+    #[must_use]
+    pub fn compact(&self) -> String {
+        match self {
+            Self::KeyValue { pairs } => pairs
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect::<Vec<_>>()
+                .join(" "),
+            Self::Table { rows, .. } => format!("[{} rows]", rows.len()),
+            Self::Tree { root } => format!("{}: ...", root.label),
+            Self::Color { r, g, b, a } => {
+                if *a == 255 {
+                    format!("#{:02X}{:02X}{:02X}", r, g, b)
+                } else {
+                    format!("#{:02X}{:02X}{:02X}{:02X}", r, g, b, a)
+                }
+            }
+            Self::Map { lat, lon, .. } => format!("{:.6},{:.6}", lat, lon),
+            Self::Mermaid { .. } => "[mermaid]".to_string(),
+            Self::Dot { .. } => "[dot]".to_string(),
+            Self::Code { language, .. } => format!("[{}]", language),
+            Self::Duration { human, .. } => human.clone(),
+            Self::DateTime { iso, .. } => iso.clone(),
+            Self::DataSize { human, .. } => human.clone(),
+            Self::PacketLayout { compact, .. } => compact.clone(),
+            Self::Image { format, .. } => format!("[{} image]", format),
+            Self::Progress { value, label } => label
+                .clone()
+                .unwrap_or_else(|| format!("{:.0}%", value * 100.0)),
+        }
+    }
+
+    /// Get a raw value for scripting/piping (minimal formatting).
+    #[must_use]
+    pub fn raw(&self) -> String {
+        match self {
+            Self::KeyValue { pairs } => pairs
+                .iter()
+                .map(|(_, v)| v.as_str())
+                .collect::<Vec<_>>()
+                .join("\t"),
+            Self::Table { rows, .. } => rows
+                .iter()
+                .map(|row| row.join("\t"))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            Self::Tree { root } => root.value.clone().unwrap_or_default(),
+            Self::Color { r, g, b, .. } => format!("{},{},{}", r, g, b),
+            Self::Map { lat, lon, .. } => format!("{},{}", lat, lon),
+            Self::Mermaid { source } => source.clone(),
+            Self::Dot { source } => source.clone(),
+            Self::Code { content, .. } => content.clone(),
+            Self::Duration { millis, .. } => millis.to_string(),
+            Self::DateTime { iso, .. } => iso.clone(),
+            Self::DataSize { bytes, .. } => bytes.to_string(),
+            Self::PacketLayout { compact, .. } => compact.clone(),
+            Self::Image { data, .. } => data.clone(),
+            Self::Progress { value, .. } => format!("{:.4}", value),
+        }
+    }
+}
+
 /// Internal value types that everything converts between.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(tag = "type", content = "value")]
@@ -148,12 +353,40 @@ impl CoreValue {
 }
 
 /// A possible interpretation of the input string.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Interpretation {
+    #[serde(default)]
     pub value: CoreValue,
+    #[serde(default)]
     pub source_format: String,
+    #[serde(default)]
     pub confidence: f32,
+    #[serde(default)]
     pub description: String,
+    /// Rich display hints for UI rendering.
+    ///
+    /// Multiple display options can be provided, each with a preferred
+    /// rendering and alternatives. UIs choose based on their capabilities.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rich_display: Vec<RichDisplayOption>,
+}
+
+impl Interpretation {
+    /// Create a new interpretation with empty rich_display.
+    pub fn new(
+        value: CoreValue,
+        source_format: impl Into<String>,
+        confidence: f32,
+        description: impl Into<String>,
+    ) -> Self {
+        Self {
+            value,
+            source_format: source_format.into(),
+            confidence,
+            description: description.into(),
+            rich_display: vec![],
+        }
+    }
 }
 
 /// The kind of conversion - distinguishes between actual transformations,
@@ -203,57 +436,6 @@ pub struct ConversionStep {
     pub display: String,
 }
 
-/// Structured metadata for rich UI rendering.
-///
-/// This allows UIs to render conversions with appropriate widgets
-/// (color swatches, relative time labels, etc.) without re-parsing
-/// the display string.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ConversionMetadata {
-    /// Color with RGBA components (0-255).
-    Color { r: u8, g: u8, b: u8, a: u8 },
-
-    /// Duration with human-readable form and detail.
-    Duration {
-        /// Human-readable duration, e.g. "4h38m31s"
-        human: String,
-        /// Additional context, e.g. "now + 4h38m31s = 2025-12-25T13:51:55Z"
-        detail: String,
-    },
-
-    /// DateTime with ISO format and relative time.
-    DateTime {
-        /// ISO 8601 timestamp, e.g. "2025-12-25T13:51:55Z"
-        iso: String,
-        /// Relative time, e.g. "2 hours ago" or "in 3 days"
-        relative: String,
-    },
-
-    /// Data size with byte count and human-readable form.
-    DataSize {
-        /// Raw byte count
-        bytes: u64,
-        /// Human-readable size, e.g. "15.94 MiB"
-        human: String,
-    },
-
-    /// Packet layout with byte-level structure visualization.
-    ///
-    /// Used for binary formats like protobuf and msgpack to show
-    /// exactly how bytes are structured.
-    PacketLayout {
-        /// Ordered list of segments comprising the packet.
-        segments: Vec<PacketSegment>,
-        /// Pre-formatted compact display (inline horizontal style).
-        /// Example: `[08:tag₁][96 01:varint=150][12:tag₂]...`
-        compact: String,
-        /// Pre-formatted detailed display (vertical table style).
-        /// Multi-line table with columns: Offset, Len, Field, Type, Value
-        detailed: String,
-    },
-}
-
 /// A possible conversion from a value.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Conversion {
@@ -287,16 +469,16 @@ pub struct Conversion {
     /// This is an internal implementation detail and not exposed via FFI/API.
     #[serde(skip)]
     pub display_only: bool,
-    /// Structured metadata for rich UI rendering.
+    /// Rich display hints for UI rendering.
     ///
-    /// Allows UIs to render appropriate widgets (color swatches, relative time, etc.)
-    /// without re-parsing the display string.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<ConversionMetadata>,
+    /// Multiple display options can be provided, each with a preferred
+    /// rendering and alternatives. UIs choose based on their capabilities.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rich_display: Vec<RichDisplayOption>,
 }
 
 impl Conversion {
-    /// Create a new Conversion with default metadata (None).
+    /// Create a new Conversion with default rich_display (empty).
     pub fn new(
         value: CoreValue,
         target_format: impl Into<String>,
@@ -312,7 +494,7 @@ impl Conversion {
             priority: ConversionPriority::default(),
             kind: ConversionKind::default(),
             display_only: false,
-            metadata: None,
+            rich_display: vec![],
         }
     }
 }

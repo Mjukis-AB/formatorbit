@@ -1,0 +1,17 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 284
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Currency",
+    "value": {
+      "amount": 100.0,
+      "code": "USD"
+    }
+  },
+  "source_format": "currency",
+  "confidence": 0.9,
+  "description": "100.00 USD"
+}

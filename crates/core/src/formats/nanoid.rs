@@ -116,6 +116,7 @@ impl Format for NanoIdFormat {
             source_format: "nanoid".to_string(),
             confidence,
             description,
+            rich_display: vec![],
         }]
     }
 

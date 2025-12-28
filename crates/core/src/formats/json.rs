@@ -43,6 +43,7 @@ impl Format for JsonFormat {
             source_format: "json".to_string(),
             confidence: 0.95,
             description: "JSON object".to_string(),
+            rich_display: vec![],
         }]
     }
 
@@ -85,7 +86,7 @@ impl Format for JsonFormat {
             priority: ConversionPriority::Structured,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: None,
+            rich_display: vec![],
         }]
     }
 

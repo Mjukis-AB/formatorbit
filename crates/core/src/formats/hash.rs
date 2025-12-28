@@ -111,6 +111,7 @@ impl Format for HashFormat {
             source_format: "hash".to_string(),
             confidence,
             description,
+            rich_display: vec![],
         }]
     }
 

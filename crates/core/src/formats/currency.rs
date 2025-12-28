@@ -354,6 +354,7 @@ impl Format for CurrencyFormat {
                     source_format: "currency".to_string(),
                     confidence,
                     description,
+                    rich_display: vec![],
                 })
             })
             .collect()

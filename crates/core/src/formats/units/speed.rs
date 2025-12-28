@@ -105,6 +105,7 @@ impl Format for SpeedFormat {
             source_format: "speed".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

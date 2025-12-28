@@ -1,0 +1,82 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 183
+expression: "&result.conversions"
+---
+[
+  {
+    "value": {
+      "type": "Temperature",
+      "value": 373.15
+    },
+    "target_format": "celsius",
+    "display": "100°C",
+    "path": [
+      "temperature",
+      "celsius"
+    ],
+    "steps": [
+      {
+        "format": "celsius",
+        "value": {
+          "type": "Temperature",
+          "value": 373.15
+        },
+        "display": "100°C"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Temperature",
+      "value": 373.15
+    },
+    "target_format": "fahrenheit",
+    "display": "212°F",
+    "path": [
+      "temperature",
+      "fahrenheit"
+    ],
+    "steps": [
+      {
+        "format": "fahrenheit",
+        "value": {
+          "type": "Temperature",
+          "value": 373.15
+        },
+        "display": "212°F"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Temperature",
+      "value": 373.15
+    },
+    "target_format": "kelvin",
+    "display": "373.15 K",
+    "path": [
+      "temperature",
+      "kelvin"
+    ],
+    "steps": [
+      {
+        "format": "kelvin",
+        "value": {
+          "type": "Temperature",
+          "value": 373.15
+        },
+        "display": "373.15 K"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  }
+]

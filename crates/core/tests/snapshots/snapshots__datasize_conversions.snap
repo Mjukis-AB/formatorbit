@@ -1,0 +1,362 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 193
+expression: "&result.conversions"
+---
+[
+  {
+    "value": {
+      "type": "String",
+      "value": "1024"
+    },
+    "target_format": "result",
+    "display": "1024",
+    "path": [
+      "datasize",
+      "result"
+    ],
+    "steps": [
+      {
+        "format": "result",
+        "value": {
+          "type": "String",
+          "value": "1024"
+        },
+        "display": "1024"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Primary",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0x400"
+    },
+    "target_format": "hex-int",
+    "display": "0x400",
+    "path": [
+      "datasize",
+      "hex-int"
+    ],
+    "steps": [
+      {
+        "format": "hex-int",
+        "value": {
+          "type": "String",
+          "value": "0x400"
+        },
+        "display": "0x400"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0b10000000000"
+    },
+    "target_format": "binary-int",
+    "display": "0b10000000000",
+    "path": [
+      "datasize",
+      "binary-int"
+    ],
+    "steps": [
+      {
+        "format": "binary-int",
+        "value": {
+          "type": "String",
+          "value": "0b10000000000"
+        },
+        "display": "0b10000000000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0o2000"
+    },
+    "target_format": "octal-int",
+    "display": "0o2000",
+    "path": [
+      "datasize",
+      "octal-int"
+    ],
+    "steps": [
+      {
+        "format": "octal-int",
+        "value": {
+          "type": "String",
+          "value": "0o2000"
+        },
+        "display": "0o2000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "Ѐ"
+    },
+    "target_format": "char",
+    "display": "'Ѐ' (U+0400)",
+    "path": [
+      "datasize",
+      "char"
+    ],
+    "steps": [
+      {
+        "format": "char",
+        "value": {
+          "type": "String",
+          "value": "Ѐ"
+        },
+        "display": "'Ѐ' (U+0400)"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "2^10"
+    },
+    "target_format": "power-of-2",
+    "display": "2^10",
+    "path": [
+      "datasize",
+      "power-of-2"
+    ],
+    "steps": [
+      {
+        "format": "power-of-2",
+        "value": {
+          "type": "String",
+          "value": "2^10"
+        },
+        "display": "2^10"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Trait"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "32²"
+    },
+    "target_format": "perfect-square",
+    "display": "32²",
+    "path": [
+      "datasize",
+      "perfect-square"
+    ],
+    "steps": [
+      {
+        "format": "perfect-square",
+        "value": {
+          "type": "String",
+          "value": "32²"
+        },
+        "display": "32²"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Trait"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "1 KiB"
+    },
+    "target_format": "datasize-iec",
+    "display": "1 KiB",
+    "path": [
+      "datasize",
+      "datasize-iec"
+    ],
+    "steps": [
+      {
+        "format": "datasize-iec",
+        "value": {
+          "type": "String",
+          "value": "1 KiB"
+        },
+        "display": "1 KiB"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "DataSize",
+          "bytes": 1024,
+          "human": "1 KiB"
+        }
+      }
+    ]
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "1.02 KB"
+    },
+    "target_format": "datasize-si",
+    "display": "1.02 KB",
+    "path": [
+      "datasize",
+      "datasize-si"
+    ],
+    "steps": [
+      {
+        "format": "datasize-si",
+        "value": {
+          "type": "String",
+          "value": "1.02 KB"
+        },
+        "display": "1.02 KB"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "DataSize",
+          "bytes": 1024,
+          "human": "1.02 KB"
+        }
+      }
+    ]
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 1024
+      }
+    },
+    "target_format": "octal",
+    "display": "0o2000",
+    "path": [
+      "datasize",
+      "octal"
+    ],
+    "steps": [
+      {
+        "format": "octal",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 1024
+          }
+        },
+        "display": "0o2000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 1024
+      }
+    },
+    "target_format": "decimal",
+    "display": "1024",
+    "path": [
+      "datasize",
+      "decimal"
+    ],
+    "steps": [
+      {
+        "format": "decimal",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 1024
+          }
+        },
+        "display": "1024"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 1024
+      }
+    },
+    "target_format": "msgpack",
+    "display": "CD0400",
+    "path": [
+      "datasize",
+      "msgpack"
+    ],
+    "steps": [
+      {
+        "format": "msgpack",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 1024
+          }
+        },
+        "display": "CD0400"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "D0 80"
+    },
+    "target_format": "utf8-bytes",
+    "display": "D0 80",
+    "path": [
+      "datasize",
+      "utf8-bytes"
+    ],
+    "steps": [
+      {
+        "format": "utf8-bytes",
+        "value": {
+          "type": "String",
+          "value": "D0 80"
+        },
+        "display": "D0 80"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  }
+]

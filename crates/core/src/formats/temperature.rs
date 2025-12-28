@@ -187,6 +187,7 @@ impl Format for TemperatureFormat {
             source_format: "temperature".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

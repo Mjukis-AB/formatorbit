@@ -1,0 +1,14 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 158
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "DateTime",
+    "value": "2025-01-15T10:30:00Z"
+  },
+  "source_format": "datetime",
+  "confidence": 0.95,
+  "description": "ISO 8601 / RFC 3339 datetime"
+}

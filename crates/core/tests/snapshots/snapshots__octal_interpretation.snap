@@ -1,0 +1,16 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 271
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Int",
+    "value": {
+      "value": 493
+    }
+  },
+  "source_format": "octal",
+  "confidence": 0.95,
+  "description": "Octal 755 = 493 decimal (0o prefix)"
+}

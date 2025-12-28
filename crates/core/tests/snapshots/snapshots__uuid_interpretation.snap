@@ -1,0 +1,31 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 104
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      85,
+      14,
+      132,
+      0,
+      226,
+      155,
+      65,
+      212,
+      167,
+      22,
+      68,
+      102,
+      85,
+      68,
+      0,
+      0
+    ]
+  },
+  "source_format": "uuid",
+  "confidence": 0.95,
+  "description": "UUID v4 (random)"
+}

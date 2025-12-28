@@ -1,0 +1,14 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 172
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Length",
+    "value": 5.0
+  },
+  "source_format": "length",
+  "confidence": 0.85,
+  "description": "5 m"
+}

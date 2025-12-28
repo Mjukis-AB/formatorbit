@@ -118,6 +118,7 @@ impl Format for Base64Format {
             source_format: "base64".to_string(),
             confidence,
             description: format!("{} bytes", bytes.len()),
+            rich_display: vec![],
         }]
     }
 

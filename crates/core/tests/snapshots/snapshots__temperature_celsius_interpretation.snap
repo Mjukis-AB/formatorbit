@@ -1,0 +1,14 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 182
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Temperature",
+    "value": 373.15
+  },
+  "source_format": "temperature",
+  "confidence": 0.85,
+  "description": "100°C (Celsius)"
+}

@@ -2,8 +2,8 @@
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionKind, ConversionMetadata, ConversionPriority, CoreValue, Interpretation,
-    PacketSegment,
+    Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation, PacketSegment,
+    RichDisplay, RichDisplayOption,
 };
 
 pub struct MsgPackFormat;
@@ -116,11 +116,11 @@ impl Format for MsgPackFormat {
             priority,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: Some(ConversionMetadata::PacketLayout {
+            rich_display: vec![RichDisplayOption::new(RichDisplay::PacketLayout {
                 segments: decoded.segments,
                 compact,
                 detailed,
-            }),
+            })],
         }]
     }
 
@@ -957,20 +957,20 @@ mod tests {
 
         assert_eq!(conversions.len(), 1);
 
-        // Check that metadata contains PacketLayout
-        let metadata = conversions[0].metadata.as_ref().unwrap();
-        if let ConversionMetadata::PacketLayout {
+        // Check that rich_display contains PacketLayout
+        assert!(!conversions[0].rich_display.is_empty());
+        if let RichDisplay::PacketLayout {
             segments,
             compact,
             detailed,
-        } = metadata
+        } = &conversions[0].rich_display[0].preferred
         {
             assert_eq!(segments.len(), 1);
             assert!(compact.contains("arr₃"));
             assert!(detailed.contains("Offset"));
             assert!(detailed.contains("fixarray"));
         } else {
-            panic!("Expected PacketLayout metadata");
+            panic!("Expected PacketLayout rich_display");
         }
     }
 }

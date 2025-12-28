@@ -173,6 +173,7 @@ impl Format for AreaFormat {
             source_format: "area".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

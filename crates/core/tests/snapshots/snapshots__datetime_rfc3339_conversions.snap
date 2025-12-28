@@ -1,0 +1,90 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 159
+expression: "&result.conversions"
+---
+[
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 1736937000
+      }
+    },
+    "target_format": "epoch-seconds",
+    "display": "1736937000",
+    "path": [
+      "datetime",
+      "epoch-seconds"
+    ],
+    "steps": [
+      {
+        "format": "epoch-seconds",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 1736937000
+          }
+        },
+        "display": "1736937000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 1736937000000
+      }
+    },
+    "target_format": "epoch-millis",
+    "display": "1736937000000",
+    "path": [
+      "datetime",
+      "epoch-millis"
+    ],
+    "steps": [
+      {
+        "format": "epoch-millis",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 1736937000000
+          }
+        },
+        "display": "1736937000000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "11 months ago"
+    },
+    "target_format": "relative-time",
+    "display": "11 months ago",
+    "path": [
+      "datetime",
+      "relative-time"
+    ],
+    "steps": [
+      {
+        "format": "relative-time",
+        "value": {
+          "type": "String",
+          "value": "11 months ago"
+        },
+        "display": "11 months ago"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  }
+]

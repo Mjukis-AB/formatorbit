@@ -13,8 +13,8 @@
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionKind, ConversionMetadata, ConversionPriority, CoreValue, PacketSegment,
-    ProtoField as PublicProtoField, ProtoValue as PublicProtoValue,
+    Conversion, ConversionKind, ConversionPriority, CoreValue, PacketSegment,
+    ProtoField as PublicProtoField, ProtoValue as PublicProtoValue, RichDisplay, RichDisplayOption,
 };
 
 pub struct ProtobufFormat;
@@ -736,11 +736,11 @@ impl Format for ProtobufFormat {
             priority,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: Some(ConversionMetadata::PacketLayout {
+            rich_display: vec![RichDisplayOption::new(RichDisplay::PacketLayout {
                 segments,
                 compact,
                 detailed,
-            }),
+            })],
         }]
     }
 
@@ -879,13 +879,13 @@ mod tests {
 
         assert_eq!(conversions.len(), 1);
 
-        // Check that metadata contains PacketLayout
-        let metadata = conversions[0].metadata.as_ref().unwrap();
-        if let ConversionMetadata::PacketLayout {
+        // Check that rich_display contains PacketLayout
+        assert!(!conversions[0].rich_display.is_empty());
+        if let RichDisplay::PacketLayout {
             segments,
             compact,
             detailed,
-        } = metadata
+        } = &conversions[0].rich_display[0].preferred
         {
             // Should have 4 segments: tag1, field1, tag2, field2 (len + string)
             assert_eq!(segments.len(), 4);
@@ -900,7 +900,7 @@ mod tests {
             assert!(detailed.contains("Offset"));
             assert!(detailed.contains("Len"));
         } else {
-            panic!("Expected PacketLayout metadata");
+            panic!("Expected PacketLayout rich_display");
         }
     }
 }

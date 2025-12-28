@@ -222,6 +222,7 @@ impl Format for EscapeFormat {
             source_format: "escape".to_string(),
             confidence: 0.90,
             description,
+            rich_display: vec![],
         }]
     }
 

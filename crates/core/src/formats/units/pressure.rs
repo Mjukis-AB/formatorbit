@@ -149,6 +149,7 @@ impl Format for PressureFormat {
             source_format: "pressure".to_string(),
             confidence: 0.85,
             description,
+            rich_display: vec![],
         }]
     }
 

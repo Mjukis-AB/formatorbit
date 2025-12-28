@@ -1,0 +1,16 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 248
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Int",
+    "value": {
+      "value": 4
+    }
+  },
+  "source_format": "expr",
+  "confidence": 0.6,
+  "description": "2 + 2 = 4"
+}

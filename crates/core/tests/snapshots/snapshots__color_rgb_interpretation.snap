@@ -1,0 +1,18 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 91
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      255,
+      128,
+      0
+    ]
+  },
+  "source_format": "color-rgb",
+  "confidence": 0.95,
+  "description": "rgb(): RGB(255, 128, 0) / HSL(30°, 100%, 50%)"
+}

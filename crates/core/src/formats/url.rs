@@ -135,6 +135,7 @@ impl Format for UrlEncodingFormat {
             source_format: "url-encoded".to_string(),
             confidence,
             description: format!("Decoded: {}", decoded),
+            rich_display: vec![],
         }]
     }
 
@@ -171,7 +172,7 @@ impl Format for UrlEncodingFormat {
             priority: ConversionPriority::Encoding,
             display_only: false,
             kind: ConversionKind::default(),
-            metadata: None,
+            rich_display: vec![],
         }]
     }
 

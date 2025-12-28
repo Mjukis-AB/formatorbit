@@ -1,0 +1,630 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 82
+expression: "&result.conversions"
+---
+[
+  {
+    "value": {
+      "type": "String",
+      "value": "16733440"
+    },
+    "target_format": "result",
+    "display": "16733440",
+    "path": [
+      "color-hex",
+      "int-be",
+      "result"
+    ],
+    "steps": [
+      {
+        "format": "int-be",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 16733440,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "16733440"
+      },
+      {
+        "format": "result",
+        "value": {
+          "type": "String",
+          "value": "16733440"
+        },
+        "display": "16733440"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Primary",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "rgb(255, 85, 0)"
+    },
+    "target_format": "color-rgb",
+    "display": "rgb(255, 85, 0)",
+    "path": [
+      "color-hex",
+      "color-rgb"
+    ],
+    "steps": [
+      {
+        "format": "color-rgb",
+        "value": {
+          "type": "String",
+          "value": "rgb(255, 85, 0)"
+        },
+        "display": "rgb(255, 85, 0)"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "Color",
+          "r": 255,
+          "g": 85,
+          "b": 0,
+          "a": 255
+        }
+      }
+    ]
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "hsl(20, 100%, 50%)"
+    },
+    "target_format": "color-hsl",
+    "display": "hsl(20, 100%, 50%)",
+    "path": [
+      "color-hex",
+      "color-hsl"
+    ],
+    "steps": [
+      {
+        "format": "color-hsl",
+        "value": {
+          "type": "String",
+          "value": "hsl(20, 100%, 50%)"
+        },
+        "display": "hsl(20, 100%, 50%)"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "Color",
+          "r": 255,
+          "g": 85,
+          "b": 0,
+          "a": 255
+        }
+      }
+    ]
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0xFF5500"
+    },
+    "target_format": "hex-int",
+    "display": "0xFF5500",
+    "path": [
+      "color-hex",
+      "int-be",
+      "hex-int"
+    ],
+    "steps": [
+      {
+        "format": "int-be",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 16733440,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "16733440"
+      },
+      {
+        "format": "hex-int",
+        "value": {
+          "type": "String",
+          "value": "0xFF5500"
+        },
+        "display": "0xFF5500"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0b111111110101010100000000"
+    },
+    "target_format": "binary-int",
+    "display": "0b111111110101010100000000",
+    "path": [
+      "color-hex",
+      "int-be",
+      "binary-int"
+    ],
+    "steps": [
+      {
+        "format": "int-be",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 16733440,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "16733440"
+      },
+      {
+        "format": "binary-int",
+        "value": {
+          "type": "String",
+          "value": "0b111111110101010100000000"
+        },
+        "display": "0b111111110101010100000000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0o77652400"
+    },
+    "target_format": "octal-int",
+    "display": "0o77652400",
+    "path": [
+      "color-hex",
+      "int-be",
+      "octal-int"
+    ],
+    "steps": [
+      {
+        "format": "int-be",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 16733440,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "16733440"
+      },
+      {
+        "format": "octal-int",
+        "value": {
+          "type": "String",
+          "value": "0o77652400"
+        },
+        "display": "0o77652400"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 22015
+      }
+    },
+    "target_format": "decimal",
+    "display": "22015",
+    "path": [
+      "color-hex",
+      "int-le",
+      "decimal"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      },
+      {
+        "format": "decimal",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015
+          }
+        },
+        "display": "22015"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "嗿"
+    },
+    "target_format": "char",
+    "display": "'嗿' (U+55FF)",
+    "path": [
+      "color-hex",
+      "int-le",
+      "char"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      },
+      {
+        "format": "char",
+        "value": {
+          "type": "String",
+          "value": "嗿"
+        },
+        "display": "'嗿' (U+55FF)"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Bytes",
+      "value": [
+        255,
+        85,
+        0
+      ]
+    },
+    "target_format": "hex",
+    "display": "FF5500",
+    "path": [
+      "color-hex",
+      "hex"
+    ],
+    "steps": [
+      {
+        "format": "hex",
+        "value": {
+          "type": "Bytes",
+          "value": [
+            255,
+            85,
+            0
+          ]
+        },
+        "display": "FF5500"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Bytes",
+      "value": [
+        255,
+        85,
+        0
+      ]
+    },
+    "target_format": "binary",
+    "display": "11111111 01010101 00000000",
+    "path": [
+      "color-hex",
+      "binary"
+    ],
+    "steps": [
+      {
+        "format": "binary",
+        "value": {
+          "type": "Bytes",
+          "value": [
+            255,
+            85,
+            0
+          ]
+        },
+        "display": "11111111 01010101 00000000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Bytes",
+      "value": [
+        255,
+        85,
+        0
+      ]
+    },
+    "target_format": "base64",
+    "display": "/1UA",
+    "path": [
+      "color-hex",
+      "base64"
+    ],
+    "steps": [
+      {
+        "format": "base64",
+        "value": {
+          "type": "Bytes",
+          "value": [
+            255,
+            85,
+            0
+          ]
+        },
+        "display": "/1UA"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Bytes",
+      "value": [
+        255,
+        85,
+        0
+      ]
+    },
+    "target_format": "hexdump",
+    "display": "00000000: ff55 00                                   .U.",
+    "path": [
+      "color-hex",
+      "hexdump"
+    ],
+    "steps": [
+      {
+        "format": "hexdump",
+        "value": {
+          "type": "Bytes",
+          "value": [
+            255,
+            85,
+            0
+          ]
+        },
+        "display": "00000000: ff55 00                                   .U."
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0b111111110101010100000000"
+    },
+    "target_format": "binary-0b",
+    "display": "0b111111110101010100000000",
+    "path": [
+      "color-hex",
+      "binary-0b"
+    ],
+    "steps": [
+      {
+        "format": "binary-0b",
+        "value": {
+          "type": "String",
+          "value": "0b111111110101010100000000"
+        },
+        "display": "0b111111110101010100000000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "\\xFF\\x55\\x00"
+    },
+    "target_format": "escape-hex",
+    "display": "\\xFF\\x55\\x00",
+    "path": [
+      "color-hex",
+      "escape-hex"
+    ],
+    "steps": [
+      {
+        "format": "escape-hex",
+        "value": {
+          "type": "String",
+          "value": "\\xFF\\x55\\x00"
+        },
+        "display": "\\xFF\\x55\\x00"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "E5 97 BF"
+    },
+    "target_format": "utf8-bytes",
+    "display": "E5 97 BF",
+    "path": [
+      "color-hex",
+      "int-le",
+      "utf8-bytes"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      },
+      {
+        "format": "utf8-bytes",
+        "value": {
+          "type": "String",
+          "value": "E5 97 BF"
+        },
+        "display": "E5 97 BF"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 16733440,
+        "original_bytes": [
+          255,
+          85,
+          0
+        ]
+      }
+    },
+    "target_format": "int-be",
+    "display": "16733440",
+    "path": [
+      "color-hex",
+      "int-be"
+    ],
+    "steps": [
+      {
+        "format": "int-be",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 16733440,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "16733440"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Raw",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 22015,
+        "original_bytes": [
+          255,
+          85,
+          0
+        ]
+      }
+    },
+    "target_format": "int-le",
+    "display": "22015",
+    "path": [
+      "color-hex",
+      "int-le"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Raw",
+    "kind": "Conversion"
+  }
+]

@@ -3,9 +3,122 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation, RichDisplay,
+    RichDisplayOption,
+};
 
 pub struct IpAddrFormat;
+
+impl IpAddrFormat {
+    /// Get classification info for an IPv4 address.
+    fn ipv4_info(addr: Ipv4Addr) -> Vec<(String, String)> {
+        let octets = addr.octets();
+        let mut info = vec![];
+
+        // Address class (classful networking)
+        let class = if octets[0] < 128 {
+            "A"
+        } else if octets[0] < 192 {
+            "B"
+        } else if octets[0] < 224 {
+            "C"
+        } else if octets[0] < 240 {
+            "D (multicast)"
+        } else {
+            "E (reserved)"
+        };
+        info.push(("Class".to_string(), class.to_string()));
+
+        // Scope/type
+        let scope = if addr.is_loopback() {
+            "Loopback"
+        } else if addr.is_private() {
+            "Private"
+        } else if addr.is_link_local() {
+            "Link-local"
+        } else if addr.is_broadcast() {
+            "Broadcast"
+        } else if addr.is_multicast() {
+            "Multicast"
+        } else if addr.is_unspecified() {
+            "Unspecified"
+        } else if addr.is_documentation() {
+            "Documentation"
+        } else {
+            "Public"
+        };
+        info.push(("Scope".to_string(), scope.to_string()));
+
+        // Binary representation
+        let binary = format!(
+            "{:08b}.{:08b}.{:08b}.{:08b}",
+            octets[0], octets[1], octets[2], octets[3]
+        );
+        info.push(("Binary".to_string(), binary));
+
+        // Integer representation
+        let int_val = u32::from(addr);
+        info.push(("Integer".to_string(), int_val.to_string()));
+
+        // Hex representation
+        info.push(("Hex".to_string(), format!("0x{:08X}", int_val)));
+
+        info
+    }
+
+    /// Get classification info for an IPv6 address.
+    fn ipv6_info(addr: Ipv6Addr) -> Vec<(String, String)> {
+        let mut info = vec![];
+
+        // Scope/type
+        let scope = if addr.is_loopback() {
+            "Loopback"
+        } else if addr.is_multicast() {
+            "Multicast"
+        } else if addr.is_unspecified() {
+            "Unspecified"
+        } else {
+            // Check for common prefixes
+            let segments = addr.segments();
+            if segments[0] == 0xfe80 {
+                "Link-local"
+            } else if segments[0] & 0xfe00 == 0xfc00 {
+                // fc00::/7 - Unique local addresses (includes fc00 and fd00)
+                "Unique local"
+            } else if segments[0] == 0x2001 && segments[1] == 0xdb8 {
+                "Documentation"
+            } else if segments[0] & 0xff00 == 0x2000 {
+                "Global unicast"
+            } else {
+                "Other"
+            }
+        };
+        info.push(("Scope".to_string(), scope.to_string()));
+
+        // Full expanded form
+        let segments = addr.segments();
+        let expanded = format!(
+            "{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}:{:04x}",
+            segments[0],
+            segments[1],
+            segments[2],
+            segments[3],
+            segments[4],
+            segments[5],
+            segments[6],
+            segments[7]
+        );
+        info.push(("Expanded".to_string(), expanded));
+
+        // Check if it's an IPv4-mapped address
+        if let Some(ipv4) = addr.to_ipv4_mapped() {
+            info.push(("IPv4-mapped".to_string(), ipv4.to_string()));
+        }
+
+        info
+    }
+}
 
 impl Format for IpAddrFormat {
     fn id(&self) -> &'static str {
@@ -32,21 +145,41 @@ impl Format for IpAddrFormat {
 
         // Try IPv4
         if let Ok(addr) = input.parse::<Ipv4Addr>() {
+            let info = Self::ipv4_info(addr);
+            let scope = info
+                .iter()
+                .find(|(k, _)| k == "Scope")
+                .map(|(_, v)| v.as_str())
+                .unwrap_or("Unknown");
+
             results.push(Interpretation {
                 value: CoreValue::Bytes(addr.octets().to_vec()),
                 source_format: "ipv4".to_string(),
                 confidence: 0.9,
-                description: format!("IPv4: {addr}"),
+                description: format!("IPv4: {addr} ({scope})"),
+                rich_display: vec![RichDisplayOption::new(RichDisplay::KeyValue {
+                    pairs: info,
+                })],
             });
         }
 
         // Try IPv6
         if let Ok(addr) = input.parse::<Ipv6Addr>() {
+            let info = Self::ipv6_info(addr);
+            let scope = info
+                .iter()
+                .find(|(k, _)| k == "Scope")
+                .map(|(_, v)| v.as_str())
+                .unwrap_or("Unknown");
+
             results.push(Interpretation {
                 value: CoreValue::Bytes(addr.octets().to_vec()),
                 source_format: "ipv6".to_string(),
                 confidence: 0.9,
-                description: format!("IPv6: {addr}"),
+                description: format!("IPv6: {addr} ({scope})"),
+                rich_display: vec![RichDisplayOption::new(RichDisplay::KeyValue {
+                    pairs: info,
+                })],
             });
         }
 
@@ -93,7 +226,7 @@ impl Format for IpAddrFormat {
                     priority: ConversionPriority::Semantic,
                     display_only: false,
                     kind: ConversionKind::default(),
-                    metadata: None,
+                    rich_display: vec![],
                 }]
             }
             16 => {
@@ -113,7 +246,7 @@ impl Format for IpAddrFormat {
                     priority: ConversionPriority::Semantic,
                     display_only: false,
                     kind: ConversionKind::default(),
-                    metadata: None,
+                    rich_display: vec![],
                 }];
 
                 // Also try as UUID since both are 16 bytes

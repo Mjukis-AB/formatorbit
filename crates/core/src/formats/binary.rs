@@ -153,6 +153,7 @@ impl Format for BinaryFormat {
             source_format: "binary".to_string(),
             confidence: normalized.confidence,
             description: format!("{} bits ({})", bit_count, normalized.format_hint),
+            rich_display: vec![],
         }]
     }
 
@@ -191,7 +192,7 @@ impl Format for BinaryFormat {
                 // converted further (e.g. to bytes of ASCII digits)
                 display_only: true,
                 kind: ConversionKind::Representation,
-                metadata: None,
+                rich_display: vec![],
             },
             Conversion {
                 value: CoreValue::String(Self::bytes_to_binary_0b(bytes)),
@@ -205,7 +206,7 @@ impl Format for BinaryFormat {
                 // converted further (e.g. to bytes of ASCII digits)
                 display_only: true,
                 kind: ConversionKind::Representation,
-                metadata: None,
+                rich_display: vec![],
             },
         ]
     }

@@ -10,7 +10,8 @@
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionMetadata, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+    Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation, RichDisplay,
+    RichDisplayOption,
 };
 
 pub struct DataSizeFormat;
@@ -171,6 +172,7 @@ impl Format for DataSizeFormat {
             source_format: "datasize".to_string(),
             confidence: 0.90,
             description,
+            rich_display: vec![],
         }]
     }
 
@@ -213,7 +215,10 @@ impl Format for DataSizeFormat {
                 }],
                 priority: ConversionPriority::Semantic,
                 display_only: true,
-                metadata: Some(ConversionMetadata::DataSize { bytes, human: iec }),
+                rich_display: vec![RichDisplayOption::new(RichDisplay::DataSize {
+                    bytes,
+                    human: iec,
+                })],
                 ..Default::default()
             });
         }
@@ -233,7 +238,10 @@ impl Format for DataSizeFormat {
                 }],
                 priority: ConversionPriority::Semantic,
                 display_only: true,
-                metadata: Some(ConversionMetadata::DataSize { bytes, human: si }),
+                rich_display: vec![RichDisplayOption::new(RichDisplay::DataSize {
+                    bytes,
+                    human: si,
+                })],
                 ..Default::default()
             });
         }

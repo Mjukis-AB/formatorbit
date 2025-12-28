@@ -1,0 +1,48 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 41
+expression: "&result.interpretation"
+---
+{
+  "value": {
+    "type": "Bytes",
+    "value": [
+      192,
+      168,
+      1,
+      1
+    ]
+  },
+  "source_format": "ipv4",
+  "confidence": 0.9,
+  "description": "IPv4: 192.168.1.1 (Private)",
+  "rich_display": [
+    {
+      "preferred": {
+        "type": "KeyValue",
+        "pairs": [
+          [
+            "Class",
+            "C"
+          ],
+          [
+            "Scope",
+            "Private"
+          ],
+          [
+            "Binary",
+            "11000000.10101000.00000001.00000001"
+          ],
+          [
+            "Integer",
+            "3232235777"
+          ],
+          [
+            "Hex",
+            "0xC0A80101"
+          ]
+        ]
+      }
+    }
+  ]
+}
