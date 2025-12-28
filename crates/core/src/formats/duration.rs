@@ -33,7 +33,7 @@ impl Duration {
 
     fn from_seconds(seconds: u64) -> Self {
         Self {
-            millis: seconds * 1000,
+            millis: seconds.saturating_mul(1000),
         }
     }
 
