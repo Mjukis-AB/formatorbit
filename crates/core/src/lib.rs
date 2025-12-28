@@ -12,12 +12,12 @@ pub use format::{Format, FormatInfo};
 pub use types::*;
 
 use formats::{
-    AngleFormat, AreaFormat, Base64Format, BinaryFormat, BytesToIntFormat, ColorFormat, CuidFormat,
-    CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat, DurationFormat, EnergyFormat,
-    EpochFormat, EscapeFormat, ExprFormat, HashFormat, HexFormat, HexdumpFormat, IpAddrFormat,
-    JsonFormat, JwtFormat, LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat,
-    PressureFormat, ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat,
-    Utf8Format, UuidFormat, VolumeFormat, WeightFormat,
+    AngleFormat, AreaFormat, Base64Format, BinaryFormat, BytesToIntFormat, CharFormat, ColorFormat,
+    CuidFormat, CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat, DurationFormat,
+    EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, HashFormat, HexFormat, HexdumpFormat,
+    IpAddrFormat, JsonFormat, JwtFormat, LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat,
+    PlistFormat, PressureFormat, ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat,
+    UrlEncodingFormat, Utf8Format, UuidFormat, VolumeFormat, WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -37,6 +37,7 @@ impl Formatorbit {
                 Box::new(UuidFormat),
                 Box::new(IpAddrFormat),
                 Box::new(ColorFormat),
+                Box::new(CharFormat),
                 Box::new(UrlEncodingFormat),
                 // Identifier formats (lower specificity)
                 Box::new(CuidFormat),

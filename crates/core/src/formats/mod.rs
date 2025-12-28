@@ -2,6 +2,7 @@
 
 mod base64;
 mod binary;
+mod char;
 mod color;
 mod cuid;
 mod currency;
@@ -33,6 +34,7 @@ mod uuid;
 
 pub use base64::Base64Format;
 pub use binary::BinaryFormat;
+pub use char::CharFormat;
 pub use color::ColorFormat;
 pub use cuid::CuidFormat;
 pub use currency::CurrencyFormat;
