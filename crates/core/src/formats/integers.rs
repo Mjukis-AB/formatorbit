@@ -163,7 +163,8 @@ fn triangular_root(n: i128) -> Option<i128> {
         return None;
     }
     // Solve k^2 + k - 2n = 0: k = (-1 + sqrt(1 + 8n)) / 2
-    let disc = 1 + 8 * n;
+    // Use checked arithmetic to avoid overflow for large n
+    let disc = 8_i128.checked_mul(n)?.checked_add(1)?;
     let sqrt = (disc as f64).sqrt() as i128;
     // Verify it's exact
     if sqrt * sqrt != disc {
@@ -368,6 +369,82 @@ impl Format for DecimalFormat {
                 display_only: true,
                 ..Default::default()
             });
+
+            // ASCII/Unicode character representation
+            // Show character for printable ASCII (32-126) and valid Unicode codepoints
+            if let Some(ch) = char::from_u32(val as u32) {
+                // Only show for reasonable Unicode range and if it's a "useful" character
+                if val <= 0x10FFFF {
+                    let display = if val < 32 {
+                        // Control characters - show name
+                        let name = match val {
+                            0 => "NUL (null)",
+                            1 => "SOH (start of heading)",
+                            2 => "STX (start of text)",
+                            3 => "ETX (end of text)",
+                            4 => "EOT (end of transmission)",
+                            5 => "ENQ (enquiry)",
+                            6 => "ACK (acknowledge)",
+                            7 => "BEL (bell)",
+                            8 => "BS (backspace)",
+                            9 => "HT (horizontal tab)",
+                            10 => "LF (line feed)",
+                            11 => "VT (vertical tab)",
+                            12 => "FF (form feed)",
+                            13 => "CR (carriage return)",
+                            14 => "SO (shift out)",
+                            15 => "SI (shift in)",
+                            16 => "DLE (data link escape)",
+                            17 => "DC1 (device control 1)",
+                            18 => "DC2 (device control 2)",
+                            19 => "DC3 (device control 3)",
+                            20 => "DC4 (device control 4)",
+                            21 => "NAK (negative ack)",
+                            22 => "SYN (synchronous idle)",
+                            23 => "ETB (end of trans. block)",
+                            24 => "CAN (cancel)",
+                            25 => "EM (end of medium)",
+                            26 => "SUB (substitute)",
+                            27 => "ESC (escape)",
+                            28 => "FS (file separator)",
+                            29 => "GS (group separator)",
+                            30 => "RS (record separator)",
+                            31 => "US (unit separator)",
+                            _ => "control",
+                        };
+                        format!("'{}' {}", ch.escape_unicode(), name)
+                    } else if val == 127 {
+                        "'\\u{7f}' DEL (delete)".to_string()
+                    } else if val <= 126 {
+                        // Printable ASCII
+                        format!("'{}'", ch)
+                    } else if ch.is_alphanumeric() || ch.is_ascii_punctuation() || val > 127 {
+                        // Show Unicode characters that are "interesting"
+                        format!("'{}' (U+{:04X})", ch, val)
+                    } else {
+                        // Skip other non-printable characters
+                        String::new()
+                    };
+
+                    if !display.is_empty() {
+                        conversions.push(Conversion {
+                            value: CoreValue::String(ch.to_string()),
+                            target_format: "char".to_string(),
+                            display: display.clone(),
+                            path: vec!["char".to_string()],
+                            steps: vec![ConversionStep {
+                                format: "char".to_string(),
+                                value: CoreValue::String(ch.to_string()),
+                                display,
+                            }],
+                            priority: ConversionPriority::Semantic,
+                            kind: ConversionKind::Representation,
+                            display_only: true,
+                            ..Default::default()
+                        });
+                    }
+                }
+            }
 
             // =========================================================
             // Number Traits (observations about the value)

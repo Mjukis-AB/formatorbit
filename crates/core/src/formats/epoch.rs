@@ -9,7 +9,10 @@ use tracing::{debug, trace};
 use crate::format::{Format, FormatInfo};
 use crate::types::{CoreValue, Interpretation};
 
-use super::datetime::{MAX_EPOCH_MILLIS, MAX_EPOCH_SECONDS, MIN_EPOCH_MILLIS, MIN_EPOCH_SECONDS};
+use super::datetime::{
+    MAX_EPOCH_MICROS, MAX_EPOCH_MILLIS, MAX_EPOCH_NANOS, MAX_EPOCH_SECONDS, MIN_EPOCH_MICROS,
+    MIN_EPOCH_MILLIS, MIN_EPOCH_NANOS, MIN_EPOCH_SECONDS,
+};
 
 pub struct EpochFormat;
 
@@ -88,8 +91,9 @@ impl Format for EpochFormat {
             id: self.id(),
             name: self.name(),
             category: "Timestamps",
-            description: "Unix epoch timestamp (seconds or milliseconds since 1970-01-01)",
-            examples: &["1735344000", "1735344000000"],
+            description:
+                "Unix epoch timestamp (seconds, milliseconds, microseconds, or nanoseconds)",
+            examples: &["1735344000", "1735344000000", "1735344000000000"],
             aliases: self.aliases(),
         }
     }
@@ -144,6 +148,54 @@ impl Format for EpochFormat {
                 results.push(Interpretation {
                     value: CoreValue::DateTime(dt),
                     source_format: "epoch-millis".to_string(),
+                    confidence,
+                    description: format!("{} ({})", iso, relative),
+                });
+            }
+        }
+
+        // Check if valid epoch microseconds
+        if (MIN_EPOCH_MICROS..=MAX_EPOCH_MICROS).contains(&value) {
+            let secs = value / 1_000_000;
+            let nanos = ((value % 1_000_000) * 1_000) as u32;
+            if let Some(dt) = Utc.timestamp_opt(secs, nanos).single() {
+                let base_confidence = Self::calculate_confidence(dt);
+                let confidence = (base_confidence - 0.10).max(0.65);
+                let iso = dt.to_rfc3339();
+                let relative = Self::format_relative(dt);
+
+                debug!(
+                    epoch = value,
+                    confidence, iso, "epoch: matched as microseconds"
+                );
+
+                results.push(Interpretation {
+                    value: CoreValue::DateTime(dt),
+                    source_format: "epoch-micros".to_string(),
+                    confidence,
+                    description: format!("{} ({})", iso, relative),
+                });
+            }
+        }
+
+        // Check if valid epoch nanoseconds
+        if (MIN_EPOCH_NANOS..=MAX_EPOCH_NANOS).contains(&value) {
+            let secs = value / 1_000_000_000;
+            let nanos = (value % 1_000_000_000) as u32;
+            if let Some(dt) = Utc.timestamp_opt(secs, nanos).single() {
+                let base_confidence = Self::calculate_confidence(dt);
+                let confidence = (base_confidence - 0.15).max(0.60);
+                let iso = dt.to_rfc3339();
+                let relative = Self::format_relative(dt);
+
+                debug!(
+                    epoch = value,
+                    confidence, iso, "epoch: matched as nanoseconds"
+                );
+
+                results.push(Interpretation {
+                    value: CoreValue::DateTime(dt),
+                    source_format: "epoch-nanos".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
                 });

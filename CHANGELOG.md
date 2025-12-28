@@ -11,12 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Epoch timestamp parsing** - numeric timestamps now appear as top-level interpretation
   - Dynamic confidence based on proximity to current time (0.95 within a week, 0.87 within 30 years)
   - Epoch timestamps appear before decimal for recent dates
+  - Support for microseconds and nanoseconds precision (in addition to seconds/milliseconds)
 - **More datetime string formats** - parse additional date formats:
   - `12/28/2025 @ 10:41am` (US with time)
   - `Dec 28, 2025` / `December 28, 2025`
   - `28 Dec 2025` / `28 December 2025`
   - Ambiguous `01/02/2025` returns both US and European interpretations
 - **DateTime → epoch conversions** - parsed datetime strings now show epoch-seconds, epoch-millis, and relative time
+- **ASCII/Unicode character display** - integers show their character representation:
+  - Printable ASCII (32-126): `65` → `'A'`
+  - Control characters (0-31): `10` → `'\u{a}' LF (line feed)`
+  - Unicode: `128512` → `'😀' (U+1F600)`
+
+### Fixed
+- Overflow panic when processing very large integers (triangular number check, duration conversion)
 
 ## [0.5.2] - 2025-12-26
 

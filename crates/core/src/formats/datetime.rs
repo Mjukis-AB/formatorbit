@@ -17,6 +17,15 @@ pub(crate) const MAX_EPOCH_SECONDS: i64 = 4_102_444_800; // 2100-01-01
 pub(crate) const MIN_EPOCH_MILLIS: i64 = MIN_EPOCH_SECONDS * 1000;
 pub(crate) const MAX_EPOCH_MILLIS: i64 = MAX_EPOCH_SECONDS * 1000;
 
+/// For microseconds, multiply by 1,000,000
+pub(crate) const MIN_EPOCH_MICROS: i64 = MIN_EPOCH_SECONDS * 1_000_000;
+pub(crate) const MAX_EPOCH_MICROS: i64 = MAX_EPOCH_SECONDS * 1_000_000;
+
+/// For nanoseconds, multiply by 1,000,000,000
+/// Note: i64 max is ~9.2e18, and max_epoch_nanos is ~4.1e18, so this fits
+pub(crate) const MIN_EPOCH_NANOS: i64 = MIN_EPOCH_SECONDS * 1_000_000_000;
+pub(crate) const MAX_EPOCH_NANOS: i64 = MAX_EPOCH_SECONDS * 1_000_000_000;
+
 /// Apple/Cocoa reference date: 2001-01-01 00:00:00 UTC
 /// This is 978307200 seconds after Unix epoch (1970-01-01)
 const APPLE_REFERENCE_DATE: i64 = 978_307_200;
