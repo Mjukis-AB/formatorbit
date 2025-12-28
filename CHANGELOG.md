@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Printable ASCII (32-126): `65` → `'A'`
   - Control characters (0-31): `10` → `'\u{a}' LF (line feed)`
   - Unicode: `128512` → `'😀' (U+1F600)`
+- **Unicode character parsing** - single characters parsed to show codepoint:
+  - `🤑` → `U+1F911 '🤑'` with decimal (129297), hex, UTF-8 bytes (F0 9F A4 91)
 
 ### Fixed
 - Overflow panic when processing very large integers (triangular number check, duration conversion)
