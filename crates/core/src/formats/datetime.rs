@@ -10,12 +10,12 @@ use crate::types::{
 /// Reasonable epoch range: 2000-01-01 to 2100-01-01
 /// We use 2000 as minimum to avoid false positives from small integers
 /// (like IP octets converted to int, which gives values in 1970s-1980s).
-const MIN_EPOCH_SECONDS: i64 = 946_684_800; // 2000-01-01
-const MAX_EPOCH_SECONDS: i64 = 4_102_444_800; // 2100-01-01
+pub(crate) const MIN_EPOCH_SECONDS: i64 = 946_684_800; // 2000-01-01
+pub(crate) const MAX_EPOCH_SECONDS: i64 = 4_102_444_800; // 2100-01-01
 
 /// For milliseconds, multiply by 1000
-const MIN_EPOCH_MILLIS: i64 = MIN_EPOCH_SECONDS * 1000;
-const MAX_EPOCH_MILLIS: i64 = MAX_EPOCH_SECONDS * 1000;
+pub(crate) const MIN_EPOCH_MILLIS: i64 = MIN_EPOCH_SECONDS * 1000;
+pub(crate) const MAX_EPOCH_MILLIS: i64 = MAX_EPOCH_SECONDS * 1000;
 
 /// Apple/Cocoa reference date: 2001-01-01 00:00:00 UTC
 /// This is 978307200 seconds after Unix epoch (1970-01-01)
@@ -107,72 +107,295 @@ impl DateTimeFormat {
 
         i64::try_from(secs).ok().map(|s| (s, nanos))
     }
-}
 
-impl Format for DateTimeFormat {
-    fn id(&self) -> &'static str {
-        "datetime"
+    /// Convert a DateTime to epoch conversions (seconds, millis, relative time).
+    fn conversions_from_datetime(dt: &DateTime<Utc>) -> Vec<Conversion> {
+        let epoch_secs = dt.timestamp();
+        let epoch_millis = dt.timestamp_millis();
+        let relative = Self::format_relative(*dt);
+
+        vec![
+            Conversion {
+                value: CoreValue::Int {
+                    value: epoch_secs as i128,
+                    original_bytes: None,
+                },
+                target_format: "epoch-seconds".to_string(),
+                display: epoch_secs.to_string(),
+                path: vec!["epoch-seconds".to_string()],
+                is_lossy: false,
+                steps: vec![],
+                priority: ConversionPriority::Semantic,
+                display_only: true,
+                kind: ConversionKind::Conversion,
+                metadata: None,
+            },
+            Conversion {
+                value: CoreValue::Int {
+                    value: epoch_millis as i128,
+                    original_bytes: None,
+                },
+                target_format: "epoch-millis".to_string(),
+                display: epoch_millis.to_string(),
+                path: vec!["epoch-millis".to_string()],
+                is_lossy: false,
+                steps: vec![],
+                priority: ConversionPriority::Semantic,
+                display_only: true,
+                kind: ConversionKind::Conversion,
+                metadata: None,
+            },
+            Conversion {
+                value: CoreValue::String(relative.clone()),
+                target_format: "relative-time".to_string(),
+                display: relative,
+                path: vec!["relative-time".to_string()],
+                is_lossy: false,
+                steps: vec![],
+                priority: ConversionPriority::Semantic,
+                display_only: true,
+                kind: ConversionKind::Representation,
+                metadata: None,
+            },
+        ]
     }
 
-    fn name(&self) -> &'static str {
-        "Date/Time"
-    }
+    /// Try to parse "Dec 28, 2025" or "December 28, 2025" format.
+    fn parse_month_day_year(input: &str) -> Option<DateTime<Utc>> {
+        use chrono::NaiveDate;
 
-    fn info(&self) -> FormatInfo {
-        FormatInfo {
-            id: self.id(),
-            name: self.name(),
-            category: "Timestamps",
-            description: "Date/time parsing (ISO 8601, RFC 2822/3339) and epoch conversions",
-            examples: &["2025-11-19T17:43:20Z", "1763574200", "1763574200000"],
-            aliases: self.aliases(),
+        let months = [
+            ("jan", 1),
+            ("feb", 2),
+            ("mar", 3),
+            ("apr", 4),
+            ("may", 5),
+            ("jun", 6),
+            ("jul", 7),
+            ("aug", 8),
+            ("sep", 9),
+            ("oct", 10),
+            ("nov", 11),
+            ("dec", 12),
+        ];
+
+        let input_lower = input.to_lowercase();
+        let trimmed = input_lower.trim();
+
+        // Pattern: "Dec 28, 2025" or "December 28, 2025"
+        for (month_prefix, month_num) in months {
+            if let Some(rest) = trimmed.strip_prefix(month_prefix) {
+                // Skip any remaining month name letters and spaces
+                let rest = rest.trim_start_matches(|c: char| c.is_alphabetic()).trim();
+                // Parse "28, 2025" or "28 2025"
+                let parts: Vec<&str> = rest
+                    .split(|c: char| c == ',' || c.is_whitespace())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                if parts.len() >= 2 {
+                    if let (Ok(day), Ok(year)) = (parts[0].parse::<u32>(), parts[1].parse::<i32>())
+                    {
+                        if let Some(date) = NaiveDate::from_ymd_opt(year, month_num, day) {
+                            return date.and_hms_opt(0, 0, 0).map(|dt| dt.and_utc());
+                        }
+                    }
+                }
+            }
         }
+        None
     }
 
-    fn parse(&self, input: &str) -> Vec<Interpretation> {
-        // Try to parse ISO 8601 / RFC 3339 format
-        if let Ok(dt) = DateTime::parse_from_rfc3339(input) {
-            return vec![Interpretation {
-                value: CoreValue::DateTime(dt.with_timezone(&Utc)),
-                source_format: "datetime".to_string(),
-                confidence: 0.95,
-                description: "ISO 8601 / RFC 3339 datetime".to_string(),
-            }];
+    /// Try to parse "28 Dec 2025" or "28 December 2025" format.
+    fn parse_day_month_year(input: &str) -> Option<DateTime<Utc>> {
+        use chrono::NaiveDate;
+
+        let months = [
+            ("jan", 1),
+            ("feb", 2),
+            ("mar", 3),
+            ("apr", 4),
+            ("may", 5),
+            ("jun", 6),
+            ("jul", 7),
+            ("aug", 8),
+            ("sep", 9),
+            ("oct", 10),
+            ("nov", 11),
+            ("dec", 12),
+        ];
+
+        let input_lower = input.to_lowercase();
+        let trimmed = input_lower.trim();
+
+        // Pattern: "28 Dec 2025"
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
+        if parts.len() >= 3 {
+            if let Ok(day) = parts[0].parse::<u32>() {
+                let month_str = parts[1];
+                for (month_prefix, month_num) in months {
+                    if month_str.starts_with(month_prefix) {
+                        if let Ok(year) = parts[2].parse::<i32>() {
+                            if let Some(date) = NaiveDate::from_ymd_opt(year, month_num, day) {
+                                return date.and_hms_opt(0, 0, 0).map(|dt| dt.and_utc());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Try to parse "12/28/2025 @ 10:41am" format (US date with @ and time).
+    fn parse_us_at_format(input: &str) -> Option<DateTime<Utc>> {
+        use chrono::NaiveDate;
+
+        // Split on @
+        let parts: Vec<&str> = input.split('@').collect();
+        if parts.len() != 2 {
+            return None;
         }
 
-        // Try RFC 2822 format
-        if let Ok(dt) = DateTime::parse_from_rfc2822(input) {
-            return vec![Interpretation {
-                value: CoreValue::DateTime(dt.with_timezone(&Utc)),
-                source_format: "datetime".to_string(),
-                confidence: 0.9,
-                description: "RFC 2822 datetime".to_string(),
-            }];
+        let date_part = parts[0].trim();
+        let time_part = parts[1].trim().to_lowercase();
+
+        // Parse date: MM/DD/YYYY
+        let date_parts: Vec<&str> = date_part.split('/').collect();
+        if date_parts.len() != 3 {
+            return None;
         }
 
-        vec![]
-    }
+        let month: u32 = date_parts[0].parse().ok()?;
+        let day: u32 = date_parts[1].parse().ok()?;
+        let year: i32 = date_parts[2].parse().ok()?;
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::DateTime(_))
-    }
-
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        match value {
-            CoreValue::DateTime(dt) => Some(dt.to_rfc3339()),
-            _ => None,
-        }
-    }
-
-    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        let CoreValue::Int { value: int_val, .. } = value else {
-            return vec![];
+        // Parse time: "10:41am" or "10:41pm" or "10:41"
+        let (time_str, is_pm) = if time_part.ends_with("pm") {
+            (&time_part[..time_part.len() - 2], true)
+        } else if time_part.ends_with("am") {
+            (&time_part[..time_part.len() - 2], false)
+        } else {
+            (time_part.as_str(), false)
         };
 
+        let time_parts: Vec<&str> = time_str.trim().split(':').collect();
+        let mut hour: u32 = time_parts.first()?.parse().ok()?;
+        let minute: u32 = time_parts.get(1).unwrap_or(&"0").parse().ok()?;
+        let second: u32 = time_parts.get(2).unwrap_or(&"0").parse().ok()?;
+
+        // Handle 12-hour format
+        if is_pm && hour < 12 {
+            hour += 12;
+        } else if !is_pm && hour == 12 {
+            hour = 0;
+        }
+
+        NaiveDate::from_ymd_opt(year, month, day)?
+            .and_hms_opt(hour, minute, second)
+            .map(|dt| dt.and_utc())
+    }
+
+    /// Try to parse numeric date format MM/DD/YYYY or DD/MM/YYYY.
+    /// Returns both interpretations for ambiguous cases.
+    fn parse_numeric_date(input: &str) -> Vec<(DateTime<Utc>, f32, String)> {
+        use chrono::NaiveDate;
+
+        let trimmed = input.trim();
+        let parts: Vec<&str> = trimmed.split('/').collect();
+        if parts.len() != 3 {
+            return vec![];
+        }
+
+        let a: u32 = match parts[0].parse() {
+            Ok(v) => v,
+            Err(_) => return vec![],
+        };
+        let b: u32 = match parts[1].parse() {
+            Ok(v) => v,
+            Err(_) => return vec![],
+        };
+        let year: i32 = match parts[2].parse() {
+            Ok(v) => v,
+            Err(_) => return vec![],
+        };
+
+        let mut results = vec![];
+
+        // If a > 12, it must be day (European format: DD/MM/YYYY)
+        // If b > 12, it must be day (US format: MM/DD/YYYY)
+        // If both <= 12, ambiguous - return both
+
+        // Try US format: MM/DD/YYYY (a = month, b = day)
+        if a <= 12 && b <= 31 {
+            if let Some(date) = NaiveDate::from_ymd_opt(year, a, b) {
+                let dt = date.and_hms_opt(0, 0, 0).map(|dt| dt.and_utc());
+                if let Some(dt) = dt {
+                    let confidence = if b > 12 { 0.80 } else { 0.55 }; // Higher if unambiguous
+                    let desc = if b > 12 {
+                        "US date (MM/DD/YYYY)".to_string()
+                    } else {
+                        format!(
+                            "US date (MM/DD/YYYY): {} {}, {}",
+                            Self::month_name(a),
+                            b,
+                            year
+                        )
+                    };
+                    results.push((dt, confidence, desc));
+                }
+            }
+        }
+
+        // Try European format: DD/MM/YYYY (a = day, b = month)
+        if b <= 12 && a <= 31 && a != b {
+            // Only add if it would be different from US format
+            if let Some(date) = NaiveDate::from_ymd_opt(year, b, a) {
+                let dt = date.and_hms_opt(0, 0, 0).map(|dt| dt.and_utc());
+                if let Some(dt) = dt {
+                    let confidence = if a > 12 { 0.80 } else { 0.55 }; // Higher if unambiguous
+                    let desc = if a > 12 {
+                        "European date (DD/MM/YYYY)".to_string()
+                    } else {
+                        format!(
+                            "European date (DD/MM/YYYY): {} {}, {}",
+                            a,
+                            Self::month_name(b),
+                            year
+                        )
+                    };
+                    results.push((dt, confidence, desc));
+                }
+            }
+        }
+
+        results
+    }
+
+    /// Get month name from number.
+    fn month_name(month: u32) -> &'static str {
+        match month {
+            1 => "January",
+            2 => "February",
+            3 => "March",
+            4 => "April",
+            5 => "May",
+            6 => "June",
+            7 => "July",
+            8 => "August",
+            9 => "September",
+            10 => "October",
+            11 => "November",
+            12 => "December",
+            _ => "Unknown",
+        }
+    }
+
+    /// Convert an integer to epoch timestamp conversions.
+    fn conversions_from_int(int_val: i128) -> Vec<Conversion> {
         let mut conversions = vec![];
 
         // Try as epoch seconds
-        if let Ok(secs) = i64::try_from(*int_val) {
+        if let Ok(secs) = i64::try_from(int_val) {
             if Self::is_valid_epoch_seconds(secs) {
                 if let Some(dt) = Utc.timestamp_opt(secs, 0).single() {
                     let iso = dt.to_rfc3339();
@@ -247,8 +470,8 @@ impl Format for DateTimeFormat {
 
         // Try as Windows FILETIME (100-nanosecond intervals since 1601-01-01)
         // FILETIME values are typically large (> 100 trillion for modern dates)
-        if Self::is_valid_filetime(*int_val) {
-            if let Some((unix_secs, nanos)) = Self::filetime_to_unix(*int_val) {
+        if Self::is_valid_filetime(int_val) {
+            if let Some((unix_secs, nanos)) = Self::filetime_to_unix(int_val) {
                 if let Some(dt) = Utc.timestamp_opt(unix_secs, nanos).single() {
                     let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
@@ -272,6 +495,114 @@ impl Format for DateTimeFormat {
         }
 
         conversions
+    }
+}
+
+impl Format for DateTimeFormat {
+    fn id(&self) -> &'static str {
+        "datetime"
+    }
+
+    fn name(&self) -> &'static str {
+        "Date/Time"
+    }
+
+    fn info(&self) -> FormatInfo {
+        FormatInfo {
+            id: self.id(),
+            name: self.name(),
+            category: "Timestamps",
+            description: "Date/time parsing (ISO 8601, RFC 2822/3339) and epoch conversions",
+            examples: &["2025-11-19T17:43:20Z", "1763574200", "1763574200000"],
+            aliases: self.aliases(),
+        }
+    }
+
+    fn parse(&self, input: &str) -> Vec<Interpretation> {
+        // Try to parse ISO 8601 / RFC 3339 format
+        if let Ok(dt) = DateTime::parse_from_rfc3339(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt.with_timezone(&Utc)),
+                source_format: "datetime".to_string(),
+                confidence: 0.95,
+                description: "ISO 8601 / RFC 3339 datetime".to_string(),
+            }];
+        }
+
+        // Try RFC 2822 format
+        if let Ok(dt) = DateTime::parse_from_rfc2822(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt.with_timezone(&Utc)),
+                source_format: "datetime".to_string(),
+                confidence: 0.9,
+                description: "RFC 2822 datetime".to_string(),
+            }];
+        }
+
+        // Try US format with @ (e.g., "12/28/2025 @ 10:41am")
+        if let Some(dt) = Self::parse_us_at_format(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt),
+                source_format: "datetime".to_string(),
+                confidence: 0.85,
+                description: "US date with time (MM/DD/YYYY @ HH:MMam/pm)".to_string(),
+            }];
+        }
+
+        // Try "Dec 28, 2025" or "December 28, 2025" format
+        if let Some(dt) = Self::parse_month_day_year(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt),
+                source_format: "datetime".to_string(),
+                confidence: 0.80,
+                description: "Date (Month Day, Year)".to_string(),
+            }];
+        }
+
+        // Try "28 Dec 2025" or "28 December 2025" format
+        if let Some(dt) = Self::parse_day_month_year(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt),
+                source_format: "datetime".to_string(),
+                confidence: 0.80,
+                description: "Date (Day Month Year)".to_string(),
+            }];
+        }
+
+        // Try numeric date format (returns both US and European for ambiguous cases)
+        let numeric_results = Self::parse_numeric_date(input);
+        if !numeric_results.is_empty() {
+            return numeric_results
+                .into_iter()
+                .map(|(dt, confidence, desc)| Interpretation {
+                    value: CoreValue::DateTime(dt),
+                    source_format: "datetime".to_string(),
+                    confidence,
+                    description: desc,
+                })
+                .collect();
+        }
+
+        vec![]
+    }
+
+    fn can_format(&self, value: &CoreValue) -> bool {
+        matches!(value, CoreValue::DateTime(_))
+    }
+
+    fn format(&self, value: &CoreValue) -> Option<String> {
+        match value {
+            CoreValue::DateTime(dt) => Some(dt.to_rfc3339()),
+            _ => None,
+        }
+    }
+
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        match value {
+            CoreValue::Int { value: int_val, .. } => Self::conversions_from_int(*int_val),
+            CoreValue::DateTime(dt) => Self::conversions_from_datetime(dt),
+            _ => vec![],
+        }
     }
 
     fn aliases(&self) -> &'static [&'static str] {
