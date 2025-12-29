@@ -748,8 +748,82 @@ impl Format for ProtobufFormat {
         &["proto", "pb"]
     }
 
-    fn validate(&self, _input: &str) -> Option<String> {
-        Some("protobuf is a binary format - provide hex or base64 encoded data instead".to_string())
+    fn validate(&self, input: &str) -> Option<String> {
+        // First, try to interpret input as hex or base64
+        let bytes = Self::try_decode_input(input);
+
+        match bytes {
+            None => {
+                Some("protobuf requires binary data - input is not valid hex or base64".to_string())
+            }
+            Some(bytes) if bytes.is_empty() => Some("empty input".to_string()),
+            Some(bytes) if bytes.len() < 2 => {
+                Some("protobuf message too short (minimum 2 bytes)".to_string())
+            }
+            Some(bytes) => {
+                // Try to decode as protobuf
+                match Self::decode_message(&bytes) {
+                    Some(fields) if !fields.is_empty() => {
+                        // Valid protobuf - note: appears as a conversion from hex/base64
+                        Some(format!(
+                            "valid protobuf: {} fields (run without --only to see as conversion from hex)",
+                            fields.len()
+                        ))
+                    }
+                    _ => {
+                        // Give a more specific error based on the first byte
+                        let tag = bytes[0];
+                        let wire_type = tag & 0x07;
+                        let field_num = tag >> 3;
+
+                        if field_num == 0 {
+                            Some("invalid protobuf: field number 0 is not allowed".to_string())
+                        } else if wire_type > 5 || wire_type == 3 || wire_type == 4 {
+                            Some(format!(
+                                "invalid protobuf: unknown wire type {} at byte 0",
+                                wire_type
+                            ))
+                        } else {
+                            Some("invalid protobuf: incomplete or malformed message".to_string())
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl ProtobufFormat {
+    /// Try to decode input as hex or base64 to get bytes.
+    fn try_decode_input(input: &str) -> Option<Vec<u8>> {
+        let trimmed = input.trim();
+
+        // Try hex (with or without 0x prefix)
+        let hex_str = trimmed
+            .strip_prefix("0x")
+            .or_else(|| trimmed.strip_prefix("0X"))
+            .unwrap_or(trimmed);
+
+        if hex_str.chars().all(|c| c.is_ascii_hexdigit() || c == ' ') {
+            let hex_clean: String = hex_str.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+            if hex_clean.len() >= 2 && hex_clean.len().is_multiple_of(2) {
+                if let Ok(bytes) = (0..hex_clean.len())
+                    .step_by(2)
+                    .map(|i| u8::from_str_radix(&hex_clean[i..i + 2], 16))
+                    .collect::<Result<Vec<u8>, _>>()
+                {
+                    return Some(bytes);
+                }
+            }
+        }
+
+        // Try base64
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        if let Ok(bytes) = STANDARD.decode(trimmed) {
+            return Some(bytes);
+        }
+
+        None
     }
 }
 
