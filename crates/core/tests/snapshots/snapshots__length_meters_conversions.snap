@@ -184,6 +184,31 @@ expression: "&result.conversions"
       "type": "Length",
       "value": 5.0
     },
+    "target_format": "nautical miles",
+    "display": "2.70e-3 nmi",
+    "path": [
+      "length",
+      "nautical miles"
+    ],
+    "steps": [
+      {
+        "format": "nautical miles",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "2.70e-3 nmi"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
     "target_format": "inches",
     "display": "196.85 in",
     "path": [
