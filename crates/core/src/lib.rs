@@ -14,10 +14,11 @@ pub use types::*;
 use formats::{
     AngleFormat, AreaFormat, Base64Format, BinaryFormat, BytesToIntFormat, CharFormat, ColorFormat,
     CoordsFormat, CuidFormat, CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat,
-    DurationFormat, EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, HashFormat, HexFormat,
-    HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat, LengthFormat, MsgPackFormat, NanoIdFormat,
-    OctalFormat, PlistFormat, PressureFormat, ProtobufFormat, SpeedFormat, TemperatureFormat,
-    UlidFormat, UrlEncodingFormat, Utf8Format, UuidFormat, VolumeFormat, WeightFormat,
+    DurationFormat, EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, GraphFormat, HashFormat,
+    HexFormat, HexdumpFormat, IpAddrFormat, JsonFormat, JwtFormat, LengthFormat, MsgPackFormat,
+    NanoIdFormat, OctalFormat, PlistFormat, PressureFormat, ProtobufFormat, SpeedFormat,
+    TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format, UuidFormat, VolumeFormat,
+    WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -68,6 +69,7 @@ impl Formatorbit {
                 Box::new(DurationFormat),
                 Box::new(DateTimeFormat),
                 Box::new(JsonFormat),
+                Box::new(GraphFormat),
                 Box::new(Utf8Format),
                 // Conversion-only formats (don't parse strings directly)
                 Box::new(BytesToIntFormat),
