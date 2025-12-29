@@ -128,8 +128,98 @@ impl Format for MsgPackFormat {
         &["mp", "mpack"]
     }
 
-    fn validate(&self, _input: &str) -> Option<String> {
-        Some("msgpack is a binary format - provide hex or base64 encoded data instead".to_string())
+    fn validate(&self, input: &str) -> Option<String> {
+        // First, try to interpret input as hex or base64
+        let bytes = Self::try_decode_input(input);
+
+        match bytes {
+            None => {
+                Some("msgpack requires binary data - input is not valid hex or base64".to_string())
+            }
+            Some(bytes) if bytes.is_empty() => Some("empty input".to_string()),
+            Some(bytes) => {
+                // Try to decode using our decoder (which tracks bytes consumed)
+                match Self::decode_with_offsets(&bytes) {
+                    Some(decoded) if decoded.bytes_consumed == bytes.len() => {
+                        // Check if it would pass our likelihood threshold
+                        let score = Self::msgpack_likelihood(&decoded.value, bytes.len());
+                        if score < 0.3 {
+                            Some(format!(
+                                "decoded as {} but unlikely to be intentional msgpack (confidence: {:.0}%)",
+                                Self::describe_value(&decoded.value),
+                                score * 100.0
+                            ))
+                        } else {
+                            // Valid msgpack - note: msgpack appears as a conversion from hex/base64
+                            // so --only msgpack won't work, need to run without filter
+                            Some(format!(
+                                "valid msgpack: {} (run without --only to see as conversion from hex)",
+                                Self::describe_value(&decoded.value)
+                            ))
+                        }
+                    }
+                    Some(decoded) => Some(format!(
+                        "only {} of {} bytes consumed - trailing data",
+                        decoded.bytes_consumed,
+                        bytes.len()
+                    )),
+                    None => {
+                        // Try rmp_serde for a more specific error
+                        match rmp_serde::from_slice::<serde_json::Value>(&bytes) {
+                            Ok(_) => Some("valid msgpack but our decoder failed".to_string()),
+                            Err(e) => Some(format!("invalid msgpack: {}", e)),
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl MsgPackFormat {
+    /// Describe a JSON value briefly for error messages.
+    fn describe_value(value: &serde_json::Value) -> String {
+        match value {
+            serde_json::Value::Null => "null".to_string(),
+            serde_json::Value::Bool(b) => format!("bool({})", b),
+            serde_json::Value::Number(n) => format!("number({})", n),
+            serde_json::Value::String(s) if s.len() <= 20 => format!("\"{}\"", s),
+            serde_json::Value::String(s) => format!("string({} chars)", s.len()),
+            serde_json::Value::Array(a) => format!("array({} items)", a.len()),
+            serde_json::Value::Object(o) => format!("object({} keys)", o.len()),
+        }
+    }
+
+    /// Try to decode input as hex or base64 to get bytes.
+    fn try_decode_input(input: &str) -> Option<Vec<u8>> {
+        let trimmed = input.trim();
+
+        // Try hex (with or without 0x prefix)
+        let hex_str = trimmed
+            .strip_prefix("0x")
+            .or_else(|| trimmed.strip_prefix("0X"))
+            .unwrap_or(trimmed);
+
+        if hex_str.chars().all(|c| c.is_ascii_hexdigit() || c == ' ') {
+            let hex_clean: String = hex_str.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+            if hex_clean.len() >= 2 && hex_clean.len().is_multiple_of(2) {
+                if let Ok(bytes) = (0..hex_clean.len())
+                    .step_by(2)
+                    .map(|i| u8::from_str_radix(&hex_clean[i..i + 2], 16))
+                    .collect::<Result<Vec<u8>, _>>()
+                {
+                    return Some(bytes);
+                }
+            }
+        }
+
+        // Try base64
+        use base64::{engine::general_purpose::STANDARD, Engine};
+        if let Ok(bytes) = STANDARD.decode(trimmed) {
+            return Some(bytes);
+        }
+
+        None
     }
 }
 
