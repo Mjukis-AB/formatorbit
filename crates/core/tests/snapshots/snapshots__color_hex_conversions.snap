@@ -335,39 +335,6 @@ expression: "&result.conversions"
         0
       ]
     },
-    "target_format": "hex",
-    "display": "FF5500",
-    "path": [
-      "color-hex",
-      "hex"
-    ],
-    "steps": [
-      {
-        "format": "hex",
-        "value": {
-          "type": "Bytes",
-          "value": [
-            255,
-            85,
-            0
-          ]
-        },
-        "display": "FF5500"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Encoding",
-    "kind": "Conversion"
-  },
-  {
-    "value": {
-      "type": "Bytes",
-      "value": [
-        255,
-        85,
-        0
-      ]
-    },
     "target_format": "binary",
     "display": "11111111 01010101 00000000",
     "path": [
@@ -386,39 +353,6 @@ expression: "&result.conversions"
           ]
         },
         "display": "11111111 01010101 00000000"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Encoding",
-    "kind": "Conversion"
-  },
-  {
-    "value": {
-      "type": "Bytes",
-      "value": [
-        255,
-        85,
-        0
-      ]
-    },
-    "target_format": "base64",
-    "display": "/1UA",
-    "path": [
-      "color-hex",
-      "base64"
-    ],
-    "steps": [
-      {
-        "format": "base64",
-        "value": {
-          "type": "Bytes",
-          "value": [
-            255,
-            85,
-            0
-          ]
-        },
-        "display": "/1UA"
       }
     ],
     "is_lossy": false,
@@ -461,6 +395,31 @@ expression: "&result.conversions"
   {
     "value": {
       "type": "String",
+      "value": "FF5500"
+    },
+    "target_format": "hex",
+    "display": "FF5500",
+    "path": [
+      "color-hex",
+      "hex"
+    ],
+    "steps": [
+      {
+        "format": "hex",
+        "value": {
+          "type": "String",
+          "value": "FF5500"
+        },
+        "display": "FF5500"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "String",
       "value": "0b111111110101010100000000"
     },
     "target_format": "binary-0b",
@@ -482,6 +441,35 @@ expression: "&result.conversions"
     "is_lossy": false,
     "priority": "Encoding",
     "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "/1UA"
+    },
+    "target_format": "base64",
+    "display": "/1UA",
+    "path": [
+      "color-hex",
+      "base64"
+    ],
+    "steps": [
+      {
+        "format": "base64",
+        "value": {
+          "type": "Bytes",
+          "value": [
+            255,
+            85,
+            0
+          ]
+        },
+        "display": "/1UA"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
   },
   {
     "value": {
