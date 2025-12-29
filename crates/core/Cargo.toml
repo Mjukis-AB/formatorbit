@@ -23,6 +23,10 @@ thiserror = { workspace = true }
 libloading = { workspace = true }
 uuid = { version = "1", features = ["v4", "serde"] }
 rmp-serde = "1"
+# Coordinate systems
+geohash = "0.13"
+pluscodes = "0.5"
+geoconvert = "1"
 percent-encoding = "2"
 plist = "1"
 evalexpr = "13"
@@ -30,6 +34,7 @@ ureq = { version = "2", features = ["json"] }
 dirs = "5"
 tracing = { workspace = true }
 unicode-segmentation = "1"
+regex = "1"
 
 [dependencies.pyo3]
 version = "0.23"
