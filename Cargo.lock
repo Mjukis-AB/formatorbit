@@ -567,6 +567,7 @@ dependencies = [
 name = "formatorbit-cli"
 version = "0.5.2"
 dependencies = [
+ "base64",
  "clap 4.5.53",
  "colored",
  "formatorbit-core",
@@ -575,6 +576,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unicode-width 0.2.2",
+ "ureq",
 ]
 
 [[package]]
