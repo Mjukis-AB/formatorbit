@@ -75,6 +75,41 @@ impl UrlEncodingFormat {
 
         false
     }
+
+    /// Check if input looks like base64 data (which often contains +).
+    fn looks_like_base64(s: &str) -> bool {
+        // Base64 characteristics:
+        // - Length is typically multiple of 4 (or close with padding)
+        // - Contains only A-Z, a-z, 0-9, +, /, =
+        // - Often ends with = or ==
+        // - Relatively long strings without spaces
+        if s.len() < 20 {
+            return false;
+        }
+
+        // Count base64-valid characters
+        let valid_count = s
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || *c == '+' || *c == '/' || *c == '=')
+            .count();
+
+        // If almost all characters are base64-valid, it's probably base64
+        if valid_count as f32 / s.len() as f32 > 0.95 {
+            return true;
+        }
+
+        false
+    }
+
+    /// Truncate a string for display purposes.
+    fn truncate_display(s: &str, max_chars: usize) -> String {
+        if s.len() <= max_chars {
+            s.to_string()
+        } else {
+            let remaining = s.len() - max_chars;
+            format!("{}... ({} more chars)", &s[..max_chars], remaining)
+        }
+    }
 }
 
 impl Format for UrlEncodingFormat {
@@ -100,6 +135,11 @@ impl Format for UrlEncodingFormat {
     fn parse(&self, input: &str) -> Vec<Interpretation> {
         // Skip if input looks like code/text rather than URL-encoded data
         if Self::looks_like_code(input) {
+            return vec![];
+        }
+
+        // Skip if input looks like base64 (which also uses +)
+        if Self::looks_like_base64(input) {
             return vec![];
         }
 
@@ -130,11 +170,14 @@ impl Format for UrlEncodingFormat {
         // Lower confidence if only + replacement (no percent encoding)
         let confidence = if has_percent { 0.85 } else { 0.70 };
 
+        // Truncate description for long strings
+        let display = Self::truncate_display(&decoded, 100);
+
         vec![Interpretation {
             value: CoreValue::String(decoded.to_string()),
             source_format: "url-encoded".to_string(),
             confidence,
-            description: format!("Decoded: {}", decoded),
+            description: format!("Decoded: {}", display),
             rich_display: vec![],
         }]
     }
