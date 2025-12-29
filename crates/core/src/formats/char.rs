@@ -255,6 +255,12 @@ impl Format for CharFormat {
                 // Composite grapheme - show codepoints and UTF-8
                 let chars: Vec<char> = s.chars().collect();
 
+                // Only show codepoints for short strings (max 100 chars)
+                // Long strings would produce massive output
+                if chars.len() > 100 {
+                    return vec![];
+                }
+
                 // List of codepoints
                 let codepoints: String = chars
                     .iter()
