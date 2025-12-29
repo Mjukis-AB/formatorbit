@@ -18,9 +18,11 @@ use super::{
 
 pub struct LengthFormat;
 
-/// Imperial units with multiplier to meters.
+/// Imperial and nautical units with multiplier to meters.
 const IMPERIAL_UNITS: &[(&str, f64)] = &[
     // Full names (longest first)
+    ("nautical miles", 1852.0),
+    ("nautical mile", 1852.0),
     ("miles", 1609.344),
     ("mile", 1609.344),
     ("yards", 0.9144),
@@ -30,6 +32,8 @@ const IMPERIAL_UNITS: &[(&str, f64)] = &[
     ("feet", 0.3048),
     ("foot", 0.3048),
     // Abbreviations
+    ("nmi", 1852.0),
+    ("NM", 1852.0),
     ("mi", 1609.344),
     ("yd", 0.9144),
     ("in", 0.0254),
@@ -44,6 +48,7 @@ const DISPLAY_UNITS: &[(&str, &str, f64)] = &[
     ("millimeters", "mm", 0.001),
     ("feet", "ft", 0.3048),
     ("miles", "mi", 1609.344),
+    ("nautical miles", "nmi", 1852.0),
     ("inches", "in", 0.0254),
 ];
 

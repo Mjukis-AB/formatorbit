@@ -184,10 +184,37 @@ impl CoordsFormat {
         }
     }
 
+    /// Check if input looks like a measurement (number followed by unit suffix).
+    /// Examples: "500cm", "10km", "5.5m", "100kg"
+    /// This helps avoid false positives where measurements are parsed as geohash.
+    fn looks_like_measurement(s: &str) -> bool {
+        // Find where digits/decimal end
+        let digit_end = s
+            .char_indices()
+            .find(|(_, c)| !c.is_ascii_digit() && *c != '.')
+            .map(|(i, _)| i)
+            .unwrap_or(s.len());
+
+        // Must have some digits at the start
+        if digit_end == 0 {
+            return false;
+        }
+
+        // Suffix must be 1-3 letters (typical unit length: m, cm, km, kg, etc.)
+        let suffix = &s[digit_end..];
+        let suffix_len = suffix.len();
+        (1..=3).contains(&suffix_len) && suffix.chars().all(|c| c.is_ascii_alphabetic())
+    }
+
     /// Parse geohash format.
     fn parse_geohash(input: &str) -> Option<(f64, f64, String)> {
         let input_lower = input.to_lowercase();
         if !patterns().geohash.is_match(&input_lower) {
+            return None;
+        }
+
+        // Skip if it looks like a measurement (e.g., "500cm", "10km")
+        if Self::looks_like_measurement(&input_lower) {
             return None;
         }
 
