@@ -34,6 +34,7 @@ SUPPORTED FORMATS:
   Colors:       #RGB, rgb(), hsl(), 0xAARRGGBB (Android)
   Text:         plain text, ASCII codes, UTF-8 detection
   Data:         JSON, MessagePack, Protobuf, plist
+  Images:       JPEG, PNG, GIF, WebP, BMP, TIFF (with EXIF metadata)
 
 EXAMPLES:
   forb 691E01B8                 Interpret hex bytes

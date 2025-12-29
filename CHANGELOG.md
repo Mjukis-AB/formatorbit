@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-12-29
+
 ### Added
 - **Hash digest calculation** - calculate CRC32, MD5, SHA-1, SHA-256, SHA-512, Blake2b-256, Blake3 from any byte data
   - Works on hex, base64, binary files, and text input
@@ -38,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Overflow panic when processing very large integers (triangular number check, duration conversion)
+- Truncate hex/base64 output for large binary data to prevent massive output
 
 ## [0.5.2] - 2025-12-26
 
