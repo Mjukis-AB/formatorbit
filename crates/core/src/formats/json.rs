@@ -93,6 +93,21 @@ impl Format for JsonFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["j"]
     }
+
+    fn validate(&self, input: &str) -> Option<String> {
+        let trimmed = input.trim();
+
+        // Check if it looks like JSON (starts with { or [)
+        if !trimmed.starts_with('{') && !trimmed.starts_with('[') {
+            return Some("JSON must start with '{' or '['".to_string());
+        }
+
+        // Try to parse and return the specific error
+        match serde_json::from_str::<serde_json::Value>(input) {
+            Ok(_) => None, // Valid JSON
+            Err(e) => Some(format!("line {}, column {}: {}", e.line(), e.column(), e)),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -78,4 +78,14 @@ pub trait Format: Send + Sync {
     fn matches_name(&self, name: &str) -> bool {
         self.id() == name || self.aliases().contains(&name)
     }
+
+    /// Validate input and return an error message explaining why it cannot be parsed.
+    ///
+    /// This is called when a specific format is requested (e.g., `--only json`)
+    /// but parsing fails. It provides helpful feedback about what's wrong with the input.
+    ///
+    /// Returns `None` if no specific error message is available.
+    fn validate(&self, _input: &str) -> Option<String> {
+        None
+    }
 }

@@ -105,6 +105,13 @@ impl Format for UuidFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["guid"]
     }
+
+    fn validate(&self, input: &str) -> Option<String> {
+        match Uuid::parse_str(input) {
+            Ok(_) => None,
+            Err(e) => Some(e.to_string()),
+        }
+    }
 }
 
 #[cfg(test)]

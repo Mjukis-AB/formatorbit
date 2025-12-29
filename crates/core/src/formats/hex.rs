@@ -323,6 +323,48 @@ impl Format for HexFormat {
         &["h", "x"]
     }
 
+    fn validate(&self, input: &str) -> Option<String> {
+        let trimmed = input.trim();
+
+        // Try to normalize - if it fails, we need to explain why
+        if Self::normalize(trimmed).is_some() {
+            return None; // Valid hex
+        }
+
+        // Determine the specific error
+        let stripped = trimmed
+            .strip_prefix("0x")
+            .or_else(|| trimmed.strip_prefix("0X"))
+            .unwrap_or(trimmed);
+
+        // Check for invalid characters
+        for c in stripped.chars() {
+            if !c.is_ascii_hexdigit()
+                && c != ' '
+                && c != ':'
+                && c != '-'
+                && c != ','
+                && c != '{'
+                && c != '}'
+                && c != '['
+                && c != ']'
+            {
+                return Some(format!("invalid hex character: '{}'", c));
+            }
+        }
+
+        // Check for odd length
+        let hex_only: String = stripped.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+        if !hex_only.is_empty() && !hex_only.len().is_multiple_of(2) {
+            return Some(format!(
+                "odd number of hex digits ({}), expected even count",
+                hex_only.len()
+            ));
+        }
+
+        Some("not a valid hex format".to_string())
+    }
+
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
         let CoreValue::Bytes(bytes) = value else {
             return vec![];
