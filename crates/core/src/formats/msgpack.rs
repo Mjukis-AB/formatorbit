@@ -127,6 +127,10 @@ impl Format for MsgPackFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["mp", "mpack"]
     }
+
+    fn validate(&self, _input: &str) -> Option<String> {
+        Some("msgpack is a binary format - provide hex or base64 encoded data instead".to_string())
+    }
 }
 
 impl MsgPackFormat {
