@@ -2,8 +2,11 @@ mod pipe;
 mod pretty;
 mod tokenizer;
 
-use std::io::IsTerminal;
+use std::fs;
+use std::io::{self, IsTerminal, Read};
+use std::path::Path;
 
+use base64::Engine;
 use clap::Parser;
 use colored::{control::set_override, Colorize};
 use formatorbit_core::{ConversionKind, CoreValue, Formatorbit, RichDisplay, RichDisplayOption};
@@ -43,6 +46,13 @@ EXAMPLES:
   forb 'rgb(35, 50, 35)'        Parse CSS color
   forb '59.3293, 18.0686'       Convert coordinates
 
+FILE/URL INPUT:
+  Use @path to read file contents or fetch URLs (like curl):
+    forb @photo.jpg             Read and analyze image file
+    forb @data.bin              Read binary file
+    forb @-                     Read from stdin (binary)
+    forb @https://example.com/image.png   Fetch and analyze URL
+
 OUTPUT:
   Shows all possible interpretations ranked by confidence.
   Conversions sorted by usefulness (structured data first).
@@ -73,6 +83,12 @@ struct Cli {
     /// Can be hex, base64, timestamps, UUIDs, IP addresses, colors, etc.
     /// Hex input supports multiple formats: continuous, space-separated,
     /// colon-separated, C array style, and more.
+    ///
+    /// Use @path to read from a file or URL (like curl):
+    ///   forb @image.jpg      Read image file
+    ///   forb @data.bin       Read binary file
+    ///   forb @-              Read from stdin
+    ///   forb @https://...    Fetch from URL
     #[arg(value_name = "INPUT")]
     input: Option<String>,
 
@@ -261,6 +277,123 @@ fn print_formats() {
     );
 }
 
+/// Result of processing input (either direct string or file contents)
+enum InputData {
+    /// Text input to be parsed as string
+    Text(String),
+    /// Binary data from file, encoded as base64 for processing
+    Binary { base64: String, path: String },
+}
+
+/// Fetch content from a URL
+fn fetch_url(url: &str) -> Result<InputData, String> {
+    let response = ureq::get(url)
+        .call()
+        .map_err(|e| format!("Failed to fetch URL '{}': {}", url, e))?;
+
+    let content_type = response
+        .header("Content-Type")
+        .unwrap_or("application/octet-stream")
+        .to_string();
+
+    // Read response body
+    let mut buffer = Vec::new();
+    response
+        .into_reader()
+        .read_to_end(&mut buffer)
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    // Determine if it's text or binary based on content-type
+    let is_text = content_type.starts_with("text/")
+        || content_type.contains("json")
+        || content_type.contains("xml")
+        || content_type.contains("javascript");
+
+    if is_text {
+        // Try to interpret as UTF-8 text
+        match String::from_utf8(buffer) {
+            Ok(text) => Ok(InputData::Text(text)),
+            Err(e) => {
+                // Fall back to binary if not valid UTF-8
+                let b64 = base64::engine::general_purpose::STANDARD.encode(e.into_bytes());
+                Ok(InputData::Binary {
+                    base64: b64,
+                    path: url.to_string(),
+                })
+            }
+        }
+    } else {
+        // Binary content - encode as base64
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&buffer);
+        Ok(InputData::Binary {
+            base64: b64,
+            path: url.to_string(),
+        })
+    }
+}
+
+/// Read input, handling @path syntax for file reading and URL fetching
+fn read_input(input: &str) -> Result<InputData, String> {
+    if !input.starts_with('@') {
+        return Ok(InputData::Text(input.to_string()));
+    }
+
+    let path = &input[1..];
+
+    // Handle URLs (http:// or https://)
+    if path.starts_with("http://") || path.starts_with("https://") {
+        return fetch_url(path);
+    }
+
+    // Handle @- for stdin
+    if path == "-" {
+        let mut buffer = Vec::new();
+        io::stdin()
+            .read_to_end(&mut buffer)
+            .map_err(|e| format!("Failed to read stdin: {}", e))?;
+
+        // Try to interpret as UTF-8 text first
+        if let Ok(text) = String::from_utf8(buffer.clone()) {
+            // If it's valid UTF-8 and doesn't look like binary, treat as text
+            if !text.contains('\0') {
+                return Ok(InputData::Text(text));
+            }
+        }
+
+        // Binary data - encode as base64
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&buffer);
+        return Ok(InputData::Binary {
+            base64: b64,
+            path: "stdin".to_string(),
+        });
+    }
+
+    // Check if file exists
+    let file_path = Path::new(path);
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    // Read file contents
+    let buffer =
+        fs::read(file_path).map_err(|e| format!("Failed to read file '{}': {}", path, e))?;
+
+    // Try to interpret as UTF-8 text first
+    if let Ok(text) = String::from_utf8(buffer.clone()) {
+        // If it's valid UTF-8 and doesn't look like binary, treat as text
+        if !text.contains('\0') {
+            return Ok(InputData::Text(text));
+        }
+    }
+
+    // Binary data - encode as base64 for processing
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&buffer);
+    Ok(InputData::Binary {
+        base64: b64,
+        path: path.to_string(),
+    })
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -324,7 +457,7 @@ fn main() {
     }
 
     // Direct input mode
-    let Some(input) = cli.input else {
+    let Some(raw_input) = cli.input else {
         eprintln!("{}: No input provided", "error".red().bold());
         eprintln!();
         eprintln!("Usage: {} <INPUT>", "forb".bold());
@@ -335,12 +468,26 @@ fn main() {
         eprintln!("  forb 1703456789            Unix timestamp");
         eprintln!("  forb \"#FF5733\"             Color");
         eprintln!();
+        eprintln!("File input:");
+        eprintln!("  forb @image.jpg            Read and analyze file");
+        eprintln!("  forb @-                    Read from stdin");
+        eprintln!();
         eprintln!("Pipe mode:");
         eprintln!("  cat logs.txt | forb        Annotate log lines");
         eprintln!("  cat logs.txt | forb -H     With highlighting");
         eprintln!();
         eprintln!("Run {} for more information.", "forb --help".bold());
         std::process::exit(1);
+    };
+
+    // Process input (handle @path syntax for file reading)
+    let (input, file_path) = match read_input(&raw_input) {
+        Ok(InputData::Text(text)) => (text, None),
+        Ok(InputData::Binary { base64, path }) => (base64, Some(path)),
+        Err(e) => {
+            eprintln!("{}: {}", "error".red().bold(), e);
+            std::process::exit(1);
+        }
     };
 
     // Handle --no-color flag
@@ -370,7 +517,8 @@ fn main() {
             // Silent failure for raw mode
             std::process::exit(1);
         }
-        println!("No interpretations found for: {input}");
+        let display_input = file_path.as_ref().map_or(input.as_str(), |p| p.as_str());
+        println!("No interpretations found for: {display_input}");
         return;
     }
 
