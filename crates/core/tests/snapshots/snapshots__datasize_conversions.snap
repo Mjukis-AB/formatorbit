@@ -182,6 +182,31 @@ expression: "&result.conversions"
   {
     "value": {
       "type": "String",
+      "value": "valid Luhn checksum"
+    },
+    "target_format": "luhn",
+    "display": "valid Luhn checksum",
+    "path": [
+      "datasize",
+      "luhn"
+    ],
+    "steps": [
+      {
+        "format": "luhn",
+        "value": {
+          "type": "String",
+          "value": "valid Luhn checksum"
+        },
+        "display": "valid Luhn checksum"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Trait"
+  },
+  {
+    "value": {
+      "type": "String",
       "value": "1 KiB"
     },
     "target_format": "datasize-iec",
