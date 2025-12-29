@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `forb --only hex '123'` → `error: Cannot parse as hex: odd number of hex digits (3)`
   - `forb --only ip '999.1.1.1'` → `error: Cannot parse as ip: invalid IPv4 address`
   - `forb --only color '#GGG'` → `error: Cannot parse as color: contains non-hex characters`
-  - Implemented for: json, uuid, hex, base64, plist, ip, color
+  - `forb --only msgpack 'data'` → `error: msgpack is a binary format - provide hex or base64`
+  - `forb --only badformat 'x'` → `error: Unknown format 'badformat'. Use --formats to see available formats.`
+  - Implemented for: json, uuid, hex, base64, plist, ip, color, msgpack, protobuf
 - **Nautical miles** - length format now supports `nmi`, `NM`, `nautical mile(s)` (1852 meters)
 
 ### Fixed

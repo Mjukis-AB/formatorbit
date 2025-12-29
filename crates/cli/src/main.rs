@@ -508,6 +508,31 @@ fn main() {
 
     // Get results - either forced format or auto-detect
     let format_filter = cli.only.unwrap_or_default();
+
+    // Validate format names early
+    if let Some(ref from_format) = cli.from {
+        if !forb.is_valid_format(from_format) {
+            eprintln!(
+                "{}: Unknown format '{}'. Use {} to see available formats.",
+                "error".red().bold(),
+                from_format.yellow(),
+                "--formats".bold()
+            );
+            std::process::exit(1);
+        }
+    }
+    for name in &format_filter {
+        if !forb.is_valid_format(name) {
+            eprintln!(
+                "{}: Unknown format '{}'. Use {} to see available formats.",
+                "error".red().bold(),
+                name.yellow(),
+                "--formats".bold()
+            );
+            std::process::exit(1);
+        }
+    }
+
     let results = if let Some(ref from_format) = cli.from {
         // Force specific format interpretation
         forb.convert_all_filtered(&input, std::slice::from_ref(from_format))

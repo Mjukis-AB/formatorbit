@@ -186,6 +186,16 @@ impl Formatorbit {
         }
         None
     }
+
+    /// Check if a format name (id or alias) is valid.
+    pub fn is_valid_format(&self, name: &str) -> bool {
+        self.formats.iter().any(|f| f.matches_name(name))
+    }
+
+    /// Get a list of all valid format names (ids only, not aliases).
+    pub fn format_ids(&self) -> Vec<&'static str> {
+        self.formats.iter().map(|f| f.id()).collect()
+    }
 }
 
 impl Default for Formatorbit {

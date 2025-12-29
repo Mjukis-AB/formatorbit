@@ -747,6 +747,10 @@ impl Format for ProtobufFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["proto", "pb"]
     }
+
+    fn validate(&self, _input: &str) -> Option<String> {
+        Some("protobuf is a binary format - provide hex or base64 encoded data instead".to_string())
+    }
 }
 
 #[cfg(test)]
