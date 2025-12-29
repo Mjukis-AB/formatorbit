@@ -511,6 +511,59 @@ impl Format for ColorFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["col", "rgb", "argb", "hsl"]
     }
+
+    fn validate(&self, input: &str) -> Option<String> {
+        let trimmed = input.trim();
+
+        // Check for various color formats and give specific errors
+        if let Some(hex) = trimmed.strip_prefix('#') {
+            if !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                return Some("invalid hex color: contains non-hex characters".to_string());
+            }
+            if hex.len() != 3 && hex.len() != 6 && hex.len() != 8 {
+                return Some(format!(
+                    "invalid hex color length: expected 3, 6, or 8 digits, got {}",
+                    hex.len()
+                ));
+            }
+            return None;
+        }
+
+        if let Some(hex) = trimmed
+            .strip_prefix("0x")
+            .or_else(|| trimmed.strip_prefix("0X"))
+        {
+            if !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                return Some("invalid hex color: contains non-hex characters".to_string());
+            }
+            if hex.len() != 6 && hex.len() != 8 {
+                return Some(format!(
+                    "invalid 0x color length: expected 6 or 8 digits, got {}",
+                    hex.len()
+                ));
+            }
+            return None;
+        }
+
+        if trimmed.starts_with("rgb(") || trimmed.starts_with("rgba(") {
+            if !trimmed.ends_with(')') {
+                return Some("missing closing parenthesis in rgb()/rgba()".to_string());
+            }
+            return Some("invalid rgb()/rgba() format: expected rgb(r, g, b) or rgba(r, g, b, a) with values 0-255".to_string());
+        }
+
+        if trimmed.starts_with("hsl(") || trimmed.starts_with("hsla(") {
+            if !trimmed.ends_with(')') {
+                return Some("missing closing parenthesis in hsl()/hsla()".to_string());
+            }
+            return Some(
+                "invalid hsl()/hsla() format: expected hsl(h, s%, l%) or hsla(h, s%, l%, a)"
+                    .to_string(),
+            );
+        }
+
+        Some("invalid color format: expected #RGB, #RRGGBB, rgb(), hsl(), or 0xRRGGBB".to_string())
+    }
 }
 
 #[cfg(test)]

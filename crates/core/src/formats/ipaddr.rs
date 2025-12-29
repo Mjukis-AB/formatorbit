@@ -261,6 +261,22 @@ impl Format for IpAddrFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["ipv4", "ipv6"]
     }
+
+    fn validate(&self, input: &str) -> Option<String> {
+        // Try IPv4
+        if let Err(e) = input.parse::<Ipv4Addr>() {
+            // Try IPv6
+            if let Err(e6) = input.parse::<Ipv6Addr>() {
+                // Return the more informative error
+                if input.contains(':') {
+                    return Some(format!("invalid IPv6 address: {}", e6));
+                } else {
+                    return Some(format!("invalid IPv4 address: {}", e));
+                }
+            }
+        }
+        None
+    }
 }
 
 #[cfg(test)]

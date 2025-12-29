@@ -161,6 +161,21 @@ impl Format for PlistFormat {
     fn aliases(&self) -> &'static [&'static str] {
         &["pl"]
     }
+
+    fn validate(&self, input: &str) -> Option<String> {
+        // Check if it looks like XML plist
+        if !Self::looks_like_xml_plist(input) {
+            return Some(
+                "plist must start with '<?xml' or '<plist>' or '<!DOCTYPE plist'".to_string(),
+            );
+        }
+
+        // Try to parse and return the specific error
+        match plist::from_bytes::<plist::Value>(input.as_bytes()) {
+            Ok(_) => None,
+            Err(e) => Some(e.to_string()),
+        }
+    }
 }
 
 #[cfg(test)]
