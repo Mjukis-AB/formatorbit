@@ -271,6 +271,12 @@ pub enum CoreValue {
         amount: f64,
         code: String,
     },
+    /// Geographic coordinates (WGS84).
+    /// Latitude in degrees (-90 to 90), Longitude in degrees (-180 to 180).
+    Coordinates {
+        lat: f64,
+        lon: f64,
+    },
 }
 
 /// A decoded protobuf field.
@@ -348,6 +354,7 @@ impl CoreValue {
             Self::Area(_) => "area",
             Self::Temperature(_) => "temperature",
             Self::Currency { .. } => "currency",
+            Self::Coordinates { .. } => "coordinates",
         }
     }
 }

@@ -27,6 +27,7 @@ SUPPORTED FORMATS:
   Hashing:      MD5, SHA-1, SHA-256, SHA-512 (detection by length)
   Identifiers:  UUID (v1-v8), ULID, NanoID, CUID2, JWT
   Network:      IPv4, IPv6
+  Coordinates:  DD, DMS, DDM, Geohash, Plus Code, UTM, MGRS
   Colors:       #RGB, rgb(), hsl(), 0xAARRGGBB (Android)
   Data:         JSON, MessagePack, Protobuf, plist, UTF-8
 
@@ -40,6 +41,7 @@ EXAMPLES:
   forb 5m                       Convert length units
   forb 30C                      Convert temperature
   forb 'rgb(35, 50, 35)'        Parse CSS color
+  forb '59.3293, 18.0686'       Convert coordinates
 
 OUTPUT:
   Shows all possible interpretations ranked by confidence.

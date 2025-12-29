@@ -110,6 +110,12 @@ forb 550e8400-e29b-41d4-a716-446655440000
 forb 192.168.1.1
 forb "::1"
 
+# Coordinates
+forb "59.3293, 18.0686"
+forb "40° 26' 46\" N, 79° 56' 55\" W"
+forb u6sce
+forb 9FFW83PH+X9
+
 # Colors
 forb '#FF5733'
 forb 0x80FF5733
@@ -208,6 +214,7 @@ forb --mermaid 691E01B8
 | **Time** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601, durations (`1h30m`) |
 | **Identifiers** | UUID (v1-v8 detection), ULID (with timestamp), NanoID, CUID2, JWT |
 | **Network** | IPv4, IPv6 |
+| **Coordinates** | Decimal degrees, DMS, DDM, Geohash, Plus Code, UTM, MGRS, SWEREF 99 |
 | **Colors** | #RGB, #RRGGBB, rgb(), rgba(), hsl(), hsla(), 0xAARRGGBB (Android) |
 | **Data** | JSON, MessagePack, Protobuf (schema-less), plist (XML/binary), UTF-8 |
 
@@ -273,6 +280,7 @@ For quick filtering with `--only`, formats have short aliases:
 | angle | deg, rad |
 | area | sqft, sqm |
 | temperature | temp, celsius, fahrenheit |
+| coords | coordinates, gps, latlon, geo, location, dd, dms, ddm, utm, mgrs, geohash, pluscode |
 
 ## Examples
 
@@ -508,6 +516,42 @@ $ forb '72F'
   72°F (Fahrenheit)
   → celsius: 22.22°C
   → kelvin: 295.37 K
+```
+
+### Coordinates
+
+Multiple coordinate formats are supported and converted automatically:
+
+```bash
+$ forb "59.3293, 18.0686"
+
+▶ coords (90% confidence)
+  Decimal Degrees: 59.329300, 18.068600
+  ≈ dms: 59° 19' 45.48" N, 18° 4' 6.96" E
+  ≈ ddm: 59° 19.7580' N, 18° 4.1160' E
+  → geohash: u6sce0t4h
+  → plus-code: 9FFW83H9+PC
+  → utm: 34V 333230 6580391
+  → mgrs: 34VCL3323080391
+```
+
+```bash
+$ forb "40° 26' 46\" N, 79° 56' 55\" W"
+
+▶ coords (90% confidence)
+  Degrees Minutes Seconds: 40.446111, -79.948611
+  ≈ dd: 40.446111, -79.948611
+  → geohash: dppnhdzpw
+  → plus-code: 87G2C3W2+CH
+```
+
+```bash
+$ forb "u6sce"
+
+▶ coords (90% confidence)
+  Geohash (precision 5): 59.348145, 18.083496
+  → plus-code: 9FFW83XM+79
+  → utm: 34V 333418 6582476
 ```
 
 ### Processing Logs
