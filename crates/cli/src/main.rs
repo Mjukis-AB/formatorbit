@@ -27,16 +27,18 @@ SUPPORTED FORMATS:
   Units:        length, weight, volume, speed, pressure, energy, angle, area
   Currency:     100 USD, $50, 5kEUR, 2.5MSEK (with live exchange rates)
   Time:         Unix epoch (sec/ms), durations (1h30m), ISO 8601
-  Hashing:      MD5, SHA-1, SHA-256, SHA-512 (detection by length)
+  Hashing:      MD5, SHA-1, SHA-256, SHA-512, Blake2b, Blake3, CRC32
   Identifiers:  UUID (v1-v8), ULID, NanoID, CUID2, JWT
   Network:      IPv4, IPv6
   Coordinates:  DD, DMS, DDM, Geohash, Plus Code, UTM, MGRS
   Colors:       #RGB, rgb(), hsl(), 0xAARRGGBB (Android)
-  Data:         JSON, MessagePack, Protobuf, plist, UTF-8
+  Text:         plain text, ASCII codes, UTF-8 detection
+  Data:         JSON, MessagePack, Protobuf, plist
 
 EXAMPLES:
   forb 691E01B8                 Interpret hex bytes
   forb aR4BuA==                 Decode base64
+  forb "Hello"                  Text → SHA-256, MD5, base64, hex
   forb 1703456789               Unix timestamp (shows relative time)
   forb '0xFF + 1'               Evaluate expression
   forb 1h30m                    Parse duration
