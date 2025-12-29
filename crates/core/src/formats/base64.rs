@@ -4,7 +4,9 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use tracing::{debug, trace};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
 
 pub struct Base64Format;
 
@@ -122,19 +124,52 @@ impl Format for Base64Format {
         }]
     }
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::Bytes(_))
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        // Use conversions() instead to support truncation for large data
+        false
     }
 
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        match value {
-            CoreValue::Bytes(bytes) => Some(STANDARD.encode(bytes)),
-            _ => None,
-        }
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        // Use conversions() instead to support truncation for large data
+        None
     }
 
     fn aliases(&self) -> &'static [&'static str] {
         &["b64"]
+    }
+
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        let CoreValue::Bytes(bytes) = value else {
+            return vec![];
+        };
+
+        let full_b64 = STANDARD.encode(bytes);
+
+        // Truncate display for large data (max ~100 chars of base64)
+        let max_chars = 100;
+        let display = if full_b64.len() <= max_chars {
+            full_b64.clone()
+        } else {
+            let remaining = full_b64.len() - max_chars;
+            format!("{}... ({} more chars)", &full_b64[..max_chars], remaining)
+        };
+
+        vec![Conversion {
+            value: CoreValue::String(full_b64),
+            target_format: "base64".to_string(),
+            display: display.clone(),
+            path: vec!["base64".to_string()],
+            steps: vec![ConversionStep {
+                format: "base64".to_string(),
+                value: CoreValue::Bytes(bytes.clone()),
+                display,
+            }],
+            is_lossy: false,
+            priority: ConversionPriority::Encoding,
+            display_only: true, // Don't explore further from base64 string (avoids codepoints noise)
+            kind: ConversionKind::default(),
+            rich_display: vec![],
+        }]
     }
 }
 
@@ -172,10 +207,17 @@ mod tests {
     }
 
     #[test]
-    fn test_format_bytes_to_base64() {
+    fn test_conversions_bytes_to_base64() {
         let format = Base64Format;
         let value = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        assert_eq!(format.format(&value), Some("aR4BuA==".to_string()));
+        let conversions = format.conversions(&value);
+        assert_eq!(conversions.len(), 1);
+        assert_eq!(conversions[0].target_format, "base64");
+        if let CoreValue::String(s) = &conversions[0].value {
+            assert_eq!(s, "aR4BuA==");
+        } else {
+            panic!("Expected String value");
+        }
     }
 
     #[test]

@@ -11,7 +11,9 @@
 //! - Hex editor style with optional ASCII: `00000000  69 1E 01 B8  |i...|`
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{CoreValue, Interpretation};
+use crate::types::{
+    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+};
 
 pub struct HexFormat;
 
@@ -227,6 +229,20 @@ impl HexFormat {
     fn encode(bytes: &[u8]) -> String {
         bytes.iter().map(|b| format!("{b:02X}")).collect()
     }
+
+    /// Encode bytes to hex string with truncation for large data.
+    fn encode_truncated(bytes: &[u8], max_bytes: usize) -> String {
+        if bytes.len() <= max_bytes {
+            Self::encode(bytes)
+        } else {
+            let truncated: String = bytes[..max_bytes]
+                .iter()
+                .map(|b| format!("{b:02X}"))
+                .collect();
+            let remaining = bytes.len() - max_bytes;
+            format!("{}... ({} more bytes)", truncated, remaining)
+        }
+    }
 }
 
 impl Format for HexFormat {
@@ -293,19 +309,45 @@ impl Format for HexFormat {
         }]
     }
 
-    fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::Bytes(_))
+    fn can_format(&self, _value: &CoreValue) -> bool {
+        // Use conversions() instead to support truncation for large data
+        false
     }
 
-    fn format(&self, value: &CoreValue) -> Option<String> {
-        match value {
-            CoreValue::Bytes(bytes) => Some(Self::encode(bytes)),
-            _ => None,
-        }
+    fn format(&self, _value: &CoreValue) -> Option<String> {
+        // Use conversions() instead to support truncation for large data
+        None
     }
 
     fn aliases(&self) -> &'static [&'static str] {
         &["h", "x"]
+    }
+
+    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        let CoreValue::Bytes(bytes) = value else {
+            return vec![];
+        };
+
+        // Show truncated hex for large data (max 64 bytes = 128 hex chars)
+        let max_bytes = 64;
+        let display = Self::encode_truncated(bytes, max_bytes);
+
+        vec![Conversion {
+            value: CoreValue::String(Self::encode(bytes)),
+            target_format: "hex".to_string(),
+            display,
+            path: vec!["hex".to_string()],
+            steps: vec![ConversionStep {
+                format: "hex".to_string(),
+                value: CoreValue::String(Self::encode(bytes)),
+                display: Self::encode_truncated(bytes, max_bytes),
+            }],
+            is_lossy: false,
+            priority: ConversionPriority::Encoding,
+            display_only: true, // Don't explore further from hex string (avoids codepoints noise)
+            kind: ConversionKind::default(),
+            rich_display: vec![],
+        }]
     }
 }
 
@@ -350,10 +392,17 @@ mod tests {
     }
 
     #[test]
-    fn test_format_bytes() {
+    fn test_conversions_bytes_to_hex() {
         let format = HexFormat;
         let value = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        assert_eq!(format.format(&value), Some("691E01B8".to_string()));
+        let conversions = format.conversions(&value);
+        assert_eq!(conversions.len(), 1);
+        assert_eq!(conversions[0].target_format, "hex");
+        if let CoreValue::String(s) = &conversions[0].value {
+            assert_eq!(s, "691E01B8");
+        } else {
+            panic!("Expected String value");
+        }
     }
 
     #[test]
