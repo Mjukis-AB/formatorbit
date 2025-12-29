@@ -290,6 +290,9 @@ fn test_snapshot_octal() {
 
 #[test]
 fn test_snapshot_currency() {
+    // Set LANG to ensure deterministic confidence (locale boost adds 0.15 for matching currency)
+    std::env::set_var("LANG", "en_US.UTF-8");
+
     let forb = Formatorbit::new();
     let results = forb.convert_all("$100");
     let result = first_result_for_format(&results, "currency").unwrap();
