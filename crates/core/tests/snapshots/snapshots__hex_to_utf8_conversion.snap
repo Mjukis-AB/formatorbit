@@ -5,14 +5,8 @@ expression: utf8_conv
 ---
 {
   "value": {
-    "type": "Bytes",
-    "value": [
-      72,
-      101,
-      108,
-      108,
-      111
-    ]
+    "type": "String",
+    "value": "Hello"
   },
   "target_format": "utf8",
   "display": "Hello",
@@ -24,14 +18,8 @@ expression: utf8_conv
     {
       "format": "utf8",
       "value": {
-        "type": "Bytes",
-        "value": [
-          72,
-          101,
-          108,
-          108,
-          111
-        ]
+        "type": "String",
+        "value": "Hello"
       },
       "display": "Hello"
     }

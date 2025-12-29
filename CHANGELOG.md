@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Hash digest calculation** - calculate CRC32, MD5, SHA-1, SHA-256, SHA-512, Blake2b-256, Blake3 from any byte data
+  - Works on hex, base64, binary files, and text input
+  - Digests appear as conversions from bytes
+- **Plain text parsing** - any input now has a fallback "text" interpretation (10% confidence)
+  - Enables hash calculation for arbitrary text (`forb "Hello"` → SHA-256, MD5, etc.)
+  - Shows ASCII codes for short strings (decimal and hex)
+  - ASCII/UTF-8 detection trait
 - **Epoch timestamp parsing** - numeric timestamps now appear as top-level interpretation
   - Dynamic confidence based on proximity to current time (0.95 within a week, 0.87 within 30 years)
   - Epoch timestamps appear before decimal for recent dates
