@@ -15,10 +15,10 @@ use formats::{
     AngleFormat, AreaFormat, Base64Format, BinaryFormat, BytesToIntFormat, CharFormat, ColorFormat,
     CoordsFormat, CuidFormat, CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat,
     DurationFormat, EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, GraphFormat, HashFormat,
-    HexFormat, HexdumpFormat, IpAddrFormat, IsbnFormat, JsonFormat, JwtFormat, LengthFormat,
-    MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, PressureFormat, ProtobufFormat,
-    SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format, UuidFormat,
-    VolumeFormat, WeightFormat,
+    HexFormat, HexdumpFormat, ImageFormat, IpAddrFormat, IsbnFormat, JsonFormat, JwtFormat,
+    LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, PressureFormat,
+    ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
+    UuidFormat, VolumeFormat, WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -75,6 +75,7 @@ impl Formatorbit {
                 // Conversion-only formats (don't parse strings directly)
                 Box::new(BytesToIntFormat),
                 Box::new(HexdumpFormat),
+                Box::new(ImageFormat),
                 Box::new(MsgPackFormat),
                 Box::new(PlistFormat),
                 Box::new(ProtobufFormat),

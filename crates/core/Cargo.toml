@@ -35,6 +35,9 @@ dirs = "5"
 tracing = { workspace = true }
 unicode-segmentation = "1"
 regex = "1"
+# Image parsing
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff", "ico"] }
+kamadak-exif = "0.5"
 
 [dependencies.pyo3]
 version = "0.23"
