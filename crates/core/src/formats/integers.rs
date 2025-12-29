@@ -274,6 +274,94 @@ fn is_valid_luhn(n: i128) -> bool {
     sum % 10 == 0
 }
 
+/// Check if a 10-digit number is a valid ISBN-10 (when check digit is 0-9, not X).
+/// ISBN-10 uses mod 11 weighted checksum: sum of digit[i] * (10-i) must be divisible by 11.
+fn is_valid_isbn10_numeric(n: i128) -> bool {
+    // Must be exactly 10 digits
+    if !(1_000_000_000..10_000_000_000).contains(&n) {
+        return false;
+    }
+
+    let mut sum = 0i128;
+    let mut num = n;
+    let mut weight = 1;
+
+    while num > 0 {
+        let digit = num % 10;
+        num /= 10;
+        sum += digit * weight;
+        weight += 1;
+    }
+
+    sum % 11 == 0
+}
+
+/// Check if a 13-digit number is a valid ISBN-13 or EAN-13.
+/// Uses alternating weights of 1 and 3, sum must be divisible by 10.
+fn is_valid_ean13(n: i128) -> bool {
+    // Must be exactly 13 digits
+    if !(1_000_000_000_000..10_000_000_000_000).contains(&n) {
+        return false;
+    }
+
+    let mut sum = 0i128;
+    let mut num = n;
+    let mut weight = 1; // Rightmost digit has weight 1
+
+    while num > 0 {
+        let digit = num % 10;
+        num /= 10;
+        sum += digit * weight;
+        weight = if weight == 1 { 3 } else { 1 };
+    }
+
+    sum % 10 == 0
+}
+
+/// Check if a 12-digit number is a valid UPC-A.
+/// Same algorithm as EAN-13 (UPC-A is EAN-13 with implicit leading 0).
+fn is_valid_upc_a(n: i128) -> bool {
+    // Must be exactly 12 digits
+    if !(100_000_000_000..1_000_000_000_000).contains(&n) {
+        return false;
+    }
+
+    let mut sum = 0i128;
+    let mut num = n;
+    let mut weight = 1; // Rightmost digit has weight 1
+
+    while num > 0 {
+        let digit = num % 10;
+        num /= 10;
+        sum += digit * weight;
+        weight = if weight == 1 { 3 } else { 1 };
+    }
+
+    sum % 10 == 0
+}
+
+/// Check if an 8-digit number is a valid EAN-8.
+/// Same algorithm as EAN-13, just shorter.
+fn is_valid_ean8(n: i128) -> bool {
+    // Must be exactly 8 digits
+    if !(10_000_000..100_000_000).contains(&n) {
+        return false;
+    }
+
+    let mut sum = 0i128;
+    let mut num = n;
+    let mut weight = 1;
+
+    while num > 0 {
+        let digit = num % 10;
+        num /= 10;
+        sum += digit * weight;
+        weight = if weight == 1 { 3 } else { 1 };
+    }
+
+    sum % 10 == 0
+}
+
 pub struct DecimalFormat;
 
 impl Format for DecimalFormat {
@@ -660,6 +748,93 @@ impl Format for DecimalFormat {
             });
         }
 
+        // ISBN-10 detection (10 digits, check digit 0-9)
+        if is_valid_isbn10_numeric(*int_val) {
+            let display = "valid ISBN-10".to_string();
+            conversions.push(Conversion {
+                value: CoreValue::String(display.clone()),
+                target_format: "isbn-10".to_string(),
+                display: display.clone(),
+                path: vec!["isbn-10".to_string()],
+                steps: vec![ConversionStep {
+                    format: "isbn-10".to_string(),
+                    value: CoreValue::String(display.clone()),
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Trait,
+                display_only: true,
+                ..Default::default()
+            });
+        }
+
+        // ISBN-13 / EAN-13 detection (13 digits)
+        if is_valid_ean13(*int_val) {
+            // Check if it's an ISBN-13 (starts with 978 or 979)
+            let is_isbn = *int_val >= 9_780_000_000_000 && *int_val < 9_800_000_000_000;
+            let display = if is_isbn {
+                "valid ISBN-13".to_string()
+            } else {
+                "valid EAN-13".to_string()
+            };
+            let format_name = if is_isbn { "isbn-13" } else { "ean-13" };
+            conversions.push(Conversion {
+                value: CoreValue::String(display.clone()),
+                target_format: format_name.to_string(),
+                display: display.clone(),
+                path: vec![format_name.to_string()],
+                steps: vec![ConversionStep {
+                    format: format_name.to_string(),
+                    value: CoreValue::String(display.clone()),
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Trait,
+                display_only: true,
+                ..Default::default()
+            });
+        }
+
+        // UPC-A detection (12 digits)
+        if is_valid_upc_a(*int_val) {
+            let display = "valid UPC-A".to_string();
+            conversions.push(Conversion {
+                value: CoreValue::String(display.clone()),
+                target_format: "upc-a".to_string(),
+                display: display.clone(),
+                path: vec!["upc-a".to_string()],
+                steps: vec![ConversionStep {
+                    format: "upc-a".to_string(),
+                    value: CoreValue::String(display.clone()),
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Trait,
+                display_only: true,
+                ..Default::default()
+            });
+        }
+
+        // EAN-8 detection (8 digits)
+        if is_valid_ean8(*int_val) {
+            let display = "valid EAN-8".to_string();
+            conversions.push(Conversion {
+                value: CoreValue::String(display.clone()),
+                target_format: "ean-8".to_string(),
+                display: display.clone(),
+                path: vec!["ean-8".to_string()],
+                steps: vec![ConversionStep {
+                    format: "ean-8".to_string(),
+                    value: CoreValue::String(display.clone()),
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Trait,
+                display_only: true,
+                ..Default::default()
+            });
+        }
+
         conversions
     }
 
@@ -874,5 +1049,64 @@ mod tests {
         let luhn = conversions.iter().find(|c| c.target_format == "luhn");
         assert!(luhn.is_some(), "Should have Luhn trait");
         assert_eq!(luhn.unwrap().display, "valid Luhn checksum");
+    }
+
+    #[test]
+    fn test_isbn10_valid() {
+        // Known valid ISBN-10 numbers (without X check digit)
+        // Note: ISBN-10 starting with 0 won't be detected as integers since leading 0 is dropped
+        // 9654487659: 9*10 + 6*9 + 5*8 + 4*7 + 4*6 + 8*5 + 7*4 + 6*3 + 5*2 + 9*1 = 352, 352 % 11 = 0
+        assert!(is_valid_isbn10_numeric(9654487659));
+        // 1593279280: Programming Rust (O'Reilly)
+        assert!(is_valid_isbn10_numeric(1593279280));
+    }
+
+    #[test]
+    fn test_isbn10_invalid() {
+        assert!(!is_valid_isbn10_numeric(9654487650)); // Wrong check digit
+        assert!(!is_valid_isbn10_numeric(123456789)); // 9 digits
+        assert!(!is_valid_isbn10_numeric(12345678901)); // 11 digits
+    }
+
+    #[test]
+    fn test_ean13_valid() {
+        // ISBN-13
+        assert!(is_valid_ean13(9780306406157)); // 978-0-306-40615-7
+        assert!(is_valid_ean13(9780201633610)); // 978-0-201-63361-0
+                                                // Regular EAN-13 (not ISBN)
+        assert!(is_valid_ean13(5901234123457)); // Example barcode
+    }
+
+    #[test]
+    fn test_ean13_invalid() {
+        assert!(!is_valid_ean13(9780306406158)); // Wrong check digit
+        assert!(!is_valid_ean13(978030640615)); // 12 digits
+    }
+
+    #[test]
+    fn test_upc_a_valid() {
+        assert!(is_valid_upc_a(123456789012)); // Example
+                                               // Note: Can't use leading 0 in integer literals (octal)
+                                               // 042100005264 as decimal is tested via CLI
+    }
+
+    #[test]
+    fn test_ean8_valid() {
+        assert!(is_valid_ean8(96385074)); // Example EAN-8
+        assert!(is_valid_ean8(65833254)); // Another example
+    }
+
+    #[test]
+    fn test_isbn13_trait_conversion() {
+        let format = DecimalFormat;
+        let int_value = CoreValue::Int {
+            value: 9780306406157, // Valid ISBN-13
+            original_bytes: None,
+        };
+        let conversions = format.conversions(&int_value);
+
+        let isbn = conversions.iter().find(|c| c.target_format == "isbn-13");
+        assert!(isbn.is_some(), "Should have ISBN-13 trait");
+        assert_eq!(isbn.unwrap().display, "valid ISBN-13");
     }
 }
