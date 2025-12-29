@@ -171,6 +171,21 @@ impl Formatorbit {
             })
             .collect()
     }
+
+    /// Validate input for a specific format and return an error message if invalid.
+    ///
+    /// This is useful when a user requests a specific format (e.g., `--only json`)
+    /// and we want to explain why parsing failed.
+    ///
+    /// Returns `None` if the format doesn't provide validation or the input is valid.
+    pub fn validate(&self, input: &str, format_name: &str) -> Option<String> {
+        for format in &self.formats {
+            if format.matches_name(format_name) {
+                return format.validate(input);
+            }
+        }
+        None
+    }
 }
 
 impl Default for Formatorbit {

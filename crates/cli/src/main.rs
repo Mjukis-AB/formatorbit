@@ -521,6 +521,31 @@ fn main() {
             std::process::exit(1);
         }
         let display_input = file_path.as_ref().map_or(input.as_str(), |p| p.as_str());
+
+        // If a specific format was requested, try to show a validation error
+        if let Some(ref from_format) = cli.from {
+            if let Some(error) = forb.validate(&input, from_format) {
+                eprintln!(
+                    "{}: Cannot parse as {}: {}",
+                    "error".red().bold(),
+                    from_format.yellow(),
+                    error
+                );
+                std::process::exit(1);
+            }
+        } else if format_filter.len() == 1 {
+            // Single format in --only filter
+            if let Some(error) = forb.validate(&input, &format_filter[0]) {
+                eprintln!(
+                    "{}: Cannot parse as {}: {}",
+                    "error".red().bold(),
+                    format_filter[0].yellow(),
+                    error
+                );
+                std::process::exit(1);
+            }
+        }
+
         println!("No interpretations found for: {display_input}");
         return;
     }

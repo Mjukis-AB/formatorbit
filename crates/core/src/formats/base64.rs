@@ -138,6 +138,35 @@ impl Format for Base64Format {
         &["b64"]
     }
 
+    fn validate(&self, input: &str) -> Option<String> {
+        // Check for invalid characters
+        for c in input.chars() {
+            if !c.is_ascii_alphanumeric() && c != '+' && c != '/' && c != '=' {
+                return Some(format!("invalid base64 character: '{}'", c));
+            }
+        }
+
+        // Check for proper padding
+        let padding_count = input.chars().filter(|&c| c == '=').count();
+        if padding_count > 2 {
+            return Some(format!(
+                "too many padding characters ({}), max is 2",
+                padding_count
+            ));
+        }
+
+        // Check that padding is at the end
+        if input.contains('=') && !input.ends_with('=') {
+            return Some("padding '=' must be at the end".to_string());
+        }
+
+        // Try to decode
+        match STANDARD.decode(input) {
+            Ok(_) => None,
+            Err(e) => Some(e.to_string()),
+        }
+    }
+
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
         let CoreValue::Bytes(bytes) = value else {
             return vec![];
