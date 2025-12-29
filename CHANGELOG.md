@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `forb --only json '{bad'` → `error: Cannot parse as json: line 1, column 2: key must be a string`
   - `forb --only uuid 'not-uuid'` → `error: Cannot parse as uuid: invalid character...`
   - `forb --only hex '123'` → `error: Cannot parse as hex: odd number of hex digits (3)`
-  - Implemented for json, uuid, hex, base64 formats
+  - `forb --only ip '999.1.1.1'` → `error: Cannot parse as ip: invalid IPv4 address`
+  - `forb --only color '#GGG'` → `error: Cannot parse as color: contains non-hex characters`
+  - Implemented for: json, uuid, hex, base64, plist, ip, color
 - **Nautical miles** - length format now supports `nmi`, `NM`, `nautical mile(s)` (1852 meters)
 
 ### Fixed
