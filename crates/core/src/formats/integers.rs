@@ -244,6 +244,36 @@ fn factorial_of(n: i128) -> Option<u32> {
         .map(|idx| FACTORIALS[idx].1)
 }
 
+/// Check if a number passes the Luhn checksum (used in OCR, credit cards, IMEI, etc.).
+/// Returns true if the number has a valid Luhn check digit.
+/// Only valid for positive integers with at least 2 digits.
+fn is_valid_luhn(n: i128) -> bool {
+    if n < 10 {
+        return false; // Need at least 2 digits
+    }
+
+    let mut sum = 0i128;
+    let mut double = false;
+    let mut num = n;
+
+    while num > 0 {
+        let mut digit = num % 10;
+        num /= 10;
+
+        if double {
+            digit *= 2;
+            if digit > 9 {
+                digit -= 9;
+            }
+        }
+
+        sum += digit;
+        double = !double;
+    }
+
+    sum % 10 == 0
+}
+
 pub struct DecimalFormat;
 
 impl Format for DecimalFormat {
@@ -610,6 +640,26 @@ impl Format for DecimalFormat {
             }
         }
 
+        // Luhn checksum detection (OCR references, credit cards, IMEI, etc.)
+        if *int_val >= 10 && is_valid_luhn(*int_val) {
+            let display = "valid Luhn checksum".to_string();
+            conversions.push(Conversion {
+                value: CoreValue::String(display.clone()),
+                target_format: "luhn".to_string(),
+                display: display.clone(),
+                path: vec!["luhn".to_string()],
+                steps: vec![ConversionStep {
+                    format: "luhn".to_string(),
+                    value: CoreValue::String(display.clone()),
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Trait,
+                display_only: true,
+                ..Default::default()
+            });
+        }
+
         conversions
     }
 
@@ -793,5 +843,36 @@ mod tests {
             .find(|c| c.target_format == "int-le")
             .unwrap();
         assert_eq!(le.display, "3087081065");
+    }
+
+    #[test]
+    fn test_luhn_valid() {
+        // Known valid Luhn numbers
+        assert!(is_valid_luhn(79927398713)); // Wikipedia example
+        assert!(is_valid_luhn(4532015112830366)); // Valid credit card pattern
+        assert!(is_valid_luhn(49927398716)); // Another Wikipedia example
+    }
+
+    #[test]
+    fn test_luhn_invalid() {
+        // Invalid Luhn numbers
+        assert!(!is_valid_luhn(79927398710)); // Wrong check digit
+        assert!(!is_valid_luhn(1234567890)); // Random number
+        assert!(!is_valid_luhn(9)); // Single digit
+        assert!(!is_valid_luhn(0)); // Zero
+    }
+
+    #[test]
+    fn test_luhn_trait_conversion() {
+        let format = DecimalFormat;
+        let int_value = CoreValue::Int {
+            value: 79927398713, // Valid Luhn
+            original_bytes: None,
+        };
+        let conversions = format.conversions(&int_value);
+
+        let luhn = conversions.iter().find(|c| c.target_format == "luhn");
+        assert!(luhn.is_some(), "Should have Luhn trait");
+        assert_eq!(luhn.unwrap().display, "valid Luhn checksum");
     }
 }
