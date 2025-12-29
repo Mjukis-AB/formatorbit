@@ -5,7 +5,17 @@ edition.workspace = true
 
 [lib]
 crate-type = ["cdylib", "staticlib"]
+name = "formatorbit_ffi"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
 
 [dependencies]
 formatorbit-core = { workspace = true }
 serde_json = { workspace = true }
+uniffi = { workspace = true, features = ["cli"] }
+base64 = { workspace = true }
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
