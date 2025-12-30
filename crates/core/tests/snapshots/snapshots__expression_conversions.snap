@@ -1,34 +1,9 @@
 ---
 source: crates/core/tests/snapshots.rs
-assertion_line: 249
+assertion_line: 262
 expression: "&result.conversions"
 ---
 [
-  {
-    "value": {
-      "type": "String",
-      "value": "4"
-    },
-    "target_format": "result",
-    "display": "4",
-    "path": [
-      "expr",
-      "result"
-    ],
-    "steps": [
-      {
-        "format": "result",
-        "value": {
-          "type": "String",
-          "value": "4"
-        },
-        "display": "4"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Primary",
-    "kind": "Representation"
-  },
   {
     "value": {
       "type": "String",

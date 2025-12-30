@@ -2,7 +2,9 @@
 //!
 //! Precedence: CLI args > Environment vars > Config file > Defaults
 
+use formatorbit_core::{BlockingConfig, ConversionConfig, PriorityAdjustment, PriorityConfig};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -27,7 +29,59 @@ url_timeout = 30
 
 # Maximum response size for URL fetches (K, M, G suffixes)
 url_max_size = "10M"
+
+# ============================================================================
+# Priority Configuration (optional)
+# ============================================================================
+# Customize how conversion results are ordered.
+
+# [priority]
+# # Reorder the 5 main categories (highest priority first)
+# # Default: ["Primary", "Structured", "Semantic", "Encoding", "Raw"]
+# category_order = ["Semantic", "Structured", "Primary", "Encoding", "Raw"]
+
+# # Adjust individual format priorities
+# # Integer: +/- offset within category (higher = shown earlier)
+# # String: move to different category
+# [priority.format_priority]
+# datetime = 10        # Bump up within Semantic
+# uuid = 5             # Also bump up, but less
+# hex = -10            # Push down within Encoding
+# ipv4 = "Primary"     # Move to Primary category
+
+# ============================================================================
+# Blocking Configuration (optional)
+# ============================================================================
+# Block formats or conversion paths you don't want to see.
+# Use `forb --show-paths` to see blockable paths for any input.
+
+# [blocking]
+# # Block entire formats (never parse or convert)
+# formats = ["octal", "binary"]
+#
+# # Block specific conversion paths (source:target or full path)
+# paths = ["hex:msgpack", "uuid:epoch-seconds"]
 "#;
+
+/// Priority configuration as stored in TOML.
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+pub struct CliPriorityConfig {
+    /// Category order (highest to lowest priority).
+    pub category_order: Vec<String>,
+    /// Per-format priority adjustments (integer offset or category name).
+    pub format_priority: HashMap<String, toml::Value>,
+}
+
+/// Blocking configuration as stored in TOML.
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+pub struct CliBlockingConfig {
+    /// Blocked format IDs.
+    pub formats: Vec<String>,
+    /// Blocked paths (source:target or full path).
+    pub paths: Vec<String>,
+}
 
 /// Configuration loaded from file and environment.
 #[derive(Debug, Default, Deserialize)]
@@ -39,6 +93,10 @@ pub struct Config {
     pub url_timeout: Option<u64>,
     pub url_max_size: Option<String>,
     pub max_tokens: Option<usize>,
+    /// Priority configuration.
+    pub priority: Option<CliPriorityConfig>,
+    /// Blocking configuration.
+    pub blocking: Option<CliBlockingConfig>,
 }
 
 impl Config {
@@ -117,6 +175,47 @@ impl Config {
         Self::env_var("FORB_MAX_TOKENS")
             .or(self.max_tokens)
             .unwrap_or(50)
+    }
+
+    /// Convert CLI config to core ConversionConfig.
+    ///
+    /// Returns `Some(config)` if there's any priority or blocking customization,
+    /// otherwise `None` (to use defaults).
+    #[must_use]
+    pub fn conversion_config(&self) -> Option<ConversionConfig> {
+        let priority = self.priority.as_ref().map(|p| {
+            let format_priority = p
+                .format_priority
+                .iter()
+                .filter_map(|(k, v)| {
+                    let adj = match v {
+                        toml::Value::Integer(i) => Some(PriorityAdjustment::Offset(*i as i32)),
+                        toml::Value::String(s) => Some(PriorityAdjustment::Category(s.clone())),
+                        _ => None,
+                    };
+                    adj.map(|a| (k.clone(), a))
+                })
+                .collect();
+
+            PriorityConfig {
+                category_order: p.category_order.clone(),
+                format_priority,
+            }
+        });
+
+        let blocking = self.blocking.as_ref().map(|b| BlockingConfig {
+            formats: b.formats.clone(),
+            paths: b.paths.clone(),
+        });
+
+        // Only return Some if there's actual customization
+        match (&priority, &blocking) {
+            (None, None) => None,
+            _ => Some(ConversionConfig {
+                priority: priority.unwrap_or_default(),
+                blocking: blocking.unwrap_or_default(),
+            }),
+        }
     }
 }
 

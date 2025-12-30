@@ -6,7 +6,13 @@
 use std::collections::VecDeque;
 
 use crate::format::Format;
-use crate::types::{Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue};
+use crate::types::{
+    BlockingConfig, Conversion, ConversionConfig, ConversionKind, ConversionPriority,
+    ConversionStep, CoreValue, PriorityConfig,
+};
+
+/// Maximum BFS depth to prevent infinite loops in conversion graph traversal.
+const MAX_BFS_DEPTH: usize = 5;
 
 /// Unit format IDs that shouldn't cross-convert to each other.
 const UNIT_FORMATS: &[&str] = &[
@@ -133,8 +139,8 @@ const BLOCKED_PATHS: &[(&str, &str)] = &[
     ("color-hsl", "datasize-si"),
 ];
 
-/// Check if a source→target conversion should be blocked.
-fn is_blocked_path(source_format: &str, target_format: &str) -> bool {
+/// Check if a source→target conversion should be blocked (hardcoded rules only).
+fn is_blocked_path_builtin(source_format: &str, target_format: &str) -> bool {
     // Check explicit blocked paths
     if BLOCKED_PATHS
         .iter()
@@ -202,18 +208,49 @@ fn is_blocked_path(source_format: &str, target_format: &str) -> bool {
     false
 }
 
+/// Check if a conversion should be blocked (builtin rules + user config).
+fn is_blocked(
+    source_format: &str,
+    target_format: &str,
+    path: &[String],
+    blocking: Option<&BlockingConfig>,
+) -> bool {
+    // Check builtin blocked paths
+    if is_blocked_path_builtin(source_format, target_format) {
+        return true;
+    }
+
+    // Check user-configured blocking
+    if let Some(config) = blocking {
+        // Check if target format is blocked
+        if config.is_format_blocked(target_format) {
+            return true;
+        }
+        // Check if this path is blocked
+        if config.is_path_blocked(path) {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// Find all possible conversions from a value using BFS.
 ///
 /// This traverses the conversion graph, collecting all reachable formats.
 /// The path is tracked to show how we got from the source to each target.
 /// If `exclude_format` is provided, skip conversions to that format (to avoid hex→hex etc.)
 /// If `source_format` is provided, it's included as the first element in the path.
+/// If `config` is provided, user-configured blocking and priority settings are applied.
 pub fn find_all_conversions(
     formats: &[Box<dyn Format>],
     initial: &CoreValue,
     exclude_format: Option<&str>,
     source_format: Option<&str>,
+    config: Option<&ConversionConfig>,
 ) -> Vec<Conversion> {
+    let blocking = config.map(|c| &c.blocking);
+    let priority = config.map(|c| &c.priority);
     let mut results = Vec::new();
     // Track seen conversions by (target_format, display) to allow different values
     // for the same format (e.g., int-be → epoch vs int-le → epoch with different dates)
@@ -275,10 +312,9 @@ pub fn find_all_conversions(
     }
 
     // BFS through conversions
-    let max_depth = 5; // Prevent infinite loops
     let mut depth = 0;
 
-    while !queue.is_empty() && depth < max_depth {
+    while !queue.is_empty() && depth < MAX_BFS_DEPTH {
         let level_size = queue.len();
 
         for _ in 0..level_size {
@@ -340,19 +376,44 @@ pub fn find_all_conversions(
         depth += 1;
     }
 
-    // Filter out blocked source→target combinations
+    // Filter out blocked source→target combinations (builtin + user config)
     if let Some(source) = exclude_format {
-        results.retain(|conv| !is_blocked_path(source, &conv.target_format));
+        results.retain(|conv| !is_blocked(source, &conv.target_format, &conv.path, blocking));
     }
 
-    // Sort by priority (Structured first), then by path length (shorter = more direct)
-    results.sort_by(|a, b| {
-        a.priority
-            .cmp(&b.priority)
-            .then_with(|| a.path.len().cmp(&b.path.len()))
-    });
+    // Sort by priority, respecting user configuration
+    sort_conversions(&mut results, priority);
 
     results
+}
+
+/// Sort conversions by priority, respecting user configuration.
+fn sort_conversions(results: &mut [Conversion], priority_config: Option<&PriorityConfig>) {
+    results.sort_by(|a, b| {
+        if let Some(config) = priority_config {
+            // User-configured category order
+            let cat_a = config.category_sort_key(a.priority);
+            let cat_b = config.category_sort_key(b.priority);
+
+            // Within same category, apply format offsets
+            if cat_a == cat_b {
+                // Higher offset = shown earlier (so negate for comparison)
+                let off_a = config.format_offset(&a.target_format);
+                let off_b = config.format_offset(&b.target_format);
+                // Higher offset comes first
+                off_b
+                    .cmp(&off_a)
+                    .then_with(|| a.path.len().cmp(&b.path.len()))
+            } else {
+                cat_a.cmp(&cat_b)
+            }
+        } else {
+            // Default: priority enum order, then path length
+            a.priority
+                .cmp(&b.priority)
+                .then_with(|| a.path.len().cmp(&b.path.len()))
+        }
+    });
 }
 
 #[cfg(test)]
@@ -369,7 +430,7 @@ mod tests {
         ];
 
         let bytes = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        let conversions = find_all_conversions(&formats, &bytes, None, None);
+        let conversions = find_all_conversions(&formats, &bytes, None, None, None);
 
         // Should have hex, base64, int-be, int-le
         let format_ids: Vec<_> = conversions
@@ -392,7 +453,7 @@ mod tests {
             original_bytes: None,
         };
 
-        let conversions = find_all_conversions(&formats, &value, None, None);
+        let conversions = find_all_conversions(&formats, &value, None, None, None);
 
         let datetime_conv = conversions
             .iter()
@@ -411,7 +472,7 @@ mod tests {
 
         // Start with bytes that represent epoch 1763574200
         let bytes = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
-        let conversions = find_all_conversions(&formats, &bytes, None, None);
+        let conversions = find_all_conversions(&formats, &bytes, None, None, None);
 
         // Should find datetime via bytes -> int-be -> epoch-seconds
         let datetime_conv = conversions

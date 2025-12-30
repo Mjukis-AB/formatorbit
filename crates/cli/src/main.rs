@@ -196,6 +196,13 @@ struct Cli {
     #[arg(long)]
     mermaid: bool,
 
+    /// Show blockable path for each conversion (for configuring blocking)
+    ///
+    /// Displays the path in [source:target] format that can be copied
+    /// directly into config.toml [blocking] paths array.
+    #[arg(long)]
+    show_paths: bool,
+
     /// Show packet layout for binary formats (protobuf, msgpack)
     ///
     /// Displays byte-level structure with offsets, lengths, and decoded values.
@@ -653,7 +660,15 @@ fn main() {
         return;
     }
 
-    let forb = Formatorbit::new();
+    // Create Formatorbit with optional conversion config from file
+    let forb = if let Some(conv_config) = file_config.conversion_config() {
+        if cli.verbose > 0 {
+            tracing::debug!("Using custom priority/blocking config from config file");
+        }
+        Formatorbit::with_config(conv_config)
+    } else {
+        Formatorbit::new()
+    };
 
     // Parse packet mode early (needed for both pipe and direct mode)
     let packet_mode = match cli.packet.as_deref() {
@@ -744,6 +759,7 @@ fn main() {
         indent: "  ",
         compact: cli.compact,
         packet_mode,
+        show_paths: cli.show_paths,
     };
 
     // Get results - either forced format or auto-detect
@@ -811,7 +827,11 @@ fn main() {
             }
         }
 
-        println!("No interpretations found for: {display_input}");
+        if display_input.is_empty() {
+            println!("No interpretations found for (empty input)");
+        } else {
+            println!("No interpretations found for: {display_input}");
+        }
         return;
     }
 
@@ -904,6 +924,13 @@ fn main() {
                     String::new()
                 };
 
+                // Build blockable path string for --show-paths
+                let block_path_str = if pretty_config.show_paths && !conv.path.is_empty() {
+                    format!(" {}", format!("[{}]", conv.path.join(":")).dimmed())
+                } else {
+                    String::new()
+                };
+
                 // Pretty-print JSON values (and packet layout if enabled)
                 let display = format_conversion_display(
                     &conv.value,
@@ -926,21 +953,23 @@ fn main() {
                 let display_lines: Vec<&str> = display.lines().collect();
                 if display_lines.len() > 1 {
                     println!(
-                        "  {} {}:{}",
+                        "  {} {}:{}{}",
                         kind_symbol,
                         conv.target_format.yellow(),
-                        path_str.dimmed()
+                        path_str.dimmed(),
+                        block_path_str
                     );
                     for line in display_lines {
                         println!("    {}", line);
                     }
                 } else {
                     println!(
-                        "  {} {}: {}{}",
+                        "  {} {}: {}{}{}",
                         kind_symbol,
                         conv.target_format.yellow(),
                         display,
-                        path_str.dimmed()
+                        path_str.dimmed(),
+                        block_path_str
                     );
                 }
             }

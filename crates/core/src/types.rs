@@ -440,6 +440,173 @@ pub enum ConversionPriority {
     Raw = 4,
 }
 
+impl ConversionPriority {
+    /// Parse from string (case-insensitive).
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "primary" => Some(Self::Primary),
+            "structured" => Some(Self::Structured),
+            "semantic" => Some(Self::Semantic),
+            "encoding" => Some(Self::Encoding),
+            "raw" => Some(Self::Raw),
+            _ => None,
+        }
+    }
+
+    /// Convert to string representation.
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Primary => "Primary",
+            Self::Structured => "Structured",
+            Self::Semantic => "Semantic",
+            Self::Encoding => "Encoding",
+            Self::Raw => "Raw",
+        }
+    }
+}
+
+// ============================================================================
+// User Configuration Types
+// ============================================================================
+
+/// Priority adjustment for a format.
+///
+/// Can be either a numeric offset (within-category) or a category name (move to category).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PriorityAdjustment {
+    /// Relative adjustment within current category (+10 = higher/earlier, -5 = lower/later)
+    Offset(i32),
+    /// Move to a different category entirely
+    Category(String),
+}
+
+/// User-configurable priority settings.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PriorityConfig {
+    /// Category order (highest to lowest priority).
+    /// Default: ["Primary", "Structured", "Semantic", "Encoding", "Raw"]
+    #[serde(default)]
+    pub category_order: Vec<String>,
+
+    /// Per-format priority adjustments.
+    /// Integer: +/- offset within category
+    /// String: move to different category
+    #[serde(default)]
+    pub format_priority: std::collections::HashMap<String, PriorityAdjustment>,
+}
+
+impl PriorityConfig {
+    /// Check if this config has any customizations.
+    #[must_use]
+    pub fn is_customized(&self) -> bool {
+        !self.category_order.is_empty() || !self.format_priority.is_empty()
+    }
+
+    /// Get sort key for a category (lower = higher priority).
+    #[must_use]
+    pub fn category_sort_key(&self, priority: ConversionPriority) -> usize {
+        if self.category_order.is_empty() {
+            return priority as usize;
+        }
+        let name = priority.as_str();
+        self.category_order
+            .iter()
+            .position(|c| c.eq_ignore_ascii_case(name))
+            .unwrap_or(100 + priority as usize) // Unlisted categories go last
+    }
+
+    /// Get the effective priority for a format, applying any overrides.
+    #[must_use]
+    pub fn resolve_priority(
+        &self,
+        format_id: &str,
+        default: ConversionPriority,
+    ) -> ConversionPriority {
+        if let Some(PriorityAdjustment::Category(cat)) = self.format_priority.get(format_id) {
+            if let Some(p) = ConversionPriority::parse(cat) {
+                return p;
+            }
+        }
+        default
+    }
+
+    /// Get the offset adjustment for a format (used for within-category sorting).
+    #[must_use]
+    pub fn format_offset(&self, format_id: &str) -> i32 {
+        if let Some(PriorityAdjustment::Offset(off)) = self.format_priority.get(format_id) {
+            *off
+        } else {
+            0
+        }
+    }
+}
+
+/// User-configurable blocking settings.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct BlockingConfig {
+    /// Blocked format IDs (never parse or convert to/from these formats).
+    #[serde(default)]
+    pub formats: Vec<String>,
+
+    /// Blocked paths: specific source→target conversions to block.
+    /// Format: "source:target" or "source:via:target" for multi-hop paths.
+    #[serde(default)]
+    pub paths: Vec<String>,
+}
+
+impl BlockingConfig {
+    /// Check if this config has any customizations.
+    #[must_use]
+    pub fn is_customized(&self) -> bool {
+        !self.formats.is_empty() || !self.paths.is_empty()
+    }
+
+    /// Check if a format is blocked.
+    #[must_use]
+    pub fn is_format_blocked(&self, format_id: &str) -> bool {
+        self.formats
+            .iter()
+            .any(|f| f.eq_ignore_ascii_case(format_id))
+    }
+
+    /// Check if a conversion path is blocked.
+    /// `path` should be the full path like ["hex", "int-be", "datetime"].
+    #[must_use]
+    pub fn is_path_blocked(&self, path: &[String]) -> bool {
+        if path.is_empty() {
+            return false;
+        }
+        let path_str = path.join(":");
+        self.paths.iter().any(|blocked| {
+            // Exact match or suffix match (for blocking a specific target)
+            path_str.eq_ignore_ascii_case(blocked) || path_str.ends_with(&format!(":{}", blocked))
+        })
+    }
+}
+
+/// Combined user configuration for conversion behavior.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ConversionConfig {
+    /// Priority settings.
+    #[serde(default)]
+    pub priority: PriorityConfig,
+
+    /// Blocking settings.
+    #[serde(default)]
+    pub blocking: BlockingConfig,
+}
+
+impl ConversionConfig {
+    /// Check if this config has any customizations.
+    #[must_use]
+    pub fn is_customized(&self) -> bool {
+        self.priority.is_customized() || self.blocking.is_customized()
+    }
+}
+
 /// A single step in a conversion path.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConversionStep {

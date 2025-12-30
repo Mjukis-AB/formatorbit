@@ -34,6 +34,8 @@ pub struct PrettyConfig {
     pub compact: bool,
     /// Packet layout mode for binary formats.
     pub packet_mode: PacketMode,
+    /// Show blockable paths for conversions.
+    pub show_paths: bool,
 }
 
 impl Default for PrettyConfig {
@@ -43,6 +45,7 @@ impl Default for PrettyConfig {
             indent: "  ",
             compact: false,
             packet_mode: PacketMode::None,
+            show_paths: false,
         }
     }
 }

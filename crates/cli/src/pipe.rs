@@ -179,6 +179,7 @@ fn print_annotation(
                         indent: "  ",
                         compact: false,
                         packet_mode: config.packet_mode,
+                        show_paths: false, // Not needed in pipe mode
                     };
                     match config.packet_mode {
                         PacketMode::Compact => {

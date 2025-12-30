@@ -7,7 +7,7 @@
 //! - `2 ^ 16` → 65536
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, CoreValue, Interpretation};
 
 pub struct ExprFormat;
 
@@ -168,113 +168,14 @@ impl Format for ExprFormat {
         None
     }
 
-    fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        // Emit the primary result as the first conversion
-        // This ensures UI clients can always use conversions[0] as the canonical result
-        // Uses "result" as target_format to avoid conflict with DecimalFormat's "decimal"
-        match value {
-            CoreValue::Int { value: n, .. } => {
-                let mut results = vec![Conversion {
-                    value: CoreValue::String(n.to_string()),
-                    target_format: "result".to_string(),
-                    display: n.to_string(),
-                    path: vec!["result".to_string()],
-                    priority: ConversionPriority::Primary,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                }];
-
-                // Add hex/binary/octal representations for integer results
-                // These are useful representations that would otherwise be blocked
-                results.push(Conversion {
-                    value: CoreValue::String(format!("{n:#X}")),
-                    target_format: "hex-int".to_string(),
-                    display: format!("{n:#X}"),
-                    path: vec!["hex-int".to_string()],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                });
-
-                results.push(Conversion {
-                    value: CoreValue::String(format!("{n:#b}")),
-                    target_format: "binary-int".to_string(),
-                    display: format!("{n:#b}"),
-                    path: vec!["binary-int".to_string()],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                });
-
-                results.push(Conversion {
-                    value: CoreValue::String(format!("{n:#o}")),
-                    target_format: "octal-int".to_string(),
-                    display: format!("{n:#o}"),
-                    path: vec!["octal-int".to_string()],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                });
-
-                results
-            }
-            CoreValue::Float(f) => {
-                let mut results = vec![Conversion {
-                    value: CoreValue::String(format!("{f}")),
-                    target_format: "result".to_string(),
-                    display: format!("{f}"),
-                    path: vec!["result".to_string()],
-                    priority: ConversionPriority::Primary,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                }];
-
-                // If the float is a whole number, also show integer representations
-                if f.fract() == 0.0 && *f >= i128::MIN as f64 && *f <= i128::MAX as f64 {
-                    let n = *f as i128;
-                    results.push(Conversion {
-                        value: CoreValue::String(format!("{n:#X}")),
-                        target_format: "hex-int".to_string(),
-                        display: format!("{n:#X}"),
-                        path: vec!["hex-int".to_string()],
-                        priority: ConversionPriority::Semantic,
-                        kind: ConversionKind::Representation,
-                        display_only: true,
-                        ..Default::default()
-                    });
-
-                    results.push(Conversion {
-                        value: CoreValue::String(format!("{n:#b}")),
-                        target_format: "binary-int".to_string(),
-                        display: format!("{n:#b}"),
-                        path: vec!["binary-int".to_string()],
-                        priority: ConversionPriority::Semantic,
-                        kind: ConversionKind::Representation,
-                        display_only: true,
-                        ..Default::default()
-                    });
-
-                    results.push(Conversion {
-                        value: CoreValue::String(format!("{n:#o}")),
-                        target_format: "octal-int".to_string(),
-                        display: format!("{n:#o}"),
-                        path: vec!["octal-int".to_string()],
-                        priority: ConversionPriority::Semantic,
-                        kind: ConversionKind::Representation,
-                        display_only: true,
-                        ..Default::default()
-                    });
-                }
-
-                results
-            }
-            _ => vec![],
-        }
+    fn conversions(&self, _value: &CoreValue) -> Vec<Conversion> {
+        // Expression results are shown in the interpretation description (e.g., "0xFF + 1 = 256")
+        // We don't emit conversions here because:
+        // 1. The result is already visible in the description
+        // 2. DecimalFormat already provides hex-int, binary-int, octal-int representations
+        // 3. Having ExprFormat emit these would cause duplicate "result" conversions
+        //    when non-expression integers flow through the BFS conversion graph
+        vec![]
     }
 
     fn aliases(&self) -> &'static [&'static str] {
