@@ -9,7 +9,7 @@
 //! - Punctuation: white/default
 
 use colored::{Color, Colorize};
-use formatorbit_core::{PacketSegment, ProtoField, ProtoValue};
+use formatorbit_core::{truncate_str, PacketSegment, ProtoField, ProtoValue};
 
 /// Packet layout display mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -444,17 +444,9 @@ fn format_packet_detailed_recursive(
     let max_label_len = 10_usize.saturating_sub(depth * 2);
 
     for seg in segments {
-        let decoded = if seg.decoded.len() > 25 {
-            format!("{}...", &seg.decoded[..22])
-        } else {
-            seg.decoded.clone()
-        };
-
-        let label = if seg.label.len() > max_label_len {
-            format!("{}...", &seg.label[..max_label_len.saturating_sub(3)])
-        } else {
-            seg.label.clone()
-        };
+        // UTF-8 safe truncation
+        let decoded = truncate_str(&seg.decoded, 25);
+        let label = truncate_str(&seg.label, max_label_len);
 
         let offset_str = colorize(
             &format!("0x{:04X}", seg.offset),

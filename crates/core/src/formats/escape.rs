@@ -9,6 +9,7 @@
 use tracing::{debug, trace};
 
 use crate::format::{Format, FormatInfo};
+use crate::truncate_str;
 use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
 
 pub struct EscapeFormat;
@@ -201,8 +202,11 @@ impl Format for EscapeFormat {
 
         // Try to interpret as UTF-8 string
         let (value, description) = if let Ok(s) = std::str::from_utf8(&decoded) {
-            let display = if s.len() > 50 {
-                format!("\"{}...\" ({} chars)", &s[..47], s.chars().count())
+            let char_count = s.chars().count();
+            let display = if char_count > 50 {
+                // UTF-8 safe truncation
+                let truncated = truncate_str(s, 47);
+                format!("\"{}\" ({} chars)", truncated, char_count)
             } else {
                 format!("\"{}\"", s)
             };

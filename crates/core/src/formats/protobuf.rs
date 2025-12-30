@@ -12,6 +12,7 @@
 //! - 5: I32 (fixed32, sfixed32, float)
 
 use crate::format::{Format, FormatInfo};
+use crate::truncate_str;
 use crate::types::{
     Conversion, ConversionKind, ConversionPriority, CoreValue, PacketSegment,
     ProtoField as PublicProtoField, ProtoValue as PublicProtoValue, RichDisplay, RichDisplayOption,
@@ -553,18 +554,9 @@ impl ProtobufFormat {
         let max_label_len = 10_usize.saturating_sub(depth * 2);
 
         for seg in segments {
-            let decoded = if seg.decoded.len() > 30 {
-                format!("{}...", &seg.decoded[..27])
-            } else {
-                seg.decoded.clone()
-            };
-
-            // Truncate label to fit in column, accounting for indent
-            let label = if seg.label.len() > max_label_len {
-                format!("{}...", &seg.label[..max_label_len.saturating_sub(3)])
-            } else {
-                seg.label.clone()
-            };
+            // UTF-8 safe truncation
+            let decoded = truncate_str(&seg.decoded, 30);
+            let label = truncate_str(&seg.label, max_label_len);
 
             lines.push(format!(
                 "0x{:04X}  {:3}  {}{:<width$}  {:6}   {}",

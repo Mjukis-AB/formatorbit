@@ -72,8 +72,7 @@ fn process_line(forb: &Formatorbit, line: &str, config: &PipeModeConfig) -> Vec<
             .max_by(|a, b| {
                 a.interpretation
                     .confidence
-                    .partial_cmp(&b.interpretation.confidence)
-                    .unwrap()
+                    .total_cmp(&b.interpretation.confidence)
             });
 
         if let Some(result) = best {

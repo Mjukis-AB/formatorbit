@@ -4,6 +4,20 @@
 //! get all possible interpretations and conversions automatically.
 
 pub mod convert;
+
+/// Truncate a string to at most `max_chars` characters, appending "..." if truncated.
+///
+/// This is UTF-8 safe - it counts characters, not bytes.
+#[must_use]
+pub fn truncate_str(s: &str, max_chars: usize) -> String {
+    let char_count = s.chars().count();
+    if char_count <= max_chars {
+        s.to_string()
+    } else {
+        let truncated: String = s.chars().take(max_chars.saturating_sub(3)).collect();
+        format!("{}...", truncated)
+    }
+}
 pub mod format;
 pub mod formats;
 pub mod types;
@@ -91,7 +105,7 @@ impl Formatorbit {
             results.extend(format.parse(input));
         }
         // Sort by confidence, highest first
-        results.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap());
+        results.sort_by(|a, b| b.confidence.total_cmp(&a.confidence));
         results
     }
 
@@ -148,7 +162,7 @@ impl Formatorbit {
             }
         }
         // Sort by confidence, highest first
-        results.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap());
+        results.sort_by(|a, b| b.confidence.total_cmp(&a.confidence));
         results
     }
 
