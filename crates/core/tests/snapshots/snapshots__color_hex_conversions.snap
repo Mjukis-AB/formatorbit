@@ -48,6 +48,83 @@ expression: "&result.conversions"
   {
     "value": {
       "type": "String",
+      "value": "22015"
+    },
+    "target_format": "result",
+    "display": "22015",
+    "path": [
+      "color-hex",
+      "int-le",
+      "result"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      },
+      {
+        "format": "result",
+        "value": {
+          "type": "String",
+          "value": "22015"
+        },
+        "display": "22015"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Primary",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "#FF5500"
+    },
+    "target_format": "color-hex",
+    "display": "#FF5500",
+    "path": [
+      "color-hex",
+      "color-hex"
+    ],
+    "steps": [
+      {
+        "format": "color-hex",
+        "value": {
+          "type": "String",
+          "value": "#FF5500"
+        },
+        "display": "#FF5500"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "Color",
+          "r": 255,
+          "g": 85,
+          "b": 0,
+          "a": 255
+        }
+      }
+    ]
+  },
+  {
+    "value": {
+      "type": "String",
       "value": "rgb(255, 85, 0)"
     },
     "target_format": "color-rgb",
@@ -279,6 +356,129 @@ expression: "&result.conversions"
           }
         },
         "display": "22015"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0x55FF"
+    },
+    "target_format": "hex-int",
+    "display": "0x55FF",
+    "path": [
+      "color-hex",
+      "int-le",
+      "hex-int"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      },
+      {
+        "format": "hex-int",
+        "value": {
+          "type": "String",
+          "value": "0x55FF"
+        },
+        "display": "0x55FF"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0b101010111111111"
+    },
+    "target_format": "binary-int",
+    "display": "0b101010111111111",
+    "path": [
+      "color-hex",
+      "int-le",
+      "binary-int"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      },
+      {
+        "format": "binary-int",
+        "value": {
+          "type": "String",
+          "value": "0b101010111111111"
+        },
+        "display": "0b101010111111111"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "0o52777"
+    },
+    "target_format": "octal-int",
+    "display": "0o52777",
+    "path": [
+      "color-hex",
+      "int-le",
+      "octal-int"
+    ],
+    "steps": [
+      {
+        "format": "int-le",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 22015,
+            "original_bytes": [
+              255,
+              85,
+              0
+            ]
+          }
+        },
+        "display": "22015"
+      },
+      {
+        "format": "octal-int",
+        "value": {
+          "type": "String",
+          "value": "0o52777"
+        },
+        "display": "0o52777"
       }
     ],
     "is_lossy": false,

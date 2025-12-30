@@ -86,5 +86,30 @@ expression: "&result.conversions"
     "is_lossy": false,
     "priority": "Semantic",
     "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "DateTime",
+      "value": "2025-01-15T10:30:00Z"
+    },
+    "target_format": "datetime",
+    "display": "2025-01-15T10:30:00+00:00",
+    "path": [
+      "datetime",
+      "datetime"
+    ],
+    "steps": [
+      {
+        "format": "datetime",
+        "value": {
+          "type": "DateTime",
+          "value": "2025-01-15T10:30:00Z"
+        },
+        "display": "2025-01-15T10:30:00+00:00"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
   }
 ]

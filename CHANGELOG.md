@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Geohash false positives** - measurements like `500cm` no longer match as geohash coordinates
 - **NaN panic in confidence sorting** - use `total_cmp()` instead of `partial_cmp().unwrap()` for safe float comparison
 - **UTF-8 truncation panic** - string truncation in graph output now uses character count, not byte slicing
+- **Conversion de-duplication** - now shows different values for the same format (e.g., both int-be and int-le epoch interpretations)
+- **Currency rate cache retry** - library consumers in long-running processes can now recover from transient network failures (5-minute retry backoff)
 
 ## [0.6.0] - 2025-12-29
 
