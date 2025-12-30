@@ -6,13 +6,22 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Cached exchange rates with TTL.
-static RATE_CACHE: OnceLock<Option<RateCache>> = OnceLock::new();
+/// Cached exchange rates with retry support.
+/// Uses OnceLock for the Mutex itself, then Mutex for interior mutability.
+static RATE_CACHE: OnceLock<Mutex<CacheState>> = OnceLock::new();
+
+/// Internal cache state that supports retry on failure.
+struct CacheState {
+    /// The cached rates, if available.
+    cache: Option<RateCache>,
+    /// When we last attempted to fetch (for backoff on failures).
+    last_attempt: Option<DateTime<Utc>>,
+}
 
 /// Exchange rates relative to EUR (ECB base currency).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,13 +45,52 @@ impl RateCache {
     /// Cache TTL: 24 hours.
     const TTL_HOURS: i64 = 24;
 
+    /// Retry interval after failed fetch: 5 minutes.
+    const RETRY_MINUTES: i64 = 5;
+
     /// Get or initialize the global rate cache.
-    pub fn get() -> Option<&'static RateCache> {
-        RATE_CACHE.get_or_init(Self::load_or_fetch).as_ref()
+    ///
+    /// This will retry fetching if the cache is empty and enough time has passed
+    /// since the last failed attempt (5 minute backoff). This ensures library
+    /// consumers in long-running processes can recover from transient failures.
+    pub fn get() -> Option<RateCache> {
+        let state_mutex = RATE_CACHE.get_or_init(|| {
+            Mutex::new(CacheState {
+                cache: None,
+                last_attempt: None,
+            })
+        });
+
+        let mut state = state_mutex.lock().ok()?;
+
+        // If we have a valid (non-expired) cache, return it
+        if let Some(ref cache) = state.cache {
+            if !cache.is_expired() {
+                return Some(cache.clone());
+            }
+        }
+
+        // Check if we should attempt a fetch (respecting backoff)
+        let should_fetch = match state.last_attempt {
+            None => true,
+            Some(last) => Utc::now() - last > Duration::minutes(Self::RETRY_MINUTES),
+        };
+
+        if should_fetch {
+            state.last_attempt = Some(Utc::now());
+
+            if let Some(fresh) = Self::load_or_fetch_inner(state.cache.as_ref()) {
+                state.cache = Some(fresh.clone());
+                return Some(fresh);
+            }
+        }
+
+        // Return stale cache if available, otherwise None
+        state.cache.clone()
     }
 
     /// Load from disk or fetch from API.
-    fn load_or_fetch() -> Option<Self> {
+    fn load_or_fetch_inner(existing: Option<&RateCache>) -> Option<Self> {
         // Try loading from disk first
         if let Some(cached) = Self::load_from_disk() {
             if !cached.is_expired() {
@@ -53,17 +101,18 @@ impl RateCache {
                 fresh.save_to_disk();
                 return Some(fresh);
             }
-            // Fetch failed, use stale cache
+            // Fetch failed, use stale disk cache
             return Some(cached);
         }
 
-        // No cache, must fetch
+        // No disk cache, try to fetch
         if let Some(fresh) = Self::fetch_from_api() {
             fresh.save_to_disk();
             return Some(fresh);
         }
 
-        None
+        // Return existing in-memory cache if we have one (even if stale)
+        existing.cloned()
     }
 
     /// Check if cache has expired.

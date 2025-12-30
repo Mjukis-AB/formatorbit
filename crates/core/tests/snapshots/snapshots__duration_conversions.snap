@@ -131,6 +131,40 @@ expression: "&result.conversions"
   },
   {
     "value": {
+      "type": "String",
+      "value": "2h30m"
+    },
+    "target_format": "duration",
+    "display": "[dynamic timestamp]",
+    "path": [
+      "duration",
+      "duration"
+    ],
+    "steps": [
+      {
+        "format": "duration",
+        "value": {
+          "type": "String",
+          "value": "2h30m"
+        },
+        "display": "as seconds"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "Duration",
+          "millis": 9000000,
+          "human": "2h30m"
+        }
+      }
+    ]
+  },
+  {
+    "value": {
       "type": "Int",
       "value": {
         "value": 9000
@@ -181,6 +215,35 @@ expression: "&result.conversions"
           }
         },
         "display": "9000"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 9000
+      }
+    },
+    "target_format": "duration",
+    "display": "2h30m",
+    "path": [
+      "duration",
+      "duration"
+    ],
+    "steps": [
+      {
+        "format": "duration",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 9000
+          }
+        },
+        "display": "2h30m"
       }
     ],
     "is_lossy": false,

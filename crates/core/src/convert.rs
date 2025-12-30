@@ -215,11 +215,20 @@ pub fn find_all_conversions(
     source_format: Option<&str>,
 ) -> Vec<Conversion> {
     let mut results = Vec::new();
-    let mut seen_formats: std::collections::HashSet<String> = std::collections::HashSet::new();
+    // Track seen conversions by (target_format, display) to allow different values
+    // for the same format (e.g., int-be → epoch vs int-le → epoch with different dates)
+    let mut seen_results: std::collections::HashSet<(String, String)> =
+        std::collections::HashSet::new();
+    // Track seen formats for BFS exploration (to prevent infinite loops)
+    // We use a separate set here because we still want to explore from a format only once
+    // per unique value, but we want to show all unique results.
+    let mut seen_for_bfs: std::collections::HashSet<(String, String)> =
+        std::collections::HashSet::new();
 
     // Pre-exclude the source format if specified
     if let Some(excluded) = exclude_format {
-        seen_formats.insert(excluded.to_string());
+        // For the source format, we block all display values
+        seen_results.insert((excluded.to_string(), String::new()));
     }
 
     // Queue holds (value, path_so_far, steps_so_far)
@@ -236,7 +245,8 @@ pub fn find_all_conversions(
         if format.can_format(initial) {
             if let Some(display) = format.format(initial) {
                 let format_id = format.id().to_string();
-                if seen_formats.insert(format_id.clone()) {
+                let result_key = (format_id.clone(), display.clone());
+                if seen_results.insert(result_key) {
                     // Build path including source format if provided
                     let mut path = source_format
                         .map(|s| vec![s.to_string()])
@@ -279,12 +289,8 @@ pub fn find_all_conversions(
             // Get conversions from all formats
             for format in formats {
                 for conv in format.conversions(&current_value) {
-                    // Skip if we've already seen this format
-                    if seen_formats.contains(&conv.target_format) {
-                        continue;
-                    }
-
-                    seen_formats.insert(conv.target_format.clone());
+                    let result_key = (conv.target_format.clone(), conv.display.clone());
+                    let bfs_key = (conv.target_format.clone(), conv.display.clone());
 
                     // Build the full path (format IDs only, for backwards compat)
                     let mut full_path = current_path.clone();
@@ -307,21 +313,24 @@ pub fn find_all_conversions(
                         });
                     }
 
-                    results.push(Conversion {
-                        value: conv.value.clone(),
-                        target_format: conv.target_format.clone(),
-                        display: conv.display,
-                        path: full_path.clone(),
-                        steps: full_steps.clone(),
-                        is_lossy: conv.is_lossy,
-                        priority: conv.priority,
-                        kind: conv.kind,
-                        display_only: conv.display_only,
-                        rich_display: conv.rich_display,
-                    });
+                    // Add to results if we haven't seen this exact (format, display) pair
+                    if seen_results.insert(result_key) {
+                        results.push(Conversion {
+                            value: conv.value.clone(),
+                            target_format: conv.target_format.clone(),
+                            display: conv.display.clone(),
+                            path: full_path.clone(),
+                            steps: full_steps.clone(),
+                            is_lossy: conv.is_lossy,
+                            priority: conv.priority,
+                            kind: conv.kind,
+                            display_only: conv.display_only,
+                            rich_display: conv.rich_display.clone(),
+                        });
+                    }
 
-                    // Add to queue for further exploration (unless terminal)
-                    if !conv.display_only {
+                    // Add to queue for further exploration (unless terminal or already explored)
+                    if !conv.display_only && seen_for_bfs.insert(bfs_key) {
                         queue.push_back((conv.value, full_path, full_steps));
                     }
                 }

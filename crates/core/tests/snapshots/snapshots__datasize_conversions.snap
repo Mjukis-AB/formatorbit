@@ -337,6 +337,35 @@ expression: "&result.conversions"
         "value": 1024
       }
     },
+    "target_format": "datasize",
+    "display": "1 KiB",
+    "path": [
+      "datasize",
+      "datasize"
+    ],
+    "steps": [
+      {
+        "format": "datasize",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 1024
+          }
+        },
+        "display": "1 KiB"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Encoding",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Int",
+      "value": {
+        "value": 1024
+      }
+    },
     "target_format": "msgpack",
     "display": "CD0400",
     "path": [
