@@ -1,6 +1,9 @@
+mod config;
 mod pipe;
 mod pretty;
 mod tokenizer;
+
+use config::Config;
 
 use std::fs;
 use std::io::{self, IsTerminal, Read};
@@ -74,7 +77,25 @@ PIPE MODE:
     cat server.log | forb              Annotate log lines
     cat server.log | forb -t 0.5       Lower confidence threshold
     cat server.log | forb -H           Highlight matches inline
-    cat server.log | forb -o uuid,hex  Only look for specific formats"##;
+    cat server.log | forb -o uuid,hex  Only look for specific formats
+
+CONFIGURATION:
+  Settings can be configured via CLI flags, environment variables, or config file.
+  Precedence: CLI args > Environment vars > Config file > Defaults
+
+  Setting      | CLI flag       | Env var            | Default
+  -------------|----------------|--------------------|---------
+  limit        | -l, --limit    | FORB_LIMIT         | 5
+  threshold    | -t, --threshold| FORB_THRESHOLD     | 0.8
+  no_color     | -C, --no-color | FORB_NO_COLOR      | false
+  url_timeout  | --url-timeout  | FORB_URL_TIMEOUT   | 30
+  url_max_size | --url-max-size | FORB_URL_MAX_SIZE  | 10M
+  max_tokens   | --max-tokens   | FORB_MAX_TOKENS    | 50
+
+  Config file location: forb --config-path
+  Generate default config: forb --config-init
+
+  Note: NO_COLOR env var is also respected (https://no-color.org/)"##;
 
 #[derive(Parser)]
 #[command(name = "forb")]
@@ -109,8 +130,8 @@ struct Cli {
     /// Minimum confidence threshold for showing annotations (0.0-1.0)
     ///
     /// In pipe mode, only values with confidence >= threshold are annotated.
-    #[arg(long, short = 't', default_value = "0.8")]
-    threshold: f32,
+    #[arg(long, short = 't')]
+    threshold: Option<f32>,
 
     /// Highlight interesting values inline with color
     ///
@@ -128,16 +149,16 @@ struct Cli {
     /// Maximum conversions to show per interpretation (0 = unlimited)
     ///
     /// With priority sorting, the most valuable conversions come first.
-    #[arg(long, short = 'l', default_value = "5")]
-    limit: usize,
+    #[arg(long, short = 'l')]
+    limit: Option<usize>,
 
     /// Force pipe mode even when stdin is a TTY (for testing)
     #[arg(long, hide = true)]
     force_pipe: bool,
 
     /// Maximum tokens to analyze per line in pipe mode
-    #[arg(long, default_value = "50", hide = true)]
-    max_tokens: usize,
+    #[arg(long, hide = true)]
+    max_tokens: Option<usize>,
 
     /// Disable colored output
     #[arg(long, short = 'C')]
@@ -190,12 +211,20 @@ struct Cli {
     verbose: u8,
 
     /// Timeout for URL fetches in seconds
-    #[arg(long, default_value = "30", value_name = "SECS")]
-    url_timeout: u64,
+    #[arg(long, value_name = "SECS")]
+    url_timeout: Option<u64>,
 
     /// Maximum response size for URL fetches (e.g., 10M, 50M, 1G)
-    #[arg(long, default_value = "10M", value_name = "SIZE")]
-    url_max_size: String,
+    #[arg(long, value_name = "SIZE")]
+    url_max_size: Option<String>,
+
+    /// Show config file path
+    #[arg(long)]
+    config_path: bool,
+
+    /// Generate default config file (see --config-path for location)
+    #[arg(long)]
+    config_init: bool,
 }
 
 /// Parse size string like "10M", "50M", "1G" into bytes.
@@ -464,7 +493,34 @@ fn read_input(input: &str, url_timeout: u64, url_max_size: u64) -> Result<InputD
 fn main() {
     let cli = Cli::parse();
 
-    // Initialize tracing based on verbosity level
+    // Handle --config-path
+    if cli.config_path {
+        match Config::path() {
+            Some(path) => println!("{}", path.display()),
+            None => {
+                eprintln!(
+                    "{}: Cannot determine config directory",
+                    "error".red().bold()
+                );
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
+    // Handle --config-init
+    if cli.config_init {
+        match config::init_config() {
+            Ok(path) => println!("Created config file: {}", path.display()),
+            Err(e) => {
+                eprintln!("{}: {}", "error".red().bold(), e);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
+    // Initialize tracing based on verbosity level (before config loading for logging)
     let level = match cli.verbose {
         0 => LevelFilter::OFF,
         1 => LevelFilter::DEBUG,
@@ -480,6 +536,117 @@ fn main() {
             .with_writer(std::io::stderr)
             .init();
     }
+
+    // Load config file and merge with CLI args
+    // Precedence: CLI args > Environment vars > Config file > Defaults
+    let file_config = Config::load();
+
+    if let Some(path) = Config::path() {
+        if path.exists() {
+            tracing::debug!("Loaded config from: {}", path.display());
+        } else {
+            tracing::trace!("No config file at: {}", path.display());
+        }
+    }
+
+    // Merge settings with source logging
+    let limit = if let Some(l) = cli.limit {
+        tracing::debug!("limit = {} (from CLI)", l);
+        l
+    } else {
+        let l = file_config.limit();
+        let source = if std::env::var("FORB_LIMIT").is_ok() {
+            "env FORB_LIMIT"
+        } else if file_config.limit.is_some() {
+            "config file"
+        } else {
+            "default"
+        };
+        tracing::debug!("limit = {} (from {})", l, source);
+        l
+    };
+
+    let threshold = if let Some(t) = cli.threshold {
+        tracing::debug!("threshold = {} (from CLI)", t);
+        t
+    } else {
+        let t = file_config.threshold();
+        let source = if std::env::var("FORB_THRESHOLD").is_ok() {
+            "env FORB_THRESHOLD"
+        } else if file_config.threshold.is_some() {
+            "config file"
+        } else {
+            "default"
+        };
+        tracing::debug!("threshold = {} (from {})", t, source);
+        t
+    };
+
+    let no_color = if cli.no_color {
+        tracing::debug!("no_color = true (from CLI)");
+        true
+    } else {
+        let nc = file_config.no_color();
+        if nc {
+            let source = if std::env::var("NO_COLOR").is_ok() {
+                "env NO_COLOR"
+            } else if std::env::var("FORB_NO_COLOR").is_ok() {
+                "env FORB_NO_COLOR"
+            } else {
+                "config file"
+            };
+            tracing::debug!("no_color = true (from {})", source);
+        }
+        nc
+    };
+
+    let url_timeout = if let Some(t) = cli.url_timeout {
+        tracing::debug!("url_timeout = {} (from CLI)", t);
+        t
+    } else {
+        let t = file_config.url_timeout();
+        let source = if std::env::var("FORB_URL_TIMEOUT").is_ok() {
+            "env FORB_URL_TIMEOUT"
+        } else if file_config.url_timeout.is_some() {
+            "config file"
+        } else {
+            "default"
+        };
+        tracing::debug!("url_timeout = {} (from {})", t, source);
+        t
+    };
+
+    let url_max_size_str = if let Some(ref s) = cli.url_max_size {
+        tracing::debug!("url_max_size = {} (from CLI)", s);
+        s.clone()
+    } else {
+        let s = file_config.url_max_size();
+        let source = if std::env::var("FORB_URL_MAX_SIZE").is_ok() {
+            "env FORB_URL_MAX_SIZE"
+        } else if file_config.url_max_size.is_some() {
+            "config file"
+        } else {
+            "default"
+        };
+        tracing::debug!("url_max_size = {} (from {})", s, source);
+        s
+    };
+
+    let max_tokens = if let Some(m) = cli.max_tokens {
+        tracing::debug!("max_tokens = {} (from CLI)", m);
+        m
+    } else {
+        let m = file_config.max_tokens();
+        let source = if std::env::var("FORB_MAX_TOKENS").is_ok() {
+            "env FORB_MAX_TOKENS"
+        } else if file_config.max_tokens.is_some() {
+            "config file"
+        } else {
+            "default"
+        };
+        tracing::debug!("max_tokens = {} (from {})", m, source);
+        m
+    };
 
     if cli.formats {
         print_formats();
@@ -507,16 +674,16 @@ fn main() {
     // Only use pipe mode if stdin is not a terminal AND no direct input was given
     let stdin_is_pipe = !std::io::stdin().is_terminal();
     if (stdin_is_pipe && cli.input.is_none()) || cli.force_pipe {
-        let config = pipe::PipeModeConfig {
-            threshold: cli.threshold,
+        let pipe_config = pipe::PipeModeConfig {
+            threshold,
             highlight: cli.highlight,
-            max_tokens: cli.max_tokens,
+            max_tokens,
             json: cli.json,
             format_filter: cli.only.clone().unwrap_or_default(),
             packet_mode,
         };
 
-        if let Err(e) = pipe::run_pipe_mode(&forb, &config) {
+        if let Err(e) = pipe::run_pipe_mode(&forb, &pipe_config) {
             eprintln!("{}: Failed to read stdin: {}", "error".red().bold(), e);
             std::process::exit(1);
         }
@@ -548,7 +715,7 @@ fn main() {
     };
 
     // Parse URL size limit
-    let url_max_size = match parse_size(&cli.url_max_size) {
+    let url_max_size = match parse_size(&url_max_size_str) {
         Ok(size) => size,
         Err(e) => {
             eprintln!("{}: invalid --url-max-size: {}", "error".red().bold(), e);
@@ -557,7 +724,7 @@ fn main() {
     };
 
     // Process input (handle @path syntax for file reading)
-    let (input, file_path) = match read_input(&raw_input, cli.url_timeout, url_max_size) {
+    let (input, file_path) = match read_input(&raw_input, url_timeout, url_max_size) {
         Ok(InputData::Text(text)) => (text, None),
         Ok(InputData::Binary { base64, path }) => (base64, Some(path)),
         Err(e) => {
@@ -567,13 +734,13 @@ fn main() {
     };
 
     // Handle --no-color flag
-    if cli.no_color {
+    if no_color {
         set_override(false);
     }
 
     // Build pretty config
     let pretty_config = PrettyConfig {
-        color: !cli.no_color,
+        color: !no_color,
         indent: "  ",
         compact: cli.compact,
         packet_mode,
@@ -690,10 +857,10 @@ fn main() {
     if cli.raw {
         for result in &results_to_show {
             // Print conversion values only
-            let conversions_to_show: Vec<_> = if cli.limit == 0 {
+            let conversions_to_show: Vec<_> = if limit == 0 {
                 result.conversions.iter().collect()
             } else {
-                result.conversions.iter().take(cli.limit).collect()
+                result.conversions.iter().take(limit).collect()
             };
 
             for conv in conversions_to_show {
@@ -724,10 +891,10 @@ fn main() {
             println!("  {}", "(no conversions available)".dimmed());
         } else {
             // Apply limit (0 = unlimited)
-            let conversions_to_show: Vec<_> = if cli.limit == 0 {
+            let conversions_to_show: Vec<_> = if limit == 0 {
                 result.conversions.iter().collect()
             } else {
-                result.conversions.iter().take(cli.limit).collect()
+                result.conversions.iter().take(limit).collect()
             };
 
             for conv in &conversions_to_show {

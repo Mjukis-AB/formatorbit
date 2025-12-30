@@ -42,3 +42,6 @@ base64 = { workspace = true }
 ureq = "2"
 is-terminal = "0.4"
 unicode-width = "0.2"
+dirs = "5"
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
