@@ -1,5 +1,7 @@
 //! Built-in format implementations.
 
+mod archive;
+mod audio;
 mod base64;
 mod binary;
 mod char;
@@ -15,6 +17,7 @@ mod duration;
 mod epoch;
 mod escape;
 mod expr;
+mod font;
 mod graph;
 mod hash;
 mod hex;
@@ -28,6 +31,8 @@ mod jwt;
 mod msgpack;
 mod nanoid;
 mod octal;
+mod office;
+mod pdf;
 mod plist;
 mod protobuf;
 mod temperature;
@@ -36,7 +41,10 @@ mod units;
 mod url;
 mod utf8;
 mod uuid;
+mod video;
 
+pub use archive::ArchiveFormat;
+pub use audio::AudioFormat;
 pub use base64::Base64Format;
 pub use binary::BinaryFormat;
 pub use char::CharFormat;
@@ -51,6 +59,7 @@ pub use duration::DurationFormat;
 pub use epoch::EpochFormat;
 pub use escape::EscapeFormat;
 pub use expr::ExprFormat;
+pub use font::FontFormat;
 pub use graph::GraphFormat;
 pub use hash::HashFormat;
 pub use hex::HexFormat;
@@ -64,6 +73,8 @@ pub use jwt::JwtFormat;
 pub use msgpack::MsgPackFormat;
 pub use nanoid::NanoIdFormat;
 pub use octal::OctalFormat;
+pub use office::OfficeFormat;
+pub use pdf::PdfFormat;
 pub use plist::PlistFormat;
 pub use protobuf::ProtobufFormat;
 pub use temperature::TemperatureFormat;
@@ -75,3 +86,4 @@ pub use units::{
 pub use url::UrlEncodingFormat;
 pub use utf8::Utf8Format;
 pub use uuid::UuidFormat;
+pub use video::VideoFormat;

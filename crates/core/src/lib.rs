@@ -26,13 +26,14 @@ pub use format::{Format, FormatInfo};
 pub use types::*;
 
 use formats::{
-    AngleFormat, AreaFormat, Base64Format, BinaryFormat, BytesToIntFormat, CharFormat, ColorFormat,
-    CoordsFormat, CuidFormat, CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat,
-    DigestFormat, DurationFormat, EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, GraphFormat,
-    HashFormat, HexFormat, HexdumpFormat, ImageFormat, IpAddrFormat, IsbnFormat, JsonFormat,
-    JwtFormat, LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat, PlistFormat, PressureFormat,
+    AngleFormat, ArchiveFormat, AreaFormat, AudioFormat, Base64Format, BinaryFormat,
+    BytesToIntFormat, CharFormat, ColorFormat, CoordsFormat, CuidFormat, CurrencyFormat,
+    DataSizeFormat, DateTimeFormat, DecimalFormat, DigestFormat, DurationFormat, EnergyFormat,
+    EpochFormat, EscapeFormat, ExprFormat, FontFormat, GraphFormat, HashFormat, HexFormat,
+    HexdumpFormat, ImageFormat, IpAddrFormat, IsbnFormat, JsonFormat, JwtFormat, LengthFormat,
+    MsgPackFormat, NanoIdFormat, OctalFormat, OfficeFormat, PdfFormat, PlistFormat, PressureFormat,
     ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
-    UuidFormat, VolumeFormat, WeightFormat,
+    UuidFormat, VideoFormat, VolumeFormat, WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -94,6 +95,13 @@ impl Formatorbit {
                 Box::new(MsgPackFormat),
                 Box::new(PlistFormat),
                 Box::new(ProtobufFormat),
+                // Binary file metadata formats
+                Box::new(ArchiveFormat),
+                Box::new(AudioFormat),
+                Box::new(FontFormat),
+                Box::new(OfficeFormat),
+                Box::new(PdfFormat),
+                Box::new(VideoFormat),
             ],
         }
     }
