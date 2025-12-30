@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Binary file metadata extraction** - detect and extract metadata from common binary formats:
+  - **PDF** - pages, version, title, author, creation/modification dates, encryption status
+  - **Audio** (MP3, FLAC, WAV, OGG, AAC) - duration, bitrate, sample rate, channels, ID3 tags (artist, album, title, year, genre)
+  - **Video** (MP4, MKV, WebM) - duration, resolution, video/audio codecs, frame rate
+  - **Office** (DOCX, XLSX, PPTX) - title, author, page/sheet/slide count, creation/modification dates
+  - **Archive** (ZIP, TAR, GZIP) - file count, total/compressed size, compression ratio, file listing
+  - **Font** (TTF, OTF, WOFF, WOFF2) - font family, style, version, glyph count
 - **Configuration file support** - persistent settings in TOML config file
   - Location: `forb --config-path` (platform-specific: `~/.config/forb/` on Linux, `Library/Application Support/forb/` on macOS)
   - Generate default config: `forb --config-init`
