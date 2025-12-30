@@ -174,6 +174,9 @@ pub enum FfiRichDisplay {
         value: f64,
         label: Option<String>,
     },
+    Markdown {
+        content: String,
+    },
 }
 
 impl From<RichDisplay> for FfiRichDisplay {
@@ -210,6 +213,7 @@ impl From<RichDisplay> for FfiRichDisplay {
                 data: base64_decode(&data),
             },
             RichDisplay::Progress { value, label } => Self::Progress { value, label },
+            RichDisplay::Markdown { content } => Self::Markdown { content },
         }
     }
 }
