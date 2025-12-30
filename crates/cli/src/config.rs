@@ -61,6 +61,23 @@ url_max_size = "10M"
 #
 # # Block specific conversion paths (source:target or full path)
 # paths = ["hex:msgpack", "uuid:epoch-seconds"]
+
+# ============================================================================
+# Analytics Configuration (optional)
+# ============================================================================
+# Privacy-first usage tracking. Data is stored locally in human-readable TOML.
+
+# [analytics]
+# # Enable local tracking (default: true)
+# # Data stored at: forb analytics status (to see path)
+# enabled = true
+#
+# # Anonymous contribution (default: false)
+# # When enabled, periodically sends anonymized aggregate stats
+# contribute = false
+#
+# # Days between automatic contributions (if contribute = true)
+# contribute_interval = 7
 "#;
 
 /// Priority configuration as stored in TOML.
@@ -83,6 +100,28 @@ pub struct CliBlockingConfig {
     pub paths: Vec<String>,
 }
 
+/// Analytics configuration.
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct CliAnalyticsConfig {
+    /// Enable local tracking (default: true).
+    pub enabled: bool,
+    /// Enable anonymous contribution (default: false).
+    pub contribute: bool,
+    /// Days between automatic contributions.
+    pub contribute_interval: u32,
+}
+
+impl Default for CliAnalyticsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            contribute: false,
+            contribute_interval: 7,
+        }
+    }
+}
+
 /// Configuration loaded from file and environment.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -97,6 +136,9 @@ pub struct Config {
     pub priority: Option<CliPriorityConfig>,
     /// Blocking configuration.
     pub blocking: Option<CliBlockingConfig>,
+    /// Analytics configuration.
+    #[serde(default)]
+    pub analytics: CliAnalyticsConfig,
 }
 
 impl Config {
@@ -175,6 +217,23 @@ impl Config {
         Self::env_var("FORB_MAX_TOKENS")
             .or(self.max_tokens)
             .unwrap_or(50)
+    }
+
+    /// Get analytics_enabled with precedence: env > config > default (true).
+    pub fn analytics_enabled(&self) -> bool {
+        // FORB_ANALYTICS=0 or FORB_ANALYTICS=false disables analytics
+        if let Ok(val) = std::env::var("FORB_ANALYTICS") {
+            return !matches!(val.to_lowercase().as_str(), "0" | "false" | "no" | "off");
+        }
+        self.analytics.enabled
+    }
+
+    /// Get analytics contribution setting.
+    ///
+    /// Reserved for Phase 3 (contribution) functionality.
+    #[allow(dead_code)]
+    pub fn analytics_contribute(&self) -> bool {
+        self.analytics.contribute
     }
 
     /// Convert CLI config to core ConversionConfig.

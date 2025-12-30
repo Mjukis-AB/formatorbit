@@ -45,3 +45,4 @@ unicode-width = "0.2"
 dirs = "5"
 toml = "0.8"
 serde = { version = "1", features = ["derive"] }
+chrono = { workspace = true }
