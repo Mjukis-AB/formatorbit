@@ -476,6 +476,164 @@ pub fn format_full(data: &AnalyticsData) -> String {
     toml::to_string_pretty(data).unwrap_or_else(|_| "Failed to serialize data".to_string())
 }
 
+// =============================================================================
+// Anonymous Contribution (Phase 3)
+// =============================================================================
+
+/// TelemetryDeck app ID for forb.
+const TELEMETRY_APP_ID: &str = "DAE80104-B36F-4556-96FB-7288CD467265";
+
+/// TelemetryDeck ingest endpoint.
+const TELEMETRY_ENDPOINT: &str = "https://nom.telemetrydeck.com/v2/";
+
+/// Anonymized payload for contribution.
+///
+/// This is what gets sent to TelemetryDeck. Contains only aggregate
+/// counts and percentages - never any input data or PII.
+#[derive(Debug, Clone, Serialize)]
+pub struct ContributionPayload {
+    /// CLI version.
+    pub version: String,
+    /// Platform (darwin/linux/windows).
+    pub platform: String,
+    /// Top 10 source formats (comma-separated).
+    pub top_formats: String,
+    /// Top 10 conversion targets (comma-separated).
+    pub top_targets: String,
+    /// Total invocations.
+    pub total_invocations: u64,
+    /// Pipe mode usage count.
+    pub pipe_mode_uses: u64,
+    /// File input usage count.
+    pub file_input_uses: u64,
+    /// URL fetch usage count.
+    pub url_fetch_uses: u64,
+    /// JSON output usage count.
+    pub json_output_uses: u64,
+    /// Days since tracking started.
+    pub tracking_days: u64,
+}
+
+impl ContributionPayload {
+    /// Create a contribution payload from analytics data.
+    #[must_use]
+    pub fn from_data(data: &AnalyticsData) -> Self {
+        // Get top 10 formats by usage
+        let mut formats: Vec<_> = data.format_usage.iter().collect();
+        formats.sort_by(|a, b| b.1.cmp(a.1));
+        let top_formats: Vec<_> = formats.iter().take(10).map(|(k, _)| k.as_str()).collect();
+
+        // Get top 10 conversion targets
+        let mut targets: Vec<_> = data.conversion_targets.iter().collect();
+        targets.sort_by(|a, b| b.1.cmp(a.1));
+        let top_targets: Vec<_> = targets.iter().take(10).map(|(k, _)| k.as_str()).collect();
+
+        // Calculate days since tracking started
+        let tracking_days = data
+            .started_at
+            .map(|started| {
+                let now = Utc::now();
+                now.signed_duration_since(started).num_days().max(0) as u64
+            })
+            .unwrap_or(0);
+
+        Self {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            platform: std::env::consts::OS.to_string(),
+            top_formats: top_formats.join(","),
+            top_targets: top_targets.join(","),
+            total_invocations: data.session_stats.total_invocations,
+            pipe_mode_uses: data.session_stats.pipe_mode_uses,
+            file_input_uses: data.session_stats.file_input_uses,
+            url_fetch_uses: data.session_stats.url_fetch_uses,
+            json_output_uses: data.session_stats.json_output_uses,
+            tracking_days,
+        }
+    }
+
+    /// Format as human-readable preview.
+    #[must_use]
+    pub fn format_preview(&self) -> String {
+        let mut out = String::new();
+        out.push_str("Contribution preview (exactly what will be sent):\n\n");
+        out.push_str(&format!("  version: {}\n", self.version));
+        out.push_str(&format!("  platform: {}\n", self.platform));
+        out.push_str(&format!("  tracking_days: {}\n", self.tracking_days));
+        out.push_str(&format!(
+            "  total_invocations: {}\n",
+            self.total_invocations
+        ));
+        out.push_str(&format!("  pipe_mode_uses: {}\n", self.pipe_mode_uses));
+        out.push_str(&format!("  file_input_uses: {}\n", self.file_input_uses));
+        out.push_str(&format!("  url_fetch_uses: {}\n", self.url_fetch_uses));
+        out.push_str(&format!("  json_output_uses: {}\n", self.json_output_uses));
+        out.push_str(&format!("  top_formats: {}\n", self.top_formats));
+        out.push_str(&format!("  top_targets: {}\n", self.top_targets));
+        out.push_str(
+            "\nNo input data, filenames, or personally identifiable information is included.\n",
+        );
+        out
+    }
+}
+
+/// TelemetryDeck signal format.
+#[derive(Debug, Serialize)]
+struct TelemetrySignal {
+    #[serde(rename = "appID")]
+    app_id: String,
+    #[serde(rename = "clientUser")]
+    client_user: String,
+    #[serde(rename = "type")]
+    signal_type: String,
+    payload: ContributionPayload,
+}
+
+/// Send contribution to TelemetryDeck.
+///
+/// Returns Ok(()) on success, Err with message on failure.
+pub fn send_contribution(data: &AnalyticsData) -> Result<(), String> {
+    use sha2::{Digest, Sha256};
+
+    // Generate a random client ID (not persisted = no tracking across contributions)
+    let random_id = uuid::Uuid::new_v4().to_string();
+    let mut hasher = Sha256::new();
+    hasher.update(random_id.as_bytes());
+    let client_user = format!("{:x}", hasher.finalize());
+
+    let payload = ContributionPayload::from_data(data);
+
+    let signal = TelemetrySignal {
+        app_id: TELEMETRY_APP_ID.to_string(),
+        client_user,
+        signal_type: "forb.contribution".to_string(),
+        payload,
+    };
+
+    // TelemetryDeck expects an array of signals
+    let signals = vec![signal];
+    let body =
+        serde_json::to_string(&signals).map_err(|e| format!("Failed to serialize: {}", e))?;
+
+    let response = ureq::post(TELEMETRY_ENDPOINT)
+        .set("Content-Type", "application/json; charset=utf-8")
+        .timeout(std::time::Duration::from_secs(10))
+        .send_string(&body)
+        .map_err(|e| format!("Failed to send: {}", e))?;
+
+    if response.status() >= 200 && response.status() < 300 {
+        Ok(())
+    } else {
+        Err(format!("Server returned status {}", response.status()))
+    }
+}
+
+/// Format the contribution payload as JSON (for --analytics preview).
+#[allow(dead_code)]
+pub fn format_contribution_json(data: &AnalyticsData) -> String {
+    let payload = ContributionPayload::from_data(data);
+    serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "Failed to serialize".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
