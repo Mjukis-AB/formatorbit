@@ -590,6 +590,103 @@ $ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655
 
 Use `-l 0` to show all conversions, or `-l N` to show top N.
 
+## Configuration
+
+Settings can be configured via CLI flags, environment variables, or a config file.
+
+**Precedence:** CLI args > Environment vars > Config file > Defaults
+
+| Setting | CLI flag | Env var | Default |
+|---------|----------|---------|---------|
+| limit | `-l`, `--limit` | `FORB_LIMIT` | 5 |
+| threshold | `-t`, `--threshold` | `FORB_THRESHOLD` | 0.8 |
+| no_color | `-C`, `--no-color` | `FORB_NO_COLOR` | false |
+| url_timeout | `--url-timeout` | `FORB_URL_TIMEOUT` | 30 |
+| url_max_size | `--url-max-size` | `FORB_URL_MAX_SIZE` | 10M |
+
+```bash
+# Show config file location
+forb --config-path
+
+# Generate default config file
+forb --config-init
+```
+
+### Priority & Blocking
+
+Customize which conversions are shown and in what order:
+
+```toml
+# ~/.config/forb/config.toml (Linux) or ~/Library/Application Support/forb/config.toml (macOS)
+
+[priority]
+# Reorder categories (default: Primary, Structured, Semantic, Encoding, Raw)
+category_order = ["Semantic", "Structured", "Primary", "Encoding", "Raw"]
+
+# Adjust individual format priorities
+[priority.format_priority]
+datetime = 10        # Bump up within category
+uuid = 5             # Also bump up, but less
+hex = -10            # Push down within category
+ipv4 = "Primary"     # Move to different category
+
+[blocking]
+# Never show these formats
+formats = ["octal", "binary"]
+
+# Block specific conversion paths
+paths = ["hex:msgpack", "uuid:epoch-seconds"]
+```
+
+Use `--show-paths` to see blockable paths for any input:
+
+```bash
+$ forb --show-paths 691E01B8
+▶ hex (92% confidence)
+  4 bytes
+  → ipv4: 105.30.1.184 [hex:ipv4]
+  → epoch-seconds: 2025-11-19T17:43:20Z [hex:int-be:epoch-seconds]
+```
+
+## Analytics
+
+Local usage tracking helps improve forb. Enabled by default, stored in human-readable TOML.
+
+**Privacy-first design:**
+- No input data, filenames, or URLs are ever recorded
+- Only aggregate counts: which formats are used, which features, CLI version
+- Data stored locally at `~/.config/forb/analytics.toml`
+- Disable anytime via `FORB_ANALYTICS=0` or config
+
+```bash
+# View analytics status and summary
+forb --analytics status
+
+# View full analytics data
+forb --analytics show
+
+# Clear all analytics data
+forb --analytics clear
+
+# Disable analytics
+export FORB_ANALYTICS=0
+# Or add to config: [analytics] enabled = false
+```
+
+### Anonymous Contribution
+
+Optionally share aggregate usage data to help prioritize development:
+
+```bash
+# Preview what would be sent (no network call)
+forb --analytics preview
+
+# Send anonymous data
+forb --analytics contribute
+```
+
+**What's sent:** CLI version, platform, top 10 formats/conversions, feature usage counts. Fresh random ID per contribution (no cross-session tracking).
+
 ## License
 
 MIT
