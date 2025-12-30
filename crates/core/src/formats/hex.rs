@@ -15,6 +15,9 @@ use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
 };
 
+/// Maximum bytes to display in hex output before truncating.
+const MAX_HEX_DISPLAY_BYTES: usize = 64;
+
 pub struct HexFormat;
 
 /// Known hash types by byte length (not hex length).
@@ -370,9 +373,8 @@ impl Format for HexFormat {
             return vec![];
         };
 
-        // Show truncated hex for large data (max 64 bytes = 128 hex chars)
-        let max_bytes = 64;
-        let display = Self::encode_truncated(bytes, max_bytes);
+        // Show truncated hex for large data
+        let display = Self::encode_truncated(bytes, MAX_HEX_DISPLAY_BYTES);
 
         vec![Conversion {
             value: CoreValue::String(Self::encode(bytes)),
@@ -382,7 +384,7 @@ impl Format for HexFormat {
             steps: vec![ConversionStep {
                 format: "hex".to_string(),
                 value: CoreValue::String(Self::encode(bytes)),
-                display: Self::encode_truncated(bytes, max_bytes),
+                display: Self::encode_truncated(bytes, MAX_HEX_DISPLAY_BYTES),
             }],
             is_lossy: false,
             priority: ConversionPriority::Encoding,

@@ -7,31 +7,6 @@ expression: "&result.conversions"
   {
     "value": {
       "type": "String",
-      "value": "1024"
-    },
-    "target_format": "result",
-    "display": "1024",
-    "path": [
-      "datasize",
-      "result"
-    ],
-    "steps": [
-      {
-        "format": "result",
-        "value": {
-          "type": "String",
-          "value": "1024"
-        },
-        "display": "1024"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Primary",
-    "kind": "Representation"
-  },
-  {
-    "value": {
-      "type": "String",
       "value": "0x400"
     },
     "target_format": "hex-int",

@@ -206,6 +206,17 @@ impl CoordsFormat {
         (1..=3).contains(&suffix_len) && suffix.chars().all(|c| c.is_ascii_alphabetic())
     }
 
+    /// Check if input looks like hex (contains uppercase A-F or starts with 0x).
+    /// This helps avoid false positives where hex values are parsed as geohash.
+    fn looks_like_hex(s: &str) -> bool {
+        // Has 0x prefix
+        if s.starts_with("0x") || s.starts_with("0X") {
+            return true;
+        }
+        // Contains uppercase A-F (hex uses A-F, geohash uses lowercase only)
+        s.chars().any(|c| matches!(c, 'A'..='F'))
+    }
+
     /// Parse geohash format.
     fn parse_geohash(input: &str) -> Option<(f64, f64, String)> {
         let input_lower = input.to_lowercase();
@@ -215,6 +226,12 @@ impl CoordsFormat {
 
         // Skip if it looks like a measurement (e.g., "500cm", "10km")
         if Self::looks_like_measurement(&input_lower) {
+            return None;
+        }
+
+        // Skip if it looks like hex (e.g., "691E01B8")
+        // Real geohash strings use only lowercase letters
+        if Self::looks_like_hex(input) {
             return None;
         }
 

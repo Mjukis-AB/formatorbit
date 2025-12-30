@@ -7,31 +7,6 @@ expression: "&result.conversions"
   {
     "value": {
       "type": "String",
-      "value": "9000"
-    },
-    "target_format": "result",
-    "display": "9000",
-    "path": [
-      "duration",
-      "result"
-    ],
-    "steps": [
-      {
-        "format": "result",
-        "value": {
-          "type": "String",
-          "value": "9000"
-        },
-        "display": "9000"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Primary",
-    "kind": "Representation"
-  },
-  {
-    "value": {
-      "type": "String",
       "value": "0x2328"
     },
     "target_format": "hex-int",
