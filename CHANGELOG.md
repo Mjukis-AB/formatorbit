@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Priority and blocking configuration** - customize conversion output ordering and filtering:
+  - Category reordering: `[priority] category_order = ["Semantic", "Structured", ...]`
+  - Per-format priority: `[priority.format_priority] datetime = 10` (bump up) or `ipv4 = "Primary"` (change category)
+  - Format blocking: `[blocking] formats = ["octal", "binary"]`
+  - Path blocking: `[blocking] paths = ["hex:msgpack", "uuid:epoch-seconds"]`
+  - New `--show-paths` flag to display blockable paths for each conversion
+- **Local usage analytics** - privacy-first tracking to help improve forb:
+  - Enabled by default, stored in human-readable TOML at `~/.config/forb/analytics.toml`
+  - Tracks format usage, conversion targets, and feature usage (pipe mode, file input, etc.)
+  - No input data, filenames, or URLs are ever recorded
+  - Disable via `FORB_ANALYTICS=0` or config file `[analytics] enabled = false`
+  - Commands: `--analytics status`, `--analytics show`, `--analytics clear`
+- **Anonymous contribution** - opt-in sharing of aggregate usage data:
+  - `--analytics preview` - see exactly what would be sent
+  - `--analytics contribute` - send anonymous data to TelemetryDeck
+  - Fresh random UUID per contribution (no cross-session tracking)
+  - Only aggregate counts: top formats, feature usage, CLI version, platform
 - **Binary file metadata extraction** - detect and extract metadata from common binary formats:
   - **PDF** - pages, version, title, author, creation/modification dates, encryption status
   - **Audio** (MP3, FLAC, WAV, OGG, AAC) - duration, bitrate, sample rate, channels, ID3 tags (artist, album, title, year, genre)

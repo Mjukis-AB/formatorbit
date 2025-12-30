@@ -141,9 +141,11 @@ Formatorbit is a well-architected Rust CLI tool and library for automatic data f
    - Format plugins (though removed, could be useful for power users)
    - Easier testing of individual formats
 
-2. **`ConversionPriority` Could Be Configurable** (Future Enhancement)
+2. **`ConversionPriority` Could Be Configurable** ✅ DONE
 
-   Users might want different priority orderings. Consider exposing this as a config option.
+   ~~Users might want different priority orderings. Consider exposing this as a config option.~~
+
+   Implemented in v0.6.1: Priority config with category reordering and per-format adjustments, plus format/path blocking.
 
 ---
 
@@ -210,12 +212,12 @@ Formatorbit is a well-architected Rust CLI tool and library for automatic data f
 
 Formatorbit is a high-quality Rust project with excellent architecture and user experience.
 
-| Priority | Remaining Issue | Effort |
-|----------|-----------------|--------|
-| Low | Add `validate()` to more formats | Medium |
-| Low | Refactor long `main()` function | Medium |
-| Future | Registry pattern for formats | High |
-| Future | Configurable conversion priority | Medium |
-| Future | Async FFI support | High |
+| Priority | Remaining Issue | Effort | Status |
+|----------|-----------------|--------|--------|
+| Low | Add `validate()` to more formats | Medium | |
+| Low | Refactor long `main()` function | Medium | |
+| Future | Registry pattern for formats | High | |
+| ~~Future~~ | ~~Configurable conversion priority~~ | ~~Medium~~ | ✅ Done |
+| Future | Async FFI support | High | |
 
 The codebase is well-maintained, follows Rust best practices, and the CLI provides a genuinely useful tool for developers working with binary data and various formats.
