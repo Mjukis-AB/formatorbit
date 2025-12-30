@@ -101,13 +101,15 @@ impl UrlEncodingFormat {
         false
     }
 
-    /// Truncate a string for display purposes.
+    /// Truncate a string for display purposes (UTF-8 safe).
     fn truncate_display(s: &str, max_chars: usize) -> String {
-        if s.len() <= max_chars {
+        let char_count = s.chars().count();
+        if char_count <= max_chars {
             s.to_string()
         } else {
-            let remaining = s.len() - max_chars;
-            format!("{}... ({} more chars)", &s[..max_chars], remaining)
+            let remaining = char_count - max_chars;
+            let truncated: String = s.chars().take(max_chars).collect();
+            format!("{}... ({} more chars)", truncated, remaining)
         }
     }
 }

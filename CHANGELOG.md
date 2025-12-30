@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **URL fetch limits** - configurable timeout and size limits for `@https://...` fetches
+  - `--url-timeout <SECS>` - timeout in seconds (default: 30)
+  - `--url-max-size <SIZE>` - max response size, e.g., `10M`, `50M`, `1G` (default: 10M)
+  - Helpful error messages guide users to the relevant flag when limits are exceeded
 - **Format validation errors** - helpful error messages when `--only` or `--from` fails to parse
   - `forb --only json '{bad'` → `error: Cannot parse as json: line 1, column 2: key must be a string`
   - `forb --only uuid 'not-uuid'` → `error: Cannot parse as uuid: invalid character...`
@@ -21,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Geohash false positives** - measurements like `500cm` no longer match as geohash coordinates
+- **NaN panic in confidence sorting** - use `total_cmp()` instead of `partial_cmp().unwrap()` for safe float comparison
+- **UTF-8 truncation panic** - string truncation in graph output now uses character count, not byte slicing
 
 ## [0.6.0] - 2025-12-29
 
