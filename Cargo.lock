@@ -782,11 +782,13 @@ dependencies = [
  "is-terminal",
  "serde",
  "serde_json",
+ "sha2",
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",
  "unicode-width 0.2.2",
  "ureq",
+ "uuid",
 ]
 
 [[package]]

@@ -1292,6 +1292,42 @@ fn handle_analytics_command(cmd: &str) {
                 std::process::exit(1);
             }
         }
+        "preview" => {
+            let data = analytics::AnalyticsData::load();
+            let payload = analytics::ContributionPayload::from_data(&data);
+            println!("{}", payload.format_preview());
+        }
+        "contribute" => {
+            let data = analytics::AnalyticsData::load();
+
+            if data.session_stats.total_invocations == 0 {
+                eprintln!(
+                    "{}: No analytics data to contribute yet.",
+                    "note".yellow().bold()
+                );
+                eprintln!("Use forb a few times first, then try again.");
+                return;
+            }
+
+            // Show preview first
+            let payload = analytics::ContributionPayload::from_data(&data);
+            println!("{}", payload.format_preview());
+            println!("Sending to TelemetryDeck...");
+
+            match analytics::send_contribution(&data) {
+                Ok(()) => {
+                    println!(
+                        "{} Thank you for contributing anonymous usage data!",
+                        "✓".green().bold()
+                    );
+                    println!("This helps improve forb for everyone.");
+                }
+                Err(e) => {
+                    eprintln!("{}: {}", "error".red().bold(), e);
+                    std::process::exit(1);
+                }
+            }
+        }
         other => {
             eprintln!(
                 "{}: Unknown analytics command '{}'\n",
@@ -1299,12 +1335,14 @@ fn handle_analytics_command(cmd: &str) {
                 other
             );
             eprintln!("Available commands:");
-            eprintln!("  --analytics status   Show analytics status and summary");
-            eprintln!("  --analytics show     Show full analytics data (TOML)");
-            eprintln!("  --analytics clear    Clear all analytics data");
-            eprintln!("  --analytics enable   Show how to enable analytics");
-            eprintln!("  --analytics disable  Show how to disable analytics");
-            eprintln!("  --analytics path     Show analytics file path");
+            eprintln!("  --analytics status     Show analytics status and summary");
+            eprintln!("  --analytics show       Show full analytics data (TOML)");
+            eprintln!("  --analytics preview    Preview what would be sent");
+            eprintln!("  --analytics contribute Send anonymous usage data");
+            eprintln!("  --analytics clear      Clear all analytics data");
+            eprintln!("  --analytics enable     Show how to enable analytics");
+            eprintln!("  --analytics disable    Show how to disable analytics");
+            eprintln!("  --analytics path       Show analytics file path");
             std::process::exit(1);
         }
     }
