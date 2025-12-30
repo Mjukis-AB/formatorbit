@@ -100,6 +100,9 @@ pub enum RichDisplay {
         #[serde(skip_serializing_if = "Option::is_none")]
         label: Option<String>,
     },
+
+    /// Markdown-formatted text
+    Markdown { content: String },
 }
 
 /// A node in a tree structure for hierarchical data display.
@@ -178,6 +181,10 @@ impl RichDisplay {
             Self::Progress { value, label } => label
                 .clone()
                 .unwrap_or_else(|| format!("{:.0}%", value * 100.0)),
+            Self::Markdown { content } => {
+                // First line or truncated
+                content.lines().next().unwrap_or("").to_string()
+            }
         }
     }
 
@@ -207,6 +214,7 @@ impl RichDisplay {
             Self::PacketLayout { compact, .. } => compact.clone(),
             Self::Image { data, .. } => data.clone(),
             Self::Progress { value, .. } => format!("{:.4}", value),
+            Self::Markdown { content } => content.clone(),
         }
     }
 }
