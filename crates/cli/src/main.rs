@@ -1,3 +1,4 @@
+mod analytics;
 mod config;
 mod pipe;
 mod pretty;
@@ -95,7 +96,13 @@ CONFIGURATION:
   Config file location: forb --config-path
   Generate default config: forb --config-init
 
-  Note: NO_COLOR env var is also respected (https://no-color.org/)"##;
+  Note: NO_COLOR env var is also respected (https://no-color.org/)
+
+ANALYTICS:
+  Local usage tracking is enabled by default (stored in human-readable TOML).
+  Use --analytics status to view current analytics data.
+  Use --analytics disable to learn how to opt out.
+  Set FORB_ANALYTICS=0 to disable temporarily."##;
 
 #[derive(Parser)]
 #[command(name = "forb")]
@@ -232,6 +239,10 @@ struct Cli {
     /// Generate default config file (see --config-path for location)
     #[arg(long)]
     config_init: bool,
+
+    /// Analytics subcommand (status, show, clear, enable, disable)
+    #[arg(long, value_name = "COMMAND")]
+    analytics: Option<String>,
 }
 
 /// Parse size string like "10M", "50M", "1G" into bytes.
@@ -527,6 +538,12 @@ fn main() {
         return;
     }
 
+    // Handle --analytics subcommand (early, before config loading for disable)
+    if let Some(ref cmd) = cli.analytics {
+        handle_analytics_command(cmd);
+        return;
+    }
+
     // Initialize tracing based on verbosity level (before config loading for logging)
     let level = match cli.verbose {
         0 => LevelFilter::OFF,
@@ -660,6 +677,41 @@ fn main() {
         return;
     }
 
+    // Initialize analytics tracker
+    let mut tracker = analytics::AnalyticsTracker::new(file_config.analytics_enabled());
+    tracker.record_invocation();
+
+    // Record config customizations
+    if cli.limit.is_some() || file_config.limit.is_some() {
+        tracker.record_limit_customized();
+    }
+    if cli.threshold.is_some() || file_config.threshold.is_some() {
+        tracker.record_threshold_customized();
+    }
+    if let Some(ref only) = cli.only {
+        tracker.record_only_filter(only);
+    }
+    if file_config.priority.is_some() {
+        tracker.record_priority_customized();
+    }
+    if let Some(ref blocking) = file_config.blocking {
+        tracker.record_blocking_customized(&blocking.formats);
+    }
+
+    // Record output mode
+    if cli.json {
+        tracker.record_json_output();
+    }
+    if cli.raw {
+        tracker.record_raw_output();
+    }
+    if cli.dot {
+        tracker.record_dot_output();
+    }
+    if cli.mermaid {
+        tracker.record_mermaid_output();
+    }
+
     // Create Formatorbit with optional conversion config from file
     let forb = if let Some(conv_config) = file_config.conversion_config() {
         if cli.verbose > 0 {
@@ -689,6 +741,8 @@ fn main() {
     // Only use pipe mode if stdin is not a terminal AND no direct input was given
     let stdin_is_pipe = !std::io::stdin().is_terminal();
     if (stdin_is_pipe && cli.input.is_none()) || cli.force_pipe {
+        tracker.record_pipe_mode();
+
         let pipe_config = pipe::PipeModeConfig {
             threshold,
             highlight: cli.highlight,
@@ -739,6 +793,13 @@ fn main() {
     };
 
     // Process input (handle @path syntax for file reading)
+    // Track file/URL input for analytics
+    if raw_input.starts_with("@http://") || raw_input.starts_with("@https://") {
+        tracker.record_url_fetch();
+    } else if raw_input.starts_with('@') {
+        tracker.record_file_input();
+    }
+
     let (input, file_path) = match read_input(&raw_input, url_timeout, url_max_size) {
         Ok(InputData::Text(text)) => (text, None),
         Ok(InputData::Binary { base64, path }) => (base64, Some(path)),
@@ -795,6 +856,14 @@ fn main() {
     } else {
         forb.convert_all_filtered(&input, &format_filter)
     };
+
+    // Track format usage and conversion targets for analytics
+    for result in &results {
+        tracker.record_format_usage(&result.interpretation.source_format);
+        for conv in &result.conversions {
+            tracker.record_conversion_target(&conv.target_format);
+        }
+    }
 
     if results.is_empty() {
         if cli.raw {
@@ -1165,4 +1234,78 @@ fn escape_mermaid_label(s: &str) -> String {
         .replace('\r', "")
         .replace('[', "(")
         .replace(']', ")")
+}
+
+/// Handle analytics subcommand.
+fn handle_analytics_command(cmd: &str) {
+    use colored::Colorize;
+
+    match cmd {
+        "status" => {
+            let data = analytics::AnalyticsData::load();
+            // For status, check if enabled via config
+            let config = Config::load();
+            let enabled = config.analytics_enabled();
+            println!("{}", analytics::format_status(&data, enabled));
+        }
+        "show" => {
+            let data = analytics::AnalyticsData::load();
+            println!("{}", analytics::format_full(&data));
+        }
+        "clear" => {
+            let mut tracker = analytics::AnalyticsTracker::new(true);
+            tracker.data_mut().clear();
+            tracker.save();
+            println!("Analytics data cleared.");
+        }
+        "enable" => {
+            println!(
+                "To enable analytics, add to your config file ({}):",
+                Config::path()
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|| "~/.config/forb/config.toml".to_string())
+            );
+            println!();
+            println!("  [analytics]");
+            println!("  enabled = true");
+            println!();
+            println!("Or unset FORB_ANALYTICS environment variable.");
+        }
+        "disable" => {
+            println!(
+                "To disable analytics, add to your config file ({}):",
+                Config::path()
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|| "~/.config/forb/config.toml".to_string())
+            );
+            println!();
+            println!("  [analytics]");
+            println!("  enabled = false");
+            println!();
+            println!("Or set FORB_ANALYTICS=0 environment variable.");
+        }
+        "path" => {
+            if let Some(path) = analytics::AnalyticsData::path() {
+                println!("{}", path.display());
+            } else {
+                eprintln!("{}: Cannot determine analytics path", "error".red().bold());
+                std::process::exit(1);
+            }
+        }
+        other => {
+            eprintln!(
+                "{}: Unknown analytics command '{}'\n",
+                "error".red().bold(),
+                other
+            );
+            eprintln!("Available commands:");
+            eprintln!("  --analytics status   Show analytics status and summary");
+            eprintln!("  --analytics show     Show full analytics data (TOML)");
+            eprintln!("  --analytics clear    Clear all analytics data");
+            eprintln!("  --analytics enable   Show how to enable analytics");
+            eprintln!("  --analytics disable  Show how to disable analytics");
+            eprintln!("  --analytics path     Show analytics file path");
+            std::process::exit(1);
+        }
+    }
 }
