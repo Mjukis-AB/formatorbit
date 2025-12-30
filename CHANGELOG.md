@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Configuration file support** - persistent settings in TOML config file
+  - Location: `forb --config-path` (platform-specific: `~/.config/forb/` on Linux, `Library/Application Support/forb/` on macOS)
+  - Generate default config: `forb --config-init`
+  - Precedence: CLI args > Environment vars (`FORB_*`) > Config file > Defaults
+  - Configurable: `limit`, `threshold`, `no_color`, `url_timeout`, `url_max_size`, `max_tokens`
+  - Verbose mode (`-v`) logs which source each setting came from
+  - Supports `NO_COLOR` standard (https://no-color.org/)
 - **URL fetch limits** - configurable timeout and size limits for `@https://...` fetches
   - `--url-timeout <SECS>` - timeout in seconds (default: 30)
   - `--url-max-size <SIZE>` - max response size, e.g., `10M`, `50M`, `1G` (default: 10M)
