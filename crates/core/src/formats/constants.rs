@@ -373,6 +373,189 @@ const EXIT_CODES: &[Constant] = &[
     },
 ];
 
+/// Magic numbers and hexspeak - memorable hex values used in programming.
+/// File signatures, debug markers, and hexspeak words.
+const MAGIC_NUMBERS: &[Constant] = &[
+    // File signatures
+    Constant {
+        name: "CAFEBABE",
+        aliases: &[],
+        value: 0xCAFEBABE,
+        trait_display: "CAFEBABE (Java class file)",
+        parse_display: "0xCAFEBABE (Java class file signature)",
+    },
+    Constant {
+        name: "FEEDFACE",
+        aliases: &[],
+        value: 0xFEEDFACE,
+        trait_display: "FEEDFACE (Mach-O 32-bit BE)",
+        parse_display: "0xFEEDFACE (Mach-O 32-bit big-endian)",
+    },
+    Constant {
+        name: "FEEDFACF",
+        aliases: &[],
+        value: 0xFEEDFACF,
+        trait_display: "FEEDFACF (Mach-O 64-bit BE)",
+        parse_display: "0xFEEDFACF (Mach-O 64-bit big-endian)",
+    },
+    Constant {
+        name: "CEFAEDFE",
+        aliases: &[],
+        value: 0xCEFAEDFE,
+        trait_display: "CEFAEDFE (Mach-O 32-bit LE)",
+        parse_display: "0xCEFAEDFE (Mach-O 32-bit little-endian)",
+    },
+    Constant {
+        name: "CFFAEDFE",
+        aliases: &[],
+        value: 0xCFFAEDFE,
+        trait_display: "CFFAEDFE (Mach-O 64-bit LE)",
+        parse_display: "0xCFFAEDFE (Mach-O 64-bit little-endian)",
+    },
+    // Debug/memory markers
+    Constant {
+        name: "DEADBEEF",
+        aliases: &[],
+        value: 0xDEADBEEF,
+        trait_display: "DEADBEEF (debug memory marker)",
+        parse_display: "0xDEADBEEF (debug memory marker)",
+    },
+    Constant {
+        name: "DEADC0DE",
+        aliases: &[],
+        value: 0xDEADC0DE,
+        trait_display: "DEADC0DE (dead code marker)",
+        parse_display: "0xDEADC0DE (dead code marker)",
+    },
+    Constant {
+        name: "DEAD10CC",
+        aliases: &[],
+        value: 0xDEAD10CC,
+        trait_display: "DEAD10CC (iOS: lock held during suspend)",
+        parse_display: "0xDEAD10CC (iOS crash: lock held during suspend)",
+    },
+    Constant {
+        name: "DEADFA11",
+        aliases: &[],
+        value: 0xDEADFA11,
+        trait_display: "DEADFA11 (iOS: watchdog timeout)",
+        parse_display: "0xDEADFA11 (iOS crash: watchdog timeout)",
+    },
+    Constant {
+        name: "BAADF00D",
+        aliases: &[],
+        value: 0xBAADF00D,
+        trait_display: "BAADF00D (Windows: uninitialized heap)",
+        parse_display: "0xBAADF00D (Windows LocalAlloc uninitialized)",
+    },
+    Constant {
+        name: "BAADCAFE",
+        aliases: &[],
+        value: 0xBAADCAFE,
+        trait_display: "BAADCAFE (debug marker)",
+        parse_display: "0xBAADCAFE (debug marker)",
+    },
+    Constant {
+        name: "FEE1DEAD",
+        aliases: &[],
+        value: 0xFEE1DEAD,
+        trait_display: "FEE1DEAD (Linux reboot magic)",
+        parse_display: "0xFEE1DEAD (Linux reboot() syscall magic)",
+    },
+    Constant {
+        name: "FEEDBABE",
+        aliases: &[],
+        value: 0xFEEDBABE,
+        trait_display: "FEEDBABE (debug marker)",
+        parse_display: "0xFEEDBABE (debug marker)",
+    },
+    Constant {
+        name: "C0EDBABE",
+        aliases: &[],
+        value: 0xC0EDBABE,
+        trait_display: "C0EDBABE (debug marker)",
+        parse_display: "0xC0EDBABE (debug marker)",
+    },
+    // Hexspeak words
+    Constant {
+        name: "CAFE",
+        aliases: &[],
+        value: 0xCAFE,
+        trait_display: "hexspeak: cafe",
+        parse_display: "0xCAFE (hexspeak: cafe)",
+    },
+    Constant {
+        name: "BABE",
+        aliases: &[],
+        value: 0xBABE,
+        trait_display: "hexspeak: babe",
+        parse_display: "0xBABE (hexspeak: babe)",
+    },
+    Constant {
+        name: "BEEF",
+        aliases: &[],
+        value: 0xBEEF,
+        trait_display: "hexspeak: beef",
+        parse_display: "0xBEEF (hexspeak: beef)",
+    },
+    Constant {
+        name: "DEAD",
+        aliases: &[],
+        value: 0xDEAD,
+        trait_display: "hexspeak: dead",
+        parse_display: "0xDEAD (hexspeak: dead)",
+    },
+    Constant {
+        name: "FACE",
+        aliases: &[],
+        value: 0xFACE,
+        trait_display: "hexspeak: face",
+        parse_display: "0xFACE (hexspeak: face)",
+    },
+    Constant {
+        name: "FADE",
+        aliases: &[],
+        value: 0xFADE,
+        trait_display: "hexspeak: fade",
+        parse_display: "0xFADE (hexspeak: fade)",
+    },
+    Constant {
+        name: "FEED",
+        aliases: &[],
+        value: 0xFEED,
+        trait_display: "hexspeak: feed",
+        parse_display: "0xFEED (hexspeak: feed)",
+    },
+    Constant {
+        name: "C0DE",
+        aliases: &[],
+        value: 0xC0DE,
+        trait_display: "hexspeak: code",
+        parse_display: "0xC0DE (hexspeak: code)",
+    },
+    Constant {
+        name: "C0FFEE",
+        aliases: &[],
+        value: 0xC0FFEE,
+        trait_display: "hexspeak: coffee",
+        parse_display: "0xC0FFEE (hexspeak: coffee)",
+    },
+    Constant {
+        name: "D00D",
+        aliases: &[],
+        value: 0xD00D,
+        trait_display: "hexspeak: dude",
+        parse_display: "0xD00D (hexspeak: dude)",
+    },
+    Constant {
+        name: "ABBA",
+        aliases: &[],
+        value: 0xABBA,
+        trait_display: "hexspeak: ABBA",
+        parse_display: "0xABBA (hexspeak: ABBA)",
+    },
+];
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
@@ -388,6 +571,7 @@ fn find_constants_for_value(value: i128) -> Vec<&'static Constant> {
         SIGNALS,
         ASCII_CTRL,
         EXIT_CODES,
+        MAGIC_NUMBERS,
     ] {
         for constant in list {
             if constant.value == value {
@@ -410,6 +594,7 @@ fn find_constant_by_name(name: &str) -> Option<&'static Constant> {
         SIGNALS,
         ASCII_CTRL,
         EXIT_CODES,
+        MAGIC_NUMBERS,
     ] {
         for constant in list {
             // Match canonical name
@@ -631,5 +816,58 @@ mod tests {
         };
         let conversions = format.conversions(&value);
         assert!(conversions.is_empty());
+    }
+
+    // Magic number tests
+    #[test]
+    fn test_parse_deadbeef() {
+        let format = ConstantsFormat;
+        let results = format.parse("DEADBEEF");
+        assert_eq!(results.len(), 1);
+        if let CoreValue::Int { value, .. } = &results[0].value {
+            assert_eq!(*value, 0xDEADBEEF);
+        } else {
+            panic!("Expected Int");
+        }
+        assert!(results[0].description.contains("debug"));
+    }
+
+    #[test]
+    fn test_parse_cafebabe() {
+        let format = ConstantsFormat;
+        let results = format.parse("cafebabe");
+        assert_eq!(results.len(), 1);
+        if let CoreValue::Int { value, .. } = &results[0].value {
+            assert_eq!(*value, 0xCAFEBABE);
+        } else {
+            panic!("Expected Int");
+        }
+        assert!(results[0].description.contains("Java"));
+    }
+
+    #[test]
+    fn test_trait_deadbeef() {
+        let format = ConstantsFormat;
+        let value = CoreValue::Int {
+            value: 0xDEADBEEF,
+            original_bytes: None,
+        };
+        let conversions = format.conversions(&value);
+        assert_eq!(conversions.len(), 1);
+        assert!(conversions[0].display.contains("DEADBEEF"));
+        assert!(conversions[0].display.contains("debug"));
+    }
+
+    #[test]
+    fn test_trait_hexspeak_cafe() {
+        let format = ConstantsFormat;
+        let value = CoreValue::Int {
+            value: 0xCAFE,
+            original_bytes: None,
+        };
+        let conversions = format.conversions(&value);
+        assert_eq!(conversions.len(), 1);
+        assert!(conversions[0].display.contains("hexspeak"));
+        assert!(conversions[0].display.contains("cafe"));
     }
 }
