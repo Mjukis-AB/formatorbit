@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-12-31
+
 ### Added
+- **Magic numbers and hexspeak** - recognize well-known hex values as traits on integers:
+  - File signatures: `CAFEBABE` (Java class file), `FEEDFACE` (Mach-O)
+  - Debug markers: `DEADBEEF`, `BAADF00D`, `DEADC0DE`, `FEE1DEAD`
+  - Hexspeak words: `CAFE`, `BABE`, `BEEF`, `DEAD`, `FACE`, `FADE`, `FEED`, `C0DE`, `C0FFEE`
+  - Example: `forb DEADBEEF` shows "✓ DEADBEEF (debug memory marker)"
 - **Unix permissions format** - bidirectional octal ↔ symbolic conversion:
   - Parse octal: `755`, `0755`, `0o755`, `4755` (with setuid/setgid/sticky)
   - Parse symbolic: `rwxr-xr-x`, `rw-r--r--`, `drwxr-xr-x` (with optional type prefix)
@@ -68,12 +75,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented for: json, uuid, hex, base64, plist, ip, color, msgpack, protobuf
 - **Nautical miles** - length format now supports `nmi`, `NM`, `nautical mile(s)` (1852 meters)
 
+### Changed
+- **Reduced output noise** - significantly cleaner output for common inputs:
+  - `DEADBEEF`: 211 → 58 lines (-72%), 4 → 2 interpretations
+  - `test`: 147 → 17 conversions (-88%)
+  - Traits now grouped on one line by default (use `-v` for separate lines with paths)
+  - Hashes moved to bottom of output
+- **Smarter format detection** - fewer false positives:
+  - Hash: removed CRC-32 (8 chars) - too ambiguous for magic numbers
+  - Base64: reject pure hex strings like `DEADBEEF`
+  - Color: require `#` prefix for 6/8 char hex colors
+  - Root-based blocking prevents nonsensical conversion chains (text→ipv4, hex→color)
+
 ### Fixed
 - **Geohash false positives** - measurements like `500cm` no longer match as geohash coordinates
 - **NaN panic in confidence sorting** - use `total_cmp()` instead of `partial_cmp().unwrap()` for safe float comparison
 - **UTF-8 truncation panic** - string truncation in graph output now uses character count, not byte slicing
 - **Conversion de-duplication** - now shows different values for the same format (e.g., both int-be and int-le epoch interpretations)
 - **Currency rate cache retry** - library consumers in long-running processes can now recover from transient network failures (5-minute retry backoff)
+- **Base64 detection** - strings that decode to valid UTF-8 (like `dGVzdGFz`) now correctly recognized as base64
 
 ## [0.6.0] - 2025-12-29
 
