@@ -61,13 +61,13 @@ pub use types::*;
 
 use formats::{
     AngleFormat, ArchiveFormat, AreaFormat, AudioFormat, Base64Format, BinaryFormat,
-    BytesToIntFormat, CharFormat, ColorFormat, CoordsFormat, CuidFormat, CurrencyFormat,
-    DataSizeFormat, DateTimeFormat, DecimalFormat, DigestFormat, DurationFormat, EnergyFormat,
-    EpochFormat, EscapeFormat, ExprFormat, FontFormat, GraphFormat, HashFormat, HexFormat,
-    HexdumpFormat, ImageFormat, IpAddrFormat, IsbnFormat, JsonFormat, JwtFormat, LengthFormat,
-    MsgPackFormat, NanoIdFormat, OctalFormat, OfficeFormat, PdfFormat, PlistFormat, PressureFormat,
-    ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, Utf8Format,
-    UuidFormat, VideoFormat, VolumeFormat, WeightFormat,
+    BytesToIntFormat, CharFormat, CidrFormat, ColorFormat, ConstantsFormat, CoordsFormat,
+    CuidFormat, CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat, DigestFormat,
+    DurationFormat, EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, FontFormat, GraphFormat,
+    HashFormat, HexFormat, HexdumpFormat, ImageFormat, IpAddrFormat, IsbnFormat, JsonFormat,
+    JwtFormat, LengthFormat, MsgPackFormat, NanoIdFormat, OctalFormat, OfficeFormat, PdfFormat,
+    PermissionsFormat, PlistFormat, PressureFormat, ProtobufFormat, SpeedFormat, TemperatureFormat,
+    UlidFormat, UrlEncodingFormat, Utf8Format, UuidFormat, VideoFormat, VolumeFormat, WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -126,9 +126,12 @@ impl Formatorbit {
             Box::new(UlidFormat),
             Box::new(UuidFormat),
             Box::new(IpAddrFormat),
+            Box::new(CidrFormat),
             Box::new(CoordsFormat),
             Box::new(ColorFormat),
             Box::new(CharFormat),
+            Box::new(ConstantsFormat),
+            Box::new(PermissionsFormat),
             Box::new(UrlEncodingFormat),
             // Identifier formats (lower specificity)
             Box::new(IsbnFormat),

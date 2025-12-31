@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Unix permissions format** - bidirectional octal ↔ symbolic conversion:
+  - Parse octal: `755`, `0755`, `0o755`, `4755` (with setuid/setgid/sticky)
+  - Parse symbolic: `rwxr-xr-x`, `rw-r--r--`, `drwxr-xr-x` (with optional type prefix)
+  - Shows detailed breakdown: owner/group/other permissions with descriptions
+- **CIDR notation format** - parse network ranges with detailed info:
+  - Parse IPv4 CIDR: `192.168.1.0/24`, `10.0.0.0/8`, `172.16.0.0/12`
+  - Parse IPv6 CIDR: `2001:db8::/32`
+  - Shows: network, netmask, wildcard, broadcast, host range, usable host count
+  - Detects private networks (RFC 1918) and network class
+  - Handles edge cases: /31 (point-to-point), /32 (single host)
+- **Well-known constants lookup** - bidirectional lookup for common developer constants:
+  - **Number → Name**: integers show matching constants as traits (e.g., `443` → "HTTPS (port 443/tcp)")
+  - **Name → Number**: parse constant names to values (e.g., `ssh` → 22, `ESC` → 27, `Not Found` → 404)
+  - Includes: HTTP status codes (200, 404, 500...), ports (22, 80, 443, 3306...), Unix signals (SIGKILL, SIGTERM...), ASCII control chars (ESC, TAB, LF...), exit codes (137=SIGKILL, 139=SIGSEGV...)
 - **Priority and blocking configuration** - customize conversion output ordering and filtering:
   - Category reordering: `[priority] category_order = ["Semantic", "Structured", ...]`
   - Per-format priority: `[priority.format_priority] datetime = 10` (bump up) or `ipv4 = "Primary"` (change category)
