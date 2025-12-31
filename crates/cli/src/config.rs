@@ -98,6 +98,8 @@ pub struct CliBlockingConfig {
     pub formats: Vec<String>,
     /// Blocked paths (source:target or full path).
     pub paths: Vec<String>,
+    /// Root-based blocking (root:target - blocks target regardless of path).
+    pub root_paths: Vec<String>,
 }
 
 /// Analytics configuration.
@@ -265,6 +267,7 @@ impl Config {
         let blocking = self.blocking.as_ref().map(|b| BlockingConfig {
             formats: b.formats.clone(),
             paths: b.paths.clone(),
+            root_paths: b.root_paths.clone(),
         });
 
         // Only return Some if there's actual customization

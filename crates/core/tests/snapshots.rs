@@ -299,3 +299,51 @@ fn test_snapshot_currency() {
 
     stable_snapshot!("currency_interpretation", &result.interpretation);
 }
+
+// =============================================================================
+// Conversion Count Regression Tests
+// =============================================================================
+// These tests track the number of conversions for common inputs.
+// If the count changes unexpectedly, it indicates a potential noise regression.
+
+#[test]
+fn test_conversion_count_text() {
+    let forb = Formatorbit::new();
+    let results = forb.convert_all("hello world");
+    let result = first_result_for_format(&results, "text").unwrap();
+
+    // Track conversion count to catch noise regressions
+    let count = result.conversions.len();
+    stable_snapshot!("text_conversion_count", count);
+}
+
+#[test]
+fn test_conversion_count_short_text() {
+    let forb = Formatorbit::new();
+    let results = forb.convert_all("test");
+    let result = first_result_for_format(&results, "text").unwrap();
+
+    // Short text (4 bytes) previously triggered IPv4/color interpretations
+    let count = result.conversions.len();
+    stable_snapshot!("short_text_conversion_count", count);
+}
+
+#[test]
+fn test_conversion_count_hex() {
+    let forb = Formatorbit::new();
+    let results = forb.convert_all("deadbeef");
+    let result = first_result_for_format(&results, "hex").unwrap();
+
+    let count = result.conversions.len();
+    stable_snapshot!("hex_conversion_count", count);
+}
+
+#[test]
+fn test_conversion_count_number() {
+    let forb = Formatorbit::new();
+    let results = forb.convert_all("12345");
+    let result = first_result_for_format(&results, "decimal").unwrap();
+
+    let count = result.conversions.len();
+    stable_snapshot!("number_conversion_count", count);
+}

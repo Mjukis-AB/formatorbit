@@ -1,0 +1,6 @@
+---
+source: crates/core/tests/snapshots.rs
+assertion_line: 338
+expression: count
+---
+59
