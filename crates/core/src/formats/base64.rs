@@ -30,8 +30,17 @@ impl Base64Format {
         // All-lowercase letters-only strings are likely words or tool names
         // e.g., "xcodegen", "rustfmt", "prettier"
         // Real base64 data almost always has mixed case, digits, or special chars
+        // Exception: if it decodes to valid UTF-8, it's probably intentional base64
         let all_lowercase = s.chars().all(|c| c.is_ascii_lowercase());
         if all_lowercase && s.len() >= 4 && s.len() <= 20 {
+            // Check if it decodes to valid UTF-8 - that's a strong signal
+            // (random words almost never decode to valid UTF-8)
+            if let Ok(bytes) = STANDARD.decode(s) {
+                if std::str::from_utf8(&bytes).is_ok() && !bytes.is_empty() {
+                    // Decoded to valid UTF-8, probably intentional base64
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -51,7 +60,19 @@ impl Base64Format {
         let reasonable_length = s.len() >= 4 && s.len() <= 30;
 
         // If it's camelCase or has common prefixes, likely an identifier
-        has_camel_case || (starts_with_prefix && reasonable_length)
+        // But check if it decodes to valid UTF-8 - that's a strong base64 signal
+        // (random identifiers almost never decode to valid UTF-8)
+        if has_camel_case || (starts_with_prefix && reasonable_length) {
+            if let Ok(bytes) = STANDARD.decode(s) {
+                if std::str::from_utf8(&bytes).is_ok() && !bytes.is_empty() {
+                    // Decoded to valid UTF-8, probably intentional base64
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        false
     }
 }
 
