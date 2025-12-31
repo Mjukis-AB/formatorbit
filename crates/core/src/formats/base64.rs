@@ -18,6 +18,17 @@ impl Base64Format {
                 .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=')
     }
 
+    /// Check if a string looks like pure hex (only 0-9, A-F).
+    /// Hex strings like "DEADBEEF" or "cafebabe" should not be interpreted as base64.
+    fn looks_like_hex(s: &str) -> bool {
+        // Must be at least 2 chars and even length (hex bytes)
+        if s.len() < 2 || !s.len().is_multiple_of(2) {
+            return false;
+        }
+        // All characters must be hex digits
+        s.chars().all(|c| c.is_ascii_hexdigit())
+    }
+
     /// Check if the string looks like a word or identifier rather than base64 data.
     /// These are almost never base64-encoded data.
     fn looks_like_word_or_identifier(s: &str) -> bool {
@@ -102,6 +113,13 @@ impl Format for Base64Format {
         // Quick validation of characters
         if !Self::is_valid_base64_chars(input) {
             trace!("base64: rejected - invalid characters");
+            return vec![];
+        }
+
+        // Skip pure hex strings - they're hex, not base64
+        // e.g., "DEADBEEF", "cafebabe", "0123456789abcdef"
+        if Self::looks_like_hex(input) {
+            debug!(input, "base64: rejected - looks like hex");
             return vec![];
         }
 
@@ -276,5 +294,15 @@ mod tests {
         let format = Base64Format;
         assert!(format.parse("!!!").is_empty());
         assert!(format.parse("abc!def").is_empty());
+    }
+
+    #[test]
+    fn test_hex_not_base64() {
+        // Pure hex strings should not be interpreted as base64
+        let format = Base64Format;
+        assert!(format.parse("DEADBEEF").is_empty());
+        assert!(format.parse("cafebabe").is_empty());
+        assert!(format.parse("0123456789abcdef").is_empty());
+        assert!(format.parse("CAFED00D").is_empty());
     }
 }

@@ -8,6 +8,7 @@ use crate::types::{CoreValue, Interpretation};
 pub struct HashFormat;
 
 /// Known hash types with their hex lengths.
+/// Note: CRC-32 (8 chars) is excluded - too ambiguous, matches any 8-char hex string.
 const HASH_TYPES: &[(&str, usize, &str)] = &[
     ("MD5", 32, "128-bit"),
     ("SHA-1", 40, "160-bit"),
@@ -16,7 +17,7 @@ const HASH_TYPES: &[(&str, usize, &str)] = &[
     ("SHA-384", 96, "384-bit"),
     ("SHA-512", 128, "512-bit"),
     ("RIPEMD-160", 40, "160-bit"),
-    ("CRC-32", 8, "32-bit"),
+    // CRC-32 removed: 8-char hex is too common (DEADBEEF, CAFEBABE, etc.)
     ("MD4", 32, "128-bit"),
     ("SHA-512/256", 64, "256-bit"),
     ("BLAKE2s-256", 64, "256-bit"),
@@ -178,12 +179,16 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_crc32() {
+    fn test_8char_hex_not_hash() {
+        // 8-char hex strings like DEADBEEF should NOT match as hash
+        // They're too ambiguous - could be magic numbers, hex bytes, etc.
         let format = HashFormat;
         let results = format.parse("DEADBEEF");
 
-        assert_eq!(results.len(), 1);
-        assert!(results[0].description.contains("CRC-32"));
+        assert!(
+            results.is_empty(),
+            "8-char hex should not be detected as hash"
+        );
     }
 
     #[test]
