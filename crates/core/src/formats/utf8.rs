@@ -90,7 +90,9 @@ impl Format for Utf8Format {
             CoreValue::String(s) => {
                 let mut conversions = vec![];
 
-                // String → Bytes (enables digest calculation)
+                // String → Bytes (enables digest calculation, hexdump, etc.)
+                // Note: This is NOT display_only because we want hashes to be calculated.
+                // The bytes will chain to hex, base64, hashes, hexdump, etc.
                 conversions.push(Conversion {
                     value: CoreValue::Bytes(s.as_bytes().to_vec()),
                     target_format: "bytes".to_string(),
@@ -100,7 +102,7 @@ impl Format for Utf8Format {
                     steps: vec![],
                     priority: ConversionPriority::Raw,
                     display_only: false,
-                    kind: ConversionKind::default(),
+                    kind: ConversionKind::Conversion,
                     rich_display: vec![],
                 });
 
