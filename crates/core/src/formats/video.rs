@@ -400,6 +400,7 @@ impl Format for VideoFormat {
             priority: ConversionPriority::Structured,
             display_only: true,
             kind: ConversionKind::Representation,
+            hidden: false,
             rich_display,
         }]
     }

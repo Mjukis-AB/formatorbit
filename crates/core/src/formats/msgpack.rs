@@ -117,6 +117,7 @@ impl Format for MsgPackFormat {
             priority,
             display_only: false,
             kind: ConversionKind::default(),
+            hidden: false,
             rich_display: vec![RichDisplayOption::new(RichDisplay::PacketLayout {
                 segments: decoded.segments,
                 compact,

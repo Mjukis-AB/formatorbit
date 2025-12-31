@@ -81,6 +81,7 @@ impl Format for Utf8Format {
                         priority: ConversionPriority::Encoding,
                         display_only: false,
                         kind: ConversionKind::default(),
+                        hidden: false,
                         rich_display: vec![],
                     }]
                 } else {
@@ -93,6 +94,7 @@ impl Format for Utf8Format {
                 // String → Bytes (enables digest calculation, hexdump, etc.)
                 // Note: This is NOT display_only because we want hashes to be calculated.
                 // The bytes will chain to hex, base64, hashes, hexdump, etc.
+                // Hidden: the display "X bytes" is redundant with utf8-bytes showing byte count
                 conversions.push(Conversion {
                     value: CoreValue::Bytes(s.as_bytes().to_vec()),
                     target_format: "bytes".to_string(),
@@ -103,6 +105,7 @@ impl Format for Utf8Format {
                     priority: ConversionPriority::Raw,
                     display_only: false,
                     kind: ConversionKind::Conversion,
+                    hidden: true,
                     rich_display: vec![],
                 });
 
@@ -123,26 +126,10 @@ impl Format for Utf8Format {
                         priority: ConversionPriority::Encoding,
                         display_only: true,
                         kind: ConversionKind::Representation,
+                        hidden: false,
                         rich_display: vec![],
                     });
-
-                    let ascii_hex: String = s
-                        .bytes()
-                        .map(|b| format!("{:02X}", b))
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    conversions.push(Conversion {
-                        value: CoreValue::String(ascii_hex.clone()),
-                        target_format: "ascii-hex".to_string(),
-                        display: ascii_hex,
-                        path: vec!["ascii-hex".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Encoding,
-                        display_only: true,
-                        kind: ConversionKind::Representation,
-                        rich_display: vec![],
-                    });
+                    // Note: ascii-hex removed - utf8-bytes from CharFormat provides this
                 }
 
                 // ASCII/UTF-8 detection trait
@@ -158,6 +145,7 @@ impl Format for Utf8Format {
                         priority: ConversionPriority::Semantic,
                         display_only: true,
                         kind: ConversionKind::Trait,
+                        hidden: false,
                         rich_display: vec![],
                     });
                 } else {
@@ -177,6 +165,7 @@ impl Format for Utf8Format {
                         priority: ConversionPriority::Semantic,
                         display_only: true,
                         kind: ConversionKind::Trait,
+                        hidden: false,
                         rich_display: vec![],
                     });
                 }
@@ -251,12 +240,12 @@ mod tests {
         let value = CoreValue::String("Hi".to_string());
         let conversions = format.conversions(&value);
 
-        // Should have: bytes, ascii-decimal, ascii-hex, is-ascii
+        // Should have: bytes, ascii-decimal, is-ascii
+        // Note: ascii-hex removed (utf8-bytes from CharFormat provides this)
         assert!(conversions.iter().any(|c| c.target_format == "bytes"));
         assert!(conversions
             .iter()
             .any(|c| c.target_format == "ascii-decimal"));
-        assert!(conversions.iter().any(|c| c.target_format == "ascii-hex"));
         assert!(conversions.iter().any(|c| c.target_format == "is-ascii"));
 
         let ascii_dec = conversions
@@ -264,12 +253,6 @@ mod tests {
             .find(|c| c.target_format == "ascii-decimal")
             .unwrap();
         assert_eq!(ascii_dec.display, "72 105"); // 'H' = 72, 'i' = 105
-
-        let ascii_hex = conversions
-            .iter()
-            .find(|c| c.target_format == "ascii-hex")
-            .unwrap();
-        assert_eq!(ascii_hex.display, "48 69"); // 'H' = 0x48, 'i' = 0x69
     }
 
     #[test]

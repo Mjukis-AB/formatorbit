@@ -38,6 +38,7 @@ impl DigestFormat {
             priority: ConversionPriority::Encoding,
             display_only: true, // Don't explore hex strings further
             kind: ConversionKind::Conversion,
+            hidden: false,
             rich_display: vec![],
         }
     }

@@ -180,6 +180,7 @@ fn print_annotation(
                         compact: false,
                         packet_mode: config.packet_mode,
                         show_paths: false, // Not needed in pipe mode
+                        verbose: false,
                     };
                     match config.packet_mode {
                         PacketMode::Compact => {

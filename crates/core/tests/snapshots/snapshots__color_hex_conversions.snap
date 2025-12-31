@@ -538,31 +538,6 @@ expression: "&result.conversions"
   {
     "value": {
       "type": "String",
-      "value": "0b111111110101010100000000"
-    },
-    "target_format": "binary-0b",
-    "display": "0b111111110101010100000000",
-    "path": [
-      "color-hex",
-      "binary-0b"
-    ],
-    "steps": [
-      {
-        "format": "binary-0b",
-        "value": {
-          "type": "String",
-          "value": "0b111111110101010100000000"
-        },
-        "display": "0b111111110101010100000000"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Encoding",
-    "kind": "Representation"
-  },
-  {
-    "value": {
-      "type": "String",
       "value": "/1UA"
     },
     "target_format": "base64",

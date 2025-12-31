@@ -138,6 +138,7 @@ impl DateTimeFormat {
                 priority: ConversionPriority::Semantic,
                 display_only: true,
                 kind: ConversionKind::Conversion,
+                hidden: false,
                 rich_display: vec![],
             },
             Conversion {
@@ -153,6 +154,7 @@ impl DateTimeFormat {
                 priority: ConversionPriority::Semantic,
                 display_only: true,
                 kind: ConversionKind::Conversion,
+                hidden: false,
                 rich_display: vec![],
             },
             Conversion {
@@ -165,6 +167,7 @@ impl DateTimeFormat {
                 priority: ConversionPriority::Semantic,
                 display_only: true,
                 kind: ConversionKind::Representation,
+                hidden: false,
                 rich_display: vec![],
             },
         ]
@@ -420,6 +423,7 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
+                        hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,
@@ -445,6 +449,7 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
+                        hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,
@@ -469,6 +474,7 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
+                        hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,
@@ -495,6 +501,7 @@ impl DateTimeFormat {
                         priority: ConversionPriority::Semantic,
                         display_only: false,
                         kind: ConversionKind::default(),
+                        hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
                             iso: iso.clone(),
                             relative,

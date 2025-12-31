@@ -129,6 +129,7 @@ impl Format for HexdumpFormat {
             priority: ConversionPriority::Encoding,
             display_only: true, // Terminal format - don't re-encode the hexdump string
             kind: ConversionKind::Representation,
+            hidden: false,
             rich_display: vec![],
         }]
     }

@@ -162,6 +162,8 @@ const BLOCKED_PATHS: &[(&str, &str)] = &[
     // Text bytes shouldn't be interpreted as integers (the bytes represent characters, not numbers)
     ("text", "int-be"),
     ("text", "int-le"),
+    // Circular: text → bytes → utf8 just produces the original text again
+    ("text", "utf8"),
 ];
 
 /// Check if a source→target conversion should be blocked (hardcoded rules only).
@@ -329,6 +331,7 @@ pub fn find_all_conversions(
                         priority: ConversionPriority::default(),
                         display_only: false,
                         kind: ConversionKind::default(),
+                        hidden: false,
                         rich_display: vec![],
                     });
                 }
@@ -386,6 +389,7 @@ pub fn find_all_conversions(
                             priority: conv.priority,
                             kind: conv.kind,
                             display_only: conv.display_only,
+                            hidden: conv.hidden,
                             rich_display: conv.rich_display.clone(),
                         });
                     }

@@ -197,6 +197,7 @@ impl Format for Base64Format {
             priority: ConversionPriority::Encoding,
             display_only: true, // Don't explore further from base64 string (avoids codepoints noise)
             kind: ConversionKind::default(),
+            hidden: false,
             rich_display: vec![],
         }]
     }

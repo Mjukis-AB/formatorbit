@@ -612,6 +612,7 @@ impl Format for ImageFormat {
             priority: crate::types::ConversionPriority::Structured,
             display_only: true,
             kind: crate::types::ConversionKind::Representation,
+            hidden: false,
             rich_display,
         });
 

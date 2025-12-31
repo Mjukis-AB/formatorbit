@@ -217,6 +217,7 @@ impl Format for UrlEncodingFormat {
             priority: ConversionPriority::Encoding,
             display_only: true, // Terminal format - don't chain further
             kind: ConversionKind::Conversion,
+            hidden: false,
             rich_display: vec![],
         }]
     }

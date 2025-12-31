@@ -86,6 +86,7 @@ impl Format for JsonFormat {
             priority: ConversionPriority::Structured,
             display_only: false,
             kind: ConversionKind::default(),
+            hidden: false,
             rich_display: vec![],
         }]
     }
