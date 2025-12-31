@@ -226,6 +226,7 @@ impl Format for IpAddrFormat {
                     priority: ConversionPriority::Semantic,
                     display_only: false,
                     kind: ConversionKind::default(),
+                    hidden: false,
                     rich_display: vec![],
                 }]
             }
@@ -246,6 +247,7 @@ impl Format for IpAddrFormat {
                     priority: ConversionPriority::Semantic,
                     display_only: false,
                     kind: ConversionKind::default(),
+                    hidden: false,
                     rich_display: vec![],
                 }];
 

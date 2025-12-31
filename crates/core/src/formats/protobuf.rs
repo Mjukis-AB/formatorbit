@@ -728,6 +728,7 @@ impl Format for ProtobufFormat {
             priority,
             display_only: false,
             kind: ConversionKind::default(),
+            hidden: false,
             rich_display: vec![RichDisplayOption::new(RichDisplay::PacketLayout {
                 segments,
                 compact,

@@ -154,6 +154,7 @@ impl Format for PlistFormat {
             priority: ConversionPriority::Structured,
             display_only: false,
             kind: ConversionKind::default(),
+            hidden: false,
             rich_display: vec![],
         }]
     }

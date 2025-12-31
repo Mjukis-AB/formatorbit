@@ -283,29 +283,8 @@ impl Format for CharFormat {
                     ..Default::default()
                 });
 
-                // Character count
-                let count_display = format!("{} codepoints", chars.len());
-                conversions.push(Conversion {
-                    value: CoreValue::Int {
-                        value: chars.len() as i128,
-                        original_bytes: None,
-                    },
-                    target_format: "length".to_string(),
-                    display: count_display.clone(),
-                    path: vec!["length".to_string()],
-                    steps: vec![ConversionStep {
-                        format: "length".to_string(),
-                        value: CoreValue::Int {
-                            value: chars.len() as i128,
-                            original_bytes: None,
-                        },
-                        display: count_display,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Trait,
-                    display_only: true,
-                    ..Default::default()
-                });
+                // Note: Character count (length) removed - Utf8Format's is-ascii/encoding
+                // traits already show character count information
 
                 // UTF-8 bytes
                 let utf8_hex = Self::utf8_hex(s);
@@ -464,7 +443,7 @@ mod tests {
 
         assert!(!conversions.is_empty());
         assert!(conversions.iter().any(|c| c.target_format == "codepoints"));
-        assert!(conversions.iter().any(|c| c.target_format == "length"));
+        // Note: length removed - Utf8Format's is-ascii/encoding traits show char count
         assert!(conversions.iter().any(|c| c.target_format == "utf8-bytes"));
     }
 }

@@ -36,6 +36,8 @@ pub struct PrettyConfig {
     pub packet_mode: PacketMode,
     /// Show blockable paths for conversions.
     pub show_paths: bool,
+    /// Verbose mode (show paths for traits, etc.).
+    pub verbose: bool,
 }
 
 impl Default for PrettyConfig {
@@ -46,6 +48,7 @@ impl Default for PrettyConfig {
             compact: false,
             packet_mode: PacketMode::None,
             show_paths: false,
+            verbose: false,
         }
     }
 }

@@ -898,18 +898,20 @@ impl Format for BytesToIntFormat {
             return vec![];
         }
 
-        // Skip if bytes look like printable text (ASCII letters, digits, common punctuation)
-        // This avoids interpreting "hello" as a 5-byte big-endian integer
-        let is_likely_text = bytes.iter().all(|&b| {
-            b.is_ascii_alphanumeric()
-                || b.is_ascii_whitespace()
-                || matches!(
-                    b,
-                    b'.' | b',' | b'!' | b'?' | b'-' | b'_' | b':' | b';' | b'\'' | b'"'
-                )
-        });
-        if is_likely_text && bytes.len() > 4 {
-            return vec![];
+        // Skip if bytes look like text (valid UTF-8 with printable content)
+        // This avoids interpreting "hello" or "héllo" as big-endian integers
+        if bytes.len() > 4 {
+            if let Ok(text) = std::str::from_utf8(bytes) {
+                // Check if it's mostly printable text (allow some control chars like newline)
+                let printable_ratio = text
+                    .chars()
+                    .filter(|c| !c.is_control() || *c == '\n' || *c == '\t' || *c == '\r')
+                    .count() as f32
+                    / text.chars().count() as f32;
+                if printable_ratio > 0.8 {
+                    return vec![];
+                }
+            }
         }
 
         let be_value = Self::bytes_to_int_be(bytes);
@@ -935,6 +937,7 @@ impl Format for BytesToIntFormat {
             priority: ConversionPriority::Raw,
             display_only: false,
             kind: ConversionKind::default(),
+            hidden: false,
             rich_display: vec![],
         }];
 
@@ -960,6 +963,7 @@ impl Format for BytesToIntFormat {
                 priority: ConversionPriority::Raw,
                 display_only: false,
                 kind: ConversionKind::default(),
+                hidden: false,
                 rich_display: vec![],
             });
         }

@@ -651,6 +651,13 @@ pub struct Conversion {
     /// This is an internal implementation detail and not exposed via FFI/API.
     #[serde(skip)]
     pub display_only: bool,
+    /// If true, this conversion is for internal chaining only - don't show in output.
+    ///
+    /// Use this for intermediate conversions that enable other conversions but
+    /// whose display value is redundant. Example:
+    /// - `bytes` from text - enables hashes/hex/base64 but "15 bytes" is shown by utf8-bytes
+    #[serde(skip)]
+    pub hidden: bool,
     /// Rich display hints for UI rendering.
     ///
     /// Multiple display options can be provided, each with a preferred
@@ -676,6 +683,7 @@ impl Conversion {
             priority: ConversionPriority::default(),
             kind: ConversionKind::default(),
             display_only: false,
+            hidden: false,
             rich_display: vec![],
         }
     }

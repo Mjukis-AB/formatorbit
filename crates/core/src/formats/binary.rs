@@ -107,12 +107,6 @@ impl BinaryFormat {
             .collect::<Vec<_>>()
             .join(" ")
     }
-
-    /// Format bytes as binary string with 0b prefix.
-    fn bytes_to_binary_0b(bytes: &[u8]) -> String {
-        let bits: String = bytes.iter().map(|b| format!("{b:08b}")).collect();
-        format!("0b{bits}")
-    }
 }
 
 impl Format for BinaryFormat {
@@ -179,36 +173,23 @@ impl Format for BinaryFormat {
             return vec![];
         }
 
-        vec![
-            Conversion {
-                value: CoreValue::String(Self::bytes_to_binary_grouped(bytes)),
-                target_format: "binary".to_string(),
-                display: Self::bytes_to_binary_grouped(bytes),
-                path: vec!["binary".to_string()],
-                is_lossy: false,
-                steps: vec![],
-                priority: ConversionPriority::Encoding,
-                // Display-only: the string "01001101 10101010" shouldn't be
-                // converted further (e.g. to bytes of ASCII digits)
-                display_only: true,
-                kind: ConversionKind::Representation,
-                rich_display: vec![],
-            },
-            Conversion {
-                value: CoreValue::String(Self::bytes_to_binary_0b(bytes)),
-                target_format: "binary-0b".to_string(),
-                display: Self::bytes_to_binary_0b(bytes),
-                path: vec!["binary-0b".to_string()],
-                is_lossy: false,
-                steps: vec![],
-                priority: ConversionPriority::Encoding,
-                // Display-only: the string "0b01001101" shouldn't be
-                // converted further (e.g. to bytes of ASCII digits)
-                display_only: true,
-                kind: ConversionKind::Representation,
-                rich_display: vec![],
-            },
-        ]
+        // Only show the spaced binary format - it's more readable
+        // For compact 0b format, binary-int from IntegerFormat provides this
+        vec![Conversion {
+            value: CoreValue::String(Self::bytes_to_binary_grouped(bytes)),
+            target_format: "binary".to_string(),
+            display: Self::bytes_to_binary_grouped(bytes),
+            path: vec!["binary".to_string()],
+            is_lossy: false,
+            steps: vec![],
+            priority: ConversionPriority::Encoding,
+            // Display-only: the string "01001101 10101010" shouldn't be
+            // converted further (e.g. to bytes of ASCII digits)
+            display_only: true,
+            kind: ConversionKind::Representation,
+            hidden: false,
+            rich_display: vec![],
+        }]
     }
 
     fn aliases(&self) -> &'static [&'static str] {
@@ -336,14 +317,9 @@ mod tests {
         let value = CoreValue::Bytes(vec![0xAA]);
         let conversions = format.conversions(&value);
 
+        assert_eq!(conversions.len(), 1);
         assert!(conversions.iter().any(|c| c.target_format == "binary"));
-        assert!(conversions.iter().any(|c| c.target_format == "binary-0b"));
-
-        let bin_0b = conversions
-            .iter()
-            .find(|c| c.target_format == "binary-0b")
-            .unwrap();
-        assert_eq!(bin_0b.display, "0b10101010");
+        // binary-0b removed - IntegerFormat provides binary-int for compact form
     }
 
     #[test]

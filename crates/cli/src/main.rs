@@ -14,7 +14,8 @@ use base64::Engine;
 use clap::Parser;
 use colored::{control::set_override, Colorize};
 use formatorbit_core::{
-    truncate_str, ConversionKind, CoreValue, Formatorbit, RichDisplay, RichDisplayOption,
+    truncate_str, Conversion, ConversionKind, CoreValue, Formatorbit, RichDisplay,
+    RichDisplayOption,
 };
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
@@ -822,6 +823,7 @@ fn main() {
         compact: cli.compact,
         packet_mode,
         show_paths: cli.show_paths,
+        verbose: cli.verbose > 0,
     };
 
     // Get results - either forced format or auto-detect
@@ -980,28 +982,44 @@ fn main() {
         if result.conversions.is_empty() {
             println!("  {}", "(no conversions available)".dimmed());
         } else {
-            // Apply limit (0 = unlimited)
-            let conversions_to_show: Vec<_> = if limit == 0 {
-                result.conversions.iter().collect()
-            } else {
-                result.conversions.iter().take(limit).collect()
-            };
+            // Filter out hidden conversions (internal-only, don't add display value)
+            let displayable_conversions: Vec<_> =
+                result.conversions.iter().filter(|c| !c.hidden).collect();
 
-            for conv in &conversions_to_show {
+            // Hash format IDs - shown at the bottom
+            const HASH_FORMATS: &[&str] = &[
+                "crc32",
+                "md5",
+                "sha1",
+                "sha256",
+                "sha512",
+                "blake2b-256",
+                "blake3",
+            ];
+
+            // Partition into: traits, hashes, and primary conversions
+            let (traits, non_traits): (Vec<_>, Vec<_>) = displayable_conversions
+                .iter()
+                .partition(|c| c.kind == ConversionKind::Trait);
+
+            let (hashes, primary): (Vec<&&Conversion>, Vec<&&Conversion>) = non_traits
+                .into_iter()
+                .partition(|c: &&&Conversion| HASH_FORMATS.contains(&c.target_format.as_str()));
+
+            // Helper to display a single conversion
+            let display_conversion = |conv: &Conversion| {
                 let path_str = if conv.path.len() > 1 {
                     format!(" (via {})", conv.path.join(" → "))
                 } else {
                     String::new()
                 };
 
-                // Build blockable path string for --show-paths
                 let block_path_str = if pretty_config.show_paths && !conv.path.is_empty() {
                     format!(" {}", format!("[{}]", conv.path.join(":")).dimmed())
                 } else {
                     String::new()
                 };
 
-                // Pretty-print JSON values (and packet layout if enabled)
                 let display = format_conversion_display(
                     &conv.value,
                     &conv.display,
@@ -1009,17 +1027,12 @@ fn main() {
                     &pretty_config,
                 );
 
-                // Symbol based on conversion kind:
-                // → Conversion (actual transformation)
-                // ≈ Representation (same value, different notation)
-                // ✓ Trait (property/observation)
                 let kind_symbol = match conv.kind {
                     ConversionKind::Conversion => "→".cyan(),
                     ConversionKind::Representation => "≈".blue(),
                     ConversionKind::Trait => "✓".magenta(),
                 };
 
-                // Indent multi-line output
                 let display_lines: Vec<&str> = display.lines().collect();
                 if display_lines.len() > 1 {
                     println!(
@@ -1042,18 +1055,87 @@ fn main() {
                         block_path_str
                     );
                 }
+            };
+
+            // 1. Display traits first - grouped on one line unless verbose
+            if !traits.is_empty() {
+                if pretty_config.verbose {
+                    for conv in &traits {
+                        let path_str = if conv.path.len() > 1 {
+                            format!(" (via {})", conv.path.join(" → "))
+                        } else {
+                            String::new()
+                        };
+                        let block_path_str = if pretty_config.show_paths && !conv.path.is_empty() {
+                            format!(" {}", format!("[{}]", conv.path.join(":")).dimmed())
+                        } else {
+                            String::new()
+                        };
+                        println!(
+                            "  {} {}: {}{}{}",
+                            "✓".magenta(),
+                            conv.target_format.yellow(),
+                            conv.display,
+                            path_str.dimmed(),
+                            block_path_str
+                        );
+                    }
+                } else {
+                    let trait_displays: Vec<String> =
+                        traits.iter().map(|c| c.display.clone()).collect();
+                    println!("  {} {}", "✓".magenta(), trait_displays.join(", "));
+                }
             }
 
-            // Show how many more are hidden
-            let hidden = result
+            // 2. Display primary conversions (non-traits, non-hashes)
+            let primary_to_show: Vec<_> = if limit == 0 {
+                primary
+            } else {
+                // Reserve some slots for hashes if limit is applied
+                let primary_limit = if limit > 3 { limit - 3 } else { limit };
+                primary.into_iter().take(primary_limit).collect()
+            };
+
+            for conv in &primary_to_show {
+                display_conversion(conv);
+            }
+
+            // 3. Display hashes last
+            let hashes_to_show: Vec<_> = if limit == 0 {
+                hashes
+            } else {
+                // Show remaining slots for hashes
+                let used = primary_to_show.len();
+                let remaining = limit.saturating_sub(used);
+                hashes.into_iter().take(remaining).collect()
+            };
+
+            for conv in &hashes_to_show {
+                display_conversion(conv);
+            }
+
+            // Show how many more are hidden (use hidden field, not hardcoded format names)
+            let total_primary = result
                 .conversions
-                .len()
-                .saturating_sub(conversions_to_show.len());
-            if hidden > 0 {
+                .iter()
+                .filter(|c| {
+                    !c.hidden
+                        && c.kind != ConversionKind::Trait
+                        && !HASH_FORMATS.contains(&c.target_format.as_str())
+                })
+                .count();
+            let total_hashes = result
+                .conversions
+                .iter()
+                .filter(|c| !c.hidden && HASH_FORMATS.contains(&c.target_format.as_str()))
+                .count();
+            let shown = primary_to_show.len() + hashes_to_show.len();
+            let hidden_count = (total_primary + total_hashes).saturating_sub(shown);
+            if hidden_count > 0 {
                 println!(
                     "  {} {}",
                     "…".dimmed(),
-                    format!("({} more, use -l 0 to show all)", hidden).dimmed()
+                    format!("({} more, use -l 0 to show all)", hidden_count).dimmed()
                 );
             }
         }

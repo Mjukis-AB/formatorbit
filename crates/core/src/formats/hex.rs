@@ -390,6 +390,7 @@ impl Format for HexFormat {
             priority: ConversionPriority::Encoding,
             display_only: true, // Don't explore further from hex string (avoids codepoints noise)
             kind: ConversionKind::default(),
+            hidden: false,
             rich_display: vec![],
         }]
     }
