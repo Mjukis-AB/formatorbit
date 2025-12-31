@@ -387,4 +387,26 @@ mod tests {
             .unwrap();
         assert!(hash_result.interpretation.description.contains("SHA-1"));
     }
+
+    /// Test that geohash-like words show both coords and text in core
+    /// (CLI may filter low-confidence interpretations for cleaner output)
+    #[test]
+    fn test_geohash_word_returns_multiple_interpretations() {
+        let forb = Formatorbit::new();
+        // "rustfmt" is valid geohash but core should return both interpretations
+        let results = forb.convert_all("rustfmt");
+        let formats: Vec<_> = results
+            .iter()
+            .map(|r| &r.interpretation.source_format)
+            .collect();
+
+        assert!(
+            formats.contains(&&"coords".to_string()),
+            "should have coords interpretation"
+        );
+        assert!(
+            formats.contains(&&"text".to_string()),
+            "should have text interpretation (low confidence fallback)"
+        );
+    }
 }
