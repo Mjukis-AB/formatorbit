@@ -111,6 +111,15 @@ const ROOT_BLOCKED_TARGETS: &[(&str, &str)] = &[
     ("text", "datasize"),
     ("text", "datasize-iec"),
     ("text", "datasize-si"),
+    // Hex bytes shouldn't be interpreted as IP addresses
+    // (DEADBEEF as bytes isn't an IP like 222.173.190.239)
+    ("hex", "ipv4"),
+    ("hex", "ipv6"),
+    ("hex", "ip"),
+    // Hex bytes shouldn't be interpreted as colors
+    // (use #DEADBEEF explicitly for color interpretation)
+    ("hex", "color-rgb"),
+    ("hex", "color-hsl"),
 ];
 
 /// Nonsensical source→target combinations to filter out.

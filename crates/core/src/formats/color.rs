@@ -194,7 +194,10 @@ impl ColorFormat {
     }
 
     /// Parse a hex color string like #RGB, #RRGGBB, #RRGGBBAA, or #AARRGGBB.
+    /// For 6-char and 8-char hex, the # prefix is REQUIRED to avoid false positives
+    /// on strings like "DEADBEEF" or "CAFEBABE".
     fn parse_hex_color(s: &str) -> Option<(Rgba, &'static str)> {
+        let has_prefix = s.starts_with('#');
         let hex = s.strip_prefix('#').unwrap_or(s);
 
         // Hex colors must be ASCII - early exit if not to avoid panics on non-ASCII slicing
@@ -203,22 +206,28 @@ impl ColorFormat {
         }
 
         match hex.len() {
-            // #RGB -> expand to #RRGGBB
+            // #RGB -> expand to #RRGGBB (3-char is common enough to allow without prefix)
             3 => {
                 let r = u8::from_str_radix(&hex[0..1], 16).ok()? * 17;
                 let g = u8::from_str_radix(&hex[1..2], 16).ok()? * 17;
                 let b = u8::from_str_radix(&hex[2..3], 16).ok()? * 17;
                 Some((Rgba { r, g, b, a: None }, "RGB"))
             }
-            // #RRGGBB
+            // #RRGGBB - require # prefix to avoid matching hex like "DEADBE"
             6 => {
+                if !has_prefix {
+                    return None;
+                }
                 let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
                 let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
                 let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
                 Some((Rgba { r, g, b, a: None }, "RGB"))
             }
-            // #RRGGBBAA or #AARRGGBB - we'll parse as RGBA but note it could be ARGB
+            // #RRGGBBAA or #AARRGGBB - require # prefix to avoid matching "DEADBEEF"
             8 => {
+                if !has_prefix {
+                    return None;
+                }
                 let b0 = u8::from_str_radix(&hex[0..2], 16).ok()?;
                 let b1 = u8::from_str_radix(&hex[2..4], 16).ok()?;
                 let b2 = u8::from_str_radix(&hex[4..6], 16).ok()?;
@@ -717,5 +726,23 @@ mod tests {
         } else {
             panic!("Expected Bytes");
         }
+    }
+
+    #[test]
+    fn test_hex_without_prefix_not_color() {
+        // 6-char and 8-char hex without # prefix should NOT be parsed as color
+        // This avoids false positives like "DEADBEEF" being a color
+        let format = ColorFormat;
+
+        // 8-char hex like DEADBEEF - not a color without #
+        assert!(format.parse("DEADBEEF").is_empty());
+        assert!(format.parse("CAFEBABE").is_empty());
+
+        // 6-char hex like FF5733 - not a color without #
+        assert!(format.parse("FF5733").is_empty());
+
+        // But WITH # prefix, they ARE colors
+        assert!(!format.parse("#DEADBEEF").is_empty());
+        assert!(!format.parse("#FF5733").is_empty());
     }
 }
