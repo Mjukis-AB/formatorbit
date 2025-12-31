@@ -296,6 +296,7 @@ fn print_formats() {
         "Network",
         "Colors",
         "Data",
+        "Reference",
     ];
 
     for category in categories {
