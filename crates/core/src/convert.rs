@@ -86,6 +86,33 @@ const UNIT_TARGETS: &[&str] = &[
     "kelvin",
 ];
 
+/// Root-based blocking: targets that should never be reached from a given root interpretation.
+/// Unlike BLOCKED_PATHS which blocks immediate source→target, this blocks the target
+/// regardless of the path taken (e.g., "text" blocks ipv4 via text→bytes→ipv4).
+const ROOT_BLOCKED_TARGETS: &[(&str, &str)] = &[
+    // Text bytes shouldn't be interpreted as IP addresses
+    // (4 bytes of ASCII like "test" aren't an IPv4 address)
+    ("text", "ipv4"),
+    ("text", "ipv6"),
+    // Text bytes shouldn't be interpreted as colors
+    ("text", "color-rgb"),
+    ("text", "color-hex"),
+    ("text", "color-hsl"),
+    // Text bytes shouldn't be interpreted as integers or timestamps
+    // (already blocked via BLOCKED_PATHS for immediate, but this catches all paths)
+    ("text", "int-be"),
+    ("text", "int-le"),
+    ("text", "epoch-seconds"),
+    ("text", "epoch-millis"),
+    ("text", "apple-cocoa"),
+    ("text", "filetime"),
+    ("text", "duration"),
+    ("text", "duration-ms"),
+    ("text", "datasize"),
+    ("text", "datasize-iec"),
+    ("text", "datasize-si"),
+];
+
 /// Nonsensical source→target combinations to filter out.
 /// These are conversions that technically work but are never useful.
 const BLOCKED_PATHS: &[(&str, &str)] = &[
@@ -164,6 +191,13 @@ const BLOCKED_PATHS: &[(&str, &str)] = &[
     ("text", "int-le"),
     // Circular: text → bytes → utf8 just produces the original text again
     ("text", "utf8"),
+    // Text bytes shouldn't be interpreted as IP addresses or colors
+    // (4 bytes of ASCII text like "test" aren't an IPv4 address or RGBA color)
+    ("text", "ipv4"),
+    ("text", "ipv6"),
+    ("text", "color-rgb"),
+    ("text", "color-hex"),
+    ("text", "color-hsl"),
 ];
 
 /// Check if a source→target conversion should be blocked (hardcoded rules only).
@@ -235,16 +269,31 @@ fn is_blocked_path_builtin(source_format: &str, target_format: &str) -> bool {
     false
 }
 
+/// Check if a target is blocked based on root interpretation (builtin rules).
+fn is_root_blocked_builtin(root_format: &str, target_format: &str) -> bool {
+    ROOT_BLOCKED_TARGETS
+        .iter()
+        .any(|(root, target)| root_format == *root && target_format == *target)
+}
+
 /// Check if a conversion should be blocked (builtin rules + user config).
 fn is_blocked(
     source_format: &str,
     target_format: &str,
+    root_format: Option<&str>,
     path: &[String],
     blocking: Option<&BlockingConfig>,
 ) -> bool {
-    // Check builtin blocked paths
+    // Check builtin blocked paths (immediate source→target)
     if is_blocked_path_builtin(source_format, target_format) {
         return true;
+    }
+
+    // Check builtin root-based blocking (root→...→target)
+    if let Some(root) = root_format {
+        if is_root_blocked_builtin(root, target_format) {
+            return true;
+        }
     }
 
     // Check user-configured blocking
@@ -256,6 +305,12 @@ fn is_blocked(
         // Check if this path is blocked
         if config.is_path_blocked(path) {
             return true;
+        }
+        // Check root-based blocking from user config
+        if let Some(root) = root_format {
+            if config.is_root_blocked(root, target_format) {
+                return true;
+            }
         }
     }
 
@@ -350,9 +405,23 @@ pub fn find_all_conversions(
                 break;
             };
 
+            // Get the immediate source format (last element of current path, or root)
+            let immediate_source = current_path.last().map(|s| s.as_str()).unwrap_or("");
+
             // Get conversions from all formats
             for format in formats {
                 for conv in format.conversions(&current_value) {
+                    // Check blocking early (before adding to results or queue)
+                    if is_blocked(
+                        immediate_source,
+                        &conv.target_format,
+                        source_format,
+                        &current_path,
+                        blocking,
+                    ) {
+                        continue;
+                    }
+
                     let result_key = (conv.target_format.clone(), conv.display.clone());
                     let bfs_key = (conv.target_format.clone(), conv.display.clone());
 
@@ -406,8 +475,17 @@ pub fn find_all_conversions(
     }
 
     // Filter out blocked source→target combinations (builtin + user config)
+    // This catches any that slipped through (e.g., from initial format() calls)
     if let Some(source) = exclude_format {
-        results.retain(|conv| !is_blocked(source, &conv.target_format, &conv.path, blocking));
+        results.retain(|conv| {
+            !is_blocked(
+                source,
+                &conv.target_format,
+                source_format,
+                &conv.path,
+                blocking,
+            )
+        });
     }
 
     // Sort by priority, respecting user configuration

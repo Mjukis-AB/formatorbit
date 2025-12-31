@@ -555,13 +555,19 @@ pub struct BlockingConfig {
     /// Format: "source:target" or "source:via:target" for multi-hop paths.
     #[serde(default)]
     pub paths: Vec<String>,
+
+    /// Root-based blocking: block target formats based on root interpretation.
+    /// Format: "root:target" - blocks reaching target from any path starting at root.
+    /// Example: "text:ipv4" blocks text→bytes→ipv4, text→hex→bytes→ipv4, etc.
+    #[serde(default)]
+    pub root_paths: Vec<String>,
 }
 
 impl BlockingConfig {
     /// Check if this config has any customizations.
     #[must_use]
     pub fn is_customized(&self) -> bool {
-        !self.formats.is_empty() || !self.paths.is_empty()
+        !self.formats.is_empty() || !self.paths.is_empty() || !self.root_paths.is_empty()
     }
 
     /// Check if a format is blocked.
@@ -584,6 +590,17 @@ impl BlockingConfig {
             // Exact match or suffix match (for blocking a specific target)
             path_str.eq_ignore_ascii_case(blocked) || path_str.ends_with(&format!(":{}", blocked))
         })
+    }
+
+    /// Check if a target is blocked based on root interpretation.
+    /// `root_format` is the original interpretation format (e.g., "text").
+    /// `target_format` is the format we're trying to convert to.
+    #[must_use]
+    pub fn is_root_blocked(&self, root_format: &str, target_format: &str) -> bool {
+        let pattern = format!("{}:{}", root_format, target_format);
+        self.root_paths
+            .iter()
+            .any(|blocked| blocked.eq_ignore_ascii_case(&pattern))
     }
 }
 
