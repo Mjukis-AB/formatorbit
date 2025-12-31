@@ -127,8 +127,8 @@ impl Format for HexdumpFormat {
             is_lossy: false,
             // Priority between Encoding and Raw - shows when no structured data found
             priority: ConversionPriority::Encoding,
-            display_only: false,
-            kind: ConversionKind::default(),
+            display_only: true, // Terminal format - don't re-encode the hexdump string
+            kind: ConversionKind::Representation,
             rich_display: vec![],
         }]
     }

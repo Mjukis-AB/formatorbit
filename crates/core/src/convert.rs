@@ -137,6 +137,31 @@ const BLOCKED_PATHS: &[(&str, &str)] = &[
     ("color-hsl", "datasize"),
     ("color-hsl", "datasize-iec"),
     ("color-hsl", "datasize-si"),
+    // Hexdump output is for display only - don't re-encode it
+    ("hexdump", "bytes"),
+    ("hexdump", "url-encoded"),
+    ("hexdump", "escape-unicode"),
+    ("hexdump", "escape-hex"),
+    ("hexdump", "msgpack"),
+    // URL-encoded shouldn't chain further (double/triple encoding is noise)
+    ("url-encoded", "url-encoded"),
+    ("url-encoded", "bytes"),
+    ("url-encoded", "escape-unicode"),
+    ("url-encoded", "escape-hex"),
+    // Plain text shouldn't produce noisy intermediate conversions
+    ("text", "url-encoded"),
+    ("text", "graph"),
+    ("text", "text"),
+    ("text", "msgpack"),
+    ("text", "escape-unicode"),
+    // Escape sequences are terminal display formats
+    ("escape-hex", "bytes"),
+    ("escape-hex", "url-encoded"),
+    ("escape-unicode", "bytes"),
+    ("escape-unicode", "url-encoded"),
+    // Text bytes shouldn't be interpreted as integers (the bytes represent characters, not numbers)
+    ("text", "int-be"),
+    ("text", "int-le"),
 ];
 
 /// Check if a source→target conversion should be blocked (hardcoded rules only).
