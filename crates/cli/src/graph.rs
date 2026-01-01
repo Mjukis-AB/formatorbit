@@ -22,11 +22,20 @@ fn dot_escape(s: &str) -> String {
 
 /// Escape a string to be a valid Mermaid identifier.
 /// Mermaid identifiers can't contain special chars like `-`, `/`, etc.
+/// Also handles reserved keywords by prefixing with underscore.
 fn mermaid_escape(s: &str) -> String {
-    s.replace(
+    let escaped = s.replace(
         [' ', '-', '/', '.', '(', ')', '[', ']', '\'', '"', ':'],
         "_",
-    )
+    );
+    // Mermaid reserved keywords that can't be used as identifiers
+    match escaped.as_str() {
+        "graph" | "subgraph" | "end" | "direction" | "click" | "style" | "class" | "linkStyle"
+        | "classDef" => {
+            format!("_{}", escaped)
+        }
+        _ => escaped,
+    }
 }
 
 /// Edge in the format conversion graph.
