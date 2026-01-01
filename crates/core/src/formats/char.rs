@@ -8,6 +8,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::format::{Format, FormatInfo};
 use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
+    RichDisplay, RichDisplayOption,
 };
 
 pub struct CharFormat;
@@ -83,6 +84,21 @@ impl CharFormat {
         }
     }
 
+    /// Get the display name/character for a codepoint (without the U+XXXX prefix).
+    fn codepoint_display_value(cp: u32) -> String {
+        if let Some(name) = Self::codepoint_name(cp) {
+            name.to_string()
+        } else if let Some(ch) = char::from_u32(cp) {
+            if cp < 32 || cp == 127 {
+                String::new()
+            } else {
+                ch.to_string()
+            }
+        } else {
+            String::new()
+        }
+    }
+
     /// Get UTF-8 bytes as hex string.
     fn utf8_hex(s: &str) -> String {
         s.bytes()
@@ -130,6 +146,20 @@ impl Format for CharFormat {
         let grapheme = graphemes[0];
         let chars: Vec<char> = grapheme.chars().collect();
 
+        // Build rich display with codepoint breakdown
+        let rich_display = vec![RichDisplayOption {
+            preferred: RichDisplay::KeyValue {
+                pairs: chars
+                    .iter()
+                    .map(|ch| {
+                        let cp = *ch as u32;
+                        (format!("U+{:04X}", cp), Self::codepoint_display_value(cp))
+                    })
+                    .collect(),
+            },
+            alternatives: vec![],
+        }];
+
         // Build description based on complexity
         let (value, description) = if chars.len() == 1 {
             // Simple single codepoint
@@ -161,7 +191,7 @@ impl Format for CharFormat {
             source_format: "char".to_string(),
             confidence: 0.90,
             description,
-            rich_display: vec![],
+            rich_display,
         }]
     }
 
@@ -445,5 +475,45 @@ mod tests {
         assert!(conversions.iter().any(|c| c.target_format == "codepoints"));
         // Note: length removed - Utf8Format's is-ascii/encoding traits show char count
         assert!(conversions.iter().any(|c| c.target_format == "utf8-bytes"));
+    }
+
+    #[test]
+    fn test_rich_display_single_char() {
+        let format = CharFormat;
+        let results = format.parse("A");
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].rich_display.len(), 1);
+
+        if let RichDisplay::KeyValue { pairs } = &results[0].rich_display[0].preferred {
+            assert_eq!(pairs.len(), 1);
+            assert_eq!(pairs[0].0, "U+0041");
+            assert_eq!(pairs[0].1, "A");
+        } else {
+            panic!("Expected KeyValue rich display");
+        }
+    }
+
+    #[test]
+    fn test_rich_display_composite_emoji() {
+        let format = CharFormat;
+        // Rainbow flag: 🏳️‍🌈
+        let results = format.parse("🏳️‍🌈");
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].rich_display.len(), 1);
+
+        if let RichDisplay::KeyValue { pairs } = &results[0].rich_display[0].preferred {
+            // Should have 4 codepoints: flag, VS16, ZWJ, rainbow
+            assert_eq!(pairs.len(), 4);
+            assert_eq!(pairs[0].0, "U+1F3F3");
+            assert_eq!(pairs[1].0, "U+FE0F");
+            assert_eq!(pairs[1].1, "VS16 (emoji presentation)");
+            assert_eq!(pairs[2].0, "U+200D");
+            assert_eq!(pairs[2].1, "ZWJ (zero width joiner)");
+            assert_eq!(pairs[3].0, "U+1F308");
+        } else {
+            panic!("Expected KeyValue rich display");
+        }
     }
 }
