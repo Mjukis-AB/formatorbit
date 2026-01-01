@@ -168,12 +168,25 @@ impl Format for GraphFormat {
     }
 
     fn can_format(&self, value: &CoreValue) -> bool {
-        matches!(value, CoreValue::String(_))
+        // Only format strings that are valid DOT or Mermaid graphs
+        match value {
+            CoreValue::String(s) => {
+                Self::parse_dot(s).is_some() || Self::parse_mermaid(s).is_some()
+            }
+            _ => false,
+        }
     }
 
     fn format(&self, value: &CoreValue) -> Option<String> {
         match value {
-            CoreValue::String(s) => Some(s.clone()),
+            CoreValue::String(s) => {
+                // Only return if it's a valid graph
+                if Self::parse_dot(s).is_some() || Self::parse_mermaid(s).is_some() {
+                    Some(s.clone())
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }
