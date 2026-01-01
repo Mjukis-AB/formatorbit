@@ -217,8 +217,17 @@ impl CoordsFormat {
         s.chars().any(|c| matches!(c, 'A'..='F'))
     }
 
+    /// Check if a string is purely numeric (0-9 only).
+    /// Pure numeric strings are unlikely to be intentional geohashes.
+    fn is_pure_numeric(s: &str) -> bool {
+        !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
+    }
+
     /// Parse geohash format.
-    fn parse_geohash(input: &str) -> Option<(f64, f64, String)> {
+    /// Returns (lat, lon, format_name, confidence).
+    /// Confidence is lowered for pure numeric strings since real geohashes
+    /// almost always contain letters.
+    fn parse_geohash_with_confidence(input: &str) -> Option<(f64, f64, String, f32)> {
         let input_lower = input.to_lowercase();
         if !patterns().geohash.is_match(&input_lower) {
             return None;
@@ -238,10 +247,20 @@ impl CoordsFormat {
         let (coord, _, _) = geohash::decode(&input_lower).ok()?;
         let precision = input.len();
 
+        // Pure numeric strings (like "1704067200") are very unlikely to be
+        // intentional geohashes - they're probably timestamps or IDs.
+        // Real geohashes use base32 which includes letters.
+        let confidence = if Self::is_pure_numeric(input) {
+            0.3 // Low confidence for pure numeric
+        } else {
+            0.9 // Normal confidence for alphanumeric
+        };
+
         Some((
             coord.y,
             coord.x,
             format!("Geohash (precision {})", precision),
+            confidence,
         ))
     }
 
@@ -540,6 +559,7 @@ impl Format for CoordsFormat {
         let trimmed = input.trim();
 
         // Try each format in order of specificity
+        // Most formats have 0.9 confidence, but geohash varies based on input
         let parsers: &[CoordParser] = &[
             Self::parse_mgrs,      // Most specific pattern
             Self::parse_plus_code, // Has + character
@@ -547,8 +567,8 @@ impl Format for CoordsFormat {
             Self::parse_sweref99,  // Swedish format
             Self::parse_dms,       // Has degree/minute/second symbols
             Self::parse_ddm,       // Has degree/minute symbols
-            Self::parse_geohash,   // Base32 string
-            Self::parse_dd,        // Most general - just two numbers
+            // Note: geohash handled separately below for variable confidence
+            Self::parse_dd, // Most general - just two numbers
         ];
 
         for parser in parsers {
@@ -563,6 +583,21 @@ impl Format for CoordsFormat {
                     rich_display: Self::build_rich_display(lat, lon, &format_name),
                 }];
             }
+        }
+
+        // Try geohash separately since it has variable confidence
+        if let Some((lat, lon, format_name, confidence)) =
+            Self::parse_geohash_with_confidence(trimmed)
+        {
+            let description = format!("{}: {:.6}, {:.6}", format_name, lat, lon);
+
+            return vec![Interpretation {
+                value: CoreValue::Coordinates { lat, lon },
+                source_format: "coords".to_string(),
+                confidence,
+                description,
+                rich_display: Self::build_rich_display(lat, lon, &format_name),
+            }];
         }
 
         vec![]
@@ -782,6 +817,7 @@ mod tests {
         let results = format.parse("u6sce");
 
         assert_eq!(results.len(), 1);
+        assert!(results[0].confidence >= 0.9); // Alphanumeric geohash gets high confidence
         if let CoreValue::Coordinates { lat, lon } = &results[0].value {
             // u6sce is roughly Stockholm area
             assert!(*lat > 59.0 && *lat < 60.0);
@@ -789,6 +825,21 @@ mod tests {
         } else {
             panic!("Expected Coordinates");
         }
+    }
+
+    #[test]
+    fn test_geohash_pure_numeric_low_confidence() {
+        let format = CoordsFormat;
+        // Pure numeric string that happens to be valid geohash
+        // Should get low confidence since real geohashes use letters
+        let results = format.parse("1704067200");
+
+        assert_eq!(results.len(), 1);
+        assert!(
+            results[0].confidence <= 0.4,
+            "Pure numeric geohash should have low confidence, got {}",
+            results[0].confidence
+        );
     }
 
     #[test]
