@@ -111,6 +111,9 @@ const ROOT_BLOCKED_TARGETS: &[(&str, &str)] = &[
     ("text", "datasize"),
     ("text", "datasize-iec"),
     ("text", "datasize-si"),
+    // Text bytes shouldn't be interpreted as UUIDs
+    // (any 16 bytes can be formatted as UUID, but "🏳️‍🌈oj" isn't a UUID)
+    ("text", "uuid"),
     // Hex bytes shouldn't be interpreted as IP addresses
     // (DEADBEEF as bytes isn't an IP like 222.173.190.239)
     ("hex", "ipv4"),
