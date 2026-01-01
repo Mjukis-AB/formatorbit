@@ -368,20 +368,61 @@ impl CoreValue {
 }
 
 /// A possible interpretation of the input string.
+///
+/// # Display Strategy for UI Apps
+///
+/// The `description` and `rich_display` fields may contain the same information
+/// in different formats. UI applications should follow this priority:
+///
+/// 1. **If `rich_display` is not empty**: Render `rich_display[0].preferred` using
+///    appropriate UI components (tables, key-value lists, etc.). Do NOT also show
+///    `description` - it would be redundant.
+///
+/// 2. **If `rich_display` is empty**: Fall back to showing `description` as plain text.
+///
+/// The `description` field always contains a plain-text representation suitable for:
+/// - CLI output (cannot render rich components)
+/// - Accessibility/screen readers
+/// - Simple UIs without rich display support
+/// - Logging and debugging
+///
+/// # Example
+///
+/// For the rainbow flag emoji 🏳️‍🌈:
+/// - `description`: `"'🏳️‍🌈' = U+1F3F3 '🏳' + U+FE0F VS16 (emoji presentation) + ..."`
+/// - `rich_display`: `KeyValue { pairs: [("U+1F3F3", "🏳"), ("U+FE0F", "VS16 (emoji presentation)"), ...] }`
+///
+/// A GUI should render the KeyValue as a nice table and hide the description.
+/// A CLI should ignore rich_display and print the description.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Interpretation {
+    /// The parsed value in a canonical internal representation.
     #[serde(default)]
     pub value: CoreValue,
+
+    /// Format ID that produced this interpretation (e.g., "hex", "base64", "char").
     #[serde(default)]
     pub source_format: String,
+
+    /// Confidence score from 0.0 to 1.0 indicating how likely this interpretation is correct.
     #[serde(default)]
     pub confidence: f32,
+
+    /// Plain-text description of the interpretation.
+    ///
+    /// Always populated. Used as fallback when `rich_display` is empty or unsupported.
+    /// CLI and simple UIs should display this. GUI apps should prefer `rich_display`
+    /// when available and hide this to avoid redundancy.
     #[serde(default)]
     pub description: String,
+
     /// Rich display hints for UI rendering.
     ///
-    /// Multiple display options can be provided, each with a preferred
-    /// rendering and alternatives. UIs choose based on their capabilities.
+    /// When not empty, GUI applications should render this instead of `description`.
+    /// Multiple display options can be provided, each with a preferred rendering
+    /// and alternatives. UIs choose based on their capabilities.
+    ///
+    /// See struct-level docs for the display strategy.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rich_display: Vec<RichDisplayOption>,
 }
@@ -636,10 +677,28 @@ pub struct ConversionStep {
 }
 
 /// A possible conversion from a value.
+///
+/// # Display Strategy for UI Apps
+///
+/// Similar to [`Interpretation`], the `display` and `rich_display` fields may contain
+/// the same information in different formats. UI applications should follow this priority:
+///
+/// 1. **If `rich_display` is not empty**: Render `rich_display[0].preferred` using
+///    appropriate UI components. Do NOT also show `display` - it would be redundant.
+///
+/// 2. **If `rich_display` is empty**: Fall back to showing `display` as plain text.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Conversion {
+    /// The converted value.
     pub value: CoreValue,
+
+    /// Format ID of the conversion target (e.g., "base64", "datetime", "hex").
     pub target_format: String,
+
+    /// Plain-text display of the converted value.
+    ///
+    /// Always populated. Used as fallback when `rich_display` is empty or unsupported.
+    /// GUI apps should prefer `rich_display` when available.
     pub display: String,
     /// Legacy path field - just format IDs for backwards compatibility.
     #[serde(default)]
