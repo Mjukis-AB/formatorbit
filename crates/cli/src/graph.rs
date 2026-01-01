@@ -8,8 +8,16 @@ use std::collections::{HashMap, HashSet};
 
 /// Escape a string to be a valid DOT identifier.
 /// DOT identifiers can't contain special chars like `-`, `/`, ` `, etc.
+/// Also handles reserved keywords by prefixing with underscore.
 fn dot_escape(s: &str) -> String {
-    s.replace([' ', '-', '/', '.', '(', ')', '[', ']', '\'', '"'], "_")
+    let escaped = s.replace([' ', '-', '/', '.', '(', ')', '[', ']', '\'', '"'], "_");
+    // DOT reserved keywords that can't be used as identifiers
+    match escaped.as_str() {
+        "graph" | "digraph" | "subgraph" | "node" | "edge" | "strict" => {
+            format!("_{}", escaped)
+        }
+        _ => escaped,
+    }
 }
 
 /// Escape a string to be a valid Mermaid identifier.
