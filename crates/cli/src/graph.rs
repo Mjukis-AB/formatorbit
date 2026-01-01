@@ -6,6 +6,21 @@
 use formatorbit_core::{ConversionKind, FormatInfo, Formatorbit};
 use std::collections::{HashMap, HashSet};
 
+/// Escape a string to be a valid DOT identifier.
+/// DOT identifiers can't contain special chars like `-`, `/`, ` `, etc.
+fn dot_escape(s: &str) -> String {
+    s.replace([' ', '-', '/', '.', '(', ')', '[', ']', '\'', '"'], "_")
+}
+
+/// Escape a string to be a valid Mermaid identifier.
+/// Mermaid identifiers can't contain special chars like `-`, `/`, etc.
+fn mermaid_escape(s: &str) -> String {
+    s.replace(
+        [' ', '-', '/', '.', '(', ')', '[', ']', '\'', '"', ':'],
+        "_",
+    )
+}
+
 /// Edge in the format conversion graph.
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct FormatEdge {
@@ -198,7 +213,7 @@ pub fn build_format_graph(
 /// Render schema graph as Mermaid.
 pub fn schema_to_mermaid(infos: &[FormatInfo], edges: &[FormatEdge]) -> String {
     let mut out = String::new();
-    out.push_str("```mermaid\ngraph LR\n");
+    out.push_str("graph LR\n");
 
     // Group formats by category
     let mut by_category: HashMap<&str, Vec<&FormatInfo>> = HashMap::new();
@@ -208,17 +223,18 @@ pub fn schema_to_mermaid(infos: &[FormatInfo], edges: &[FormatEdge]) -> String {
 
     // Output subgraphs for each category
     for (category, formats) in &by_category {
-        out.push_str(&format!("  subgraph {}\n", category.replace(' ', "_")));
+        out.push_str(&format!("  subgraph {}\n", mermaid_escape(category)));
         for info in formats {
-            out.push_str(&format!("    {}[{}]\n", info.id.replace('-', "_"), info.id));
+            let node_id = mermaid_escape(info.id);
+            out.push_str(&format!("    {}[\"{}\"]\n", node_id, info.id));
         }
         out.push_str("  end\n");
     }
 
     // Output edges
     for edge in edges {
-        let source = edge.source.replace('-', "_");
-        let target = edge.target.replace('-', "_");
+        let source = mermaid_escape(&edge.source);
+        let target = mermaid_escape(&edge.target);
         let arrow = match edge.kind {
             EdgeKind::Conversion => "-->",
             EdgeKind::Representation => "-.->",
@@ -227,14 +243,13 @@ pub fn schema_to_mermaid(infos: &[FormatInfo], edges: &[FormatEdge]) -> String {
         out.push_str(&format!("  {} {} {}\n", source, arrow, target));
     }
 
-    out.push_str("```\n");
     out
 }
 
 /// Render category graph as Mermaid.
 pub fn category_to_mermaid(edges: &[(String, String)]) -> String {
     let mut out = String::new();
-    out.push_str("```mermaid\ngraph LR\n");
+    out.push_str("graph LR\n");
 
     // Collect all categories
     let mut categories: HashSet<&str> = HashSet::new();
@@ -245,18 +260,17 @@ pub fn category_to_mermaid(edges: &[(String, String)]) -> String {
 
     // Output nodes
     for cat in &categories {
-        let id = cat.replace(' ', "_");
+        let id = mermaid_escape(cat);
         out.push_str(&format!("  {}[\"{}\"]\n", id, cat));
     }
 
     // Output edges
     for (src, tgt) in edges {
-        let src_id = src.replace(' ', "_");
-        let tgt_id = tgt.replace(' ', "_");
+        let src_id = mermaid_escape(src);
+        let tgt_id = mermaid_escape(tgt);
         out.push_str(&format!("  {} --> {}\n", src_id, tgt_id));
     }
 
-    out.push_str("```\n");
     out
 }
 
@@ -268,37 +282,37 @@ pub fn format_to_mermaid(
     outgoing: &[FormatEdge],
 ) -> String {
     let mut out = String::new();
-    out.push_str("```mermaid\ngraph LR\n");
+    out.push_str("graph LR\n");
 
-    let center_id = format_id.replace('-', "_");
-    out.push_str(&format!("  {}(({}))\n", center_id, format_id));
+    let center_id = mermaid_escape(format_id);
+    out.push_str(&format!("  {}((\"{}\")){}\n", center_id, format_id, ""));
 
     // Incoming edges
     if !incoming.is_empty() {
-        out.push_str("  subgraph \"Converts FROM\"\n");
+        out.push_str("  subgraph Converts_FROM\n");
         for edge in incoming {
-            let src = edge.source.replace('-', "_");
-            out.push_str(&format!("    {}[{}]\n", src, edge.source));
+            let src = mermaid_escape(&edge.source);
+            out.push_str(&format!("    {}[\"{}\"]\n", src, edge.source));
         }
         out.push_str("  end\n");
 
         for edge in incoming {
-            let src = edge.source.replace('-', "_");
+            let src = mermaid_escape(&edge.source);
             out.push_str(&format!("  {} --> {}\n", src, center_id));
         }
     }
 
     // Outgoing edges
     if !outgoing.is_empty() {
-        out.push_str("  subgraph \"Converts TO\"\n");
+        out.push_str("  subgraph Converts_TO\n");
         for edge in outgoing {
-            let tgt = edge.target.replace('-', "_");
-            out.push_str(&format!("    {}[{}]\n", tgt, edge.target));
+            let tgt = mermaid_escape(&edge.target);
+            out.push_str(&format!("    {}[\"{}\"]\n", tgt, edge.target));
         }
         out.push_str("  end\n");
 
         for edge in outgoing {
-            let tgt = edge.target.replace('-', "_");
+            let tgt = mermaid_escape(&edge.target);
             let arrow = match edge.kind {
                 EdgeKind::Conversion => "-->",
                 EdgeKind::Representation => "-.->",
@@ -308,7 +322,6 @@ pub fn format_to_mermaid(
         }
     }
 
-    out.push_str("```\n");
     out
 }
 
@@ -326,11 +339,11 @@ pub fn schema_to_dot(infos: &[FormatInfo], edges: &[FormatEdge]) -> String {
     }
 
     for (category, formats) in &by_category {
-        let cluster_name = category.replace([' ', '-'], "_");
+        let cluster_name = dot_escape(category);
         out.push_str(&format!("  subgraph cluster_{} {{\n", cluster_name));
         out.push_str(&format!("    label=\"{}\";\n", category));
         for info in formats {
-            let node_id = info.id.replace('-', "_");
+            let node_id = dot_escape(info.id);
             out.push_str(&format!("    {} [label=\"{}\"];\n", node_id, info.id));
         }
         out.push_str("  }\n\n");
@@ -338,8 +351,8 @@ pub fn schema_to_dot(infos: &[FormatInfo], edges: &[FormatEdge]) -> String {
 
     // Output edges
     for edge in edges {
-        let source = edge.source.replace('-', "_");
-        let target = edge.target.replace('-', "_");
+        let source = dot_escape(&edge.source);
+        let target = dot_escape(&edge.target);
         let style = match edge.kind {
             EdgeKind::Conversion => "",
             EdgeKind::Representation => " [style=dashed]",
@@ -368,15 +381,15 @@ pub fn category_to_dot(edges: &[(String, String)]) -> String {
 
     // Output nodes
     for cat in &categories {
-        let id = cat.replace([' ', '-'], "_");
+        let id = dot_escape(cat);
         out.push_str(&format!("  {} [label=\"{}\"];\n", id, cat));
     }
     out.push('\n');
 
     // Output edges
     for (src, tgt) in edges {
-        let src_id = src.replace([' ', '-'], "_");
-        let tgt_id = tgt.replace([' ', '-'], "_");
+        let src_id = dot_escape(src);
+        let tgt_id = dot_escape(tgt);
         out.push_str(&format!("  {} -> {};\n", src_id, tgt_id));
     }
 
@@ -395,7 +408,7 @@ pub fn format_to_dot(
     out.push_str("digraph format {\n");
     out.push_str("  rankdir=LR;\n\n");
 
-    let center_id = format_id.replace('-', "_");
+    let center_id = dot_escape(format_id);
     out.push_str(&format!(
         "  {} [shape=ellipse, style=filled, fillcolor=yellow, label=\"{}\"];\n\n",
         center_id, format_id
@@ -406,13 +419,13 @@ pub fn format_to_dot(
         out.push_str("  subgraph cluster_from {\n");
         out.push_str("    label=\"Converts FROM\";\n");
         for edge in incoming {
-            let src = edge.source.replace('-', "_");
+            let src = dot_escape(&edge.source);
             out.push_str(&format!("    {} [label=\"{}\"];\n", src, edge.source));
         }
         out.push_str("  }\n\n");
 
         for edge in incoming {
-            let src = edge.source.replace('-', "_");
+            let src = dot_escape(&edge.source);
             out.push_str(&format!("  {} -> {};\n", src, center_id));
         }
     }
@@ -422,13 +435,13 @@ pub fn format_to_dot(
         out.push_str("\n  subgraph cluster_to {\n");
         out.push_str("    label=\"Converts TO\";\n");
         for edge in outgoing {
-            let tgt = edge.target.replace('-', "_");
+            let tgt = dot_escape(&edge.target);
             out.push_str(&format!("    {} [label=\"{}\"];\n", tgt, edge.target));
         }
         out.push_str("  }\n\n");
 
         for edge in outgoing {
-            let tgt = edge.target.replace('-', "_");
+            let tgt = dot_escape(&edge.target);
             let style = match edge.kind {
                 EdgeKind::Conversion => "",
                 EdgeKind::Representation => " [style=dashed]",
