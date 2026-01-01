@@ -88,6 +88,32 @@ impl IsbnFormat {
     fn format_isbn13(digits: &[u8]) -> String {
         digits.iter().map(|d| (b'0' + d) as char).collect()
     }
+
+    /// Check if input has ISBN-style formatting (hyphens or spaces).
+    /// Formatted ISBNs are more likely to be intentional.
+    fn has_isbn_formatting(input: &str) -> bool {
+        input.contains('-') || input.contains(' ')
+    }
+
+    /// Check if a 10-digit number looks like a Unix epoch timestamp.
+    /// Timestamps from ~2001 to ~2286 are 10 digits starting with 1.
+    fn looks_like_epoch(digits: &[u8]) -> bool {
+        if digits.len() != 10 {
+            return false;
+        }
+
+        // Convert digits to number
+        let mut value: u64 = 0;
+        for &d in digits {
+            value = value * 10 + d as u64;
+        }
+
+        // Reasonable epoch range: 2001-01-01 to 2100-01-01
+        // (978000000 to 4102444800)
+        // Most 10-digit numbers starting with 1 in range 1000000000-2100000000
+        // are plausible timestamps
+        (1_000_000_000..=2_100_000_000).contains(&value)
+    }
 }
 
 impl Format for IsbnFormat {
@@ -120,10 +146,26 @@ impl Format for IsbnFormat {
         // ISBN-10 (10 characters, may end with X)
         if total_len == 10 && Self::validate_isbn10(&digits, has_x) {
             let formatted = Self::format_isbn10(&digits, has_x);
+
+            // Determine confidence based on formatting and content
+            let confidence = if has_x {
+                // X check digit is strong ISBN signal
+                0.95
+            } else if Self::has_isbn_formatting(input) {
+                // Formatted with hyphens/spaces - likely intentional
+                0.90
+            } else if Self::looks_like_epoch(&digits) {
+                // Pure numeric that looks like a timestamp - probably not ISBN
+                0.40
+            } else {
+                // Pure numeric, not timestamp-like
+                0.70
+            };
+
             return vec![Interpretation {
                 value: CoreValue::String(formatted.clone()),
                 source_format: "isbn-10".to_string(),
-                confidence: 0.90,
+                confidence,
                 description: format!("ISBN-10: {}", formatted),
                 rich_display: vec![],
             }];
@@ -239,5 +281,40 @@ mod tests {
         assert!(format.parse("hello").is_empty());
         assert!(format.parse("12345").is_empty()); // Too short
         assert!(format.parse("1234567890123456").is_empty()); // Too long
+    }
+
+    #[test]
+    fn test_confidence_with_x_checkdigit() {
+        let format = IsbnFormat;
+        let results = format.parse("155860832X");
+        assert_eq!(results.len(), 1);
+        assert!(results[0].confidence >= 0.95); // X gives highest confidence
+    }
+
+    #[test]
+    fn test_confidence_with_hyphens() {
+        let format = IsbnFormat;
+        let results = format.parse("0-306-40615-2");
+        assert_eq!(results.len(), 1);
+        assert!(results[0].confidence >= 0.90); // Formatted gets high confidence
+    }
+
+    #[test]
+    fn test_confidence_epoch_like_number() {
+        let format = IsbnFormat;
+        // 1704067200 is Jan 1, 2024 - looks like epoch timestamp
+        let results = format.parse("1704067200");
+        assert_eq!(results.len(), 1);
+        assert!(results[0].confidence <= 0.50); // Low confidence for epoch-like
+    }
+
+    #[test]
+    fn test_confidence_pure_numeric_non_epoch() {
+        let format = IsbnFormat;
+        // 0306406152 is not in epoch range (too small)
+        let results = format.parse("0306406152");
+        assert_eq!(results.len(), 1);
+        assert!(results[0].confidence >= 0.70); // Medium confidence for pure numeric
+        assert!(results[0].confidence < 0.90); // But less than formatted
     }
 }
