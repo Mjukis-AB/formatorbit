@@ -1,5 +1,6 @@
 mod analytics;
 mod config;
+mod graph;
 mod pipe;
 mod pretty;
 mod tokenizer;
@@ -244,6 +245,17 @@ struct Cli {
     /// Analytics subcommand (status, show, clear, enable, disable)
     #[arg(long, value_name = "COMMAND")]
     analytics: Option<String>,
+
+    /// Show format conversion graph (without input data)
+    ///
+    /// Modes:
+    ///   schema   - All formats and conversion edges (large graph)
+    ///   category - Category-level relationships
+    ///   FORMAT   - Show what a specific format can convert to/from
+    ///
+    /// Output format controlled by --dot (default: mermaid)
+    #[arg(long, value_name = "MODE")]
+    graph: Option<String>,
 }
 
 /// Parse size string like "10M", "50M", "1G" into bytes.
@@ -543,6 +555,13 @@ fn main() {
     // Handle --analytics subcommand (early, before config loading for disable)
     if let Some(ref cmd) = cli.analytics {
         handle_analytics_command(cmd);
+        return;
+    }
+
+    // Handle --graph (static format graph, no input needed)
+    if let Some(ref mode) = cli.graph {
+        let forb = Formatorbit::new();
+        handle_graph_command(&forb, mode, cli.dot);
         return;
     }
 
@@ -1427,6 +1446,52 @@ fn handle_analytics_command(cmd: &str) {
             eprintln!("  --analytics disable    Show how to disable analytics");
             eprintln!("  --analytics path       Show analytics file path");
             std::process::exit(1);
+        }
+    }
+}
+
+/// Handle --graph command for static format graphs.
+fn handle_graph_command(forb: &Formatorbit, mode: &str, use_dot: bool) {
+    use colored::Colorize;
+
+    match mode {
+        "schema" => {
+            let (infos, edges) = graph::build_schema_graph(forb);
+            if use_dot {
+                println!("{}", graph::schema_to_dot(&infos, &edges));
+            } else {
+                println!("{}", graph::schema_to_mermaid(&infos, &edges));
+            }
+        }
+        "category" => {
+            let edges = graph::build_category_graph(forb);
+            if use_dot {
+                println!("{}", graph::category_to_dot(&edges));
+            } else {
+                println!("{}", graph::category_to_mermaid(&edges));
+            }
+        }
+        format_id => {
+            // Treat as a format ID
+            if !forb.is_valid_format(format_id) {
+                eprintln!("{}: Unknown format '{}'\n", "error".red().bold(), format_id);
+                eprintln!("Use --formats to see available formats, or try:");
+                eprintln!("  --graph schema   - Show all formats");
+                eprintln!("  --graph category - Show category relationships");
+                std::process::exit(1);
+            }
+            let (related, incoming, outgoing) = graph::build_format_graph(forb, format_id);
+            if use_dot {
+                println!(
+                    "{}",
+                    graph::format_to_dot(format_id, &related, &incoming, &outgoing)
+                );
+            } else {
+                println!(
+                    "{}",
+                    graph::format_to_mermaid(format_id, &related, &incoming, &outgoing)
+                );
+            }
         }
     }
 }
