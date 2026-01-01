@@ -1,10 +1,11 @@
-~# CLAUDE.md - Formatorbit
+# CLAUDE.md - Formatorbit
 
 ## Project Overview
 
 Formatorbit is a cross-platform data format converter. Users input data (e.g., `691E01B8`) and the tool shows all possible interpretations and conversions automatically.
 
 **Core idea:** Separate parsing (input → internal type) from conversion (internal type → internal type) from formatting (internal type → output string). This enables a graph-based approach where we can find all reachable conversions via BFS.
+
 ## Architecture
 
 ```
@@ -125,6 +126,15 @@ pub enum CoreValue {
     Bool(bool),
     DateTime(chrono::DateTime<chrono::Utc>),
     Json(serde_json::Value),
+    Protobuf(Vec<ProtoField>),
+    // Unit types for type-safe conversions
+    Length(f64),      // meters
+    Weight(f64),      // grams
+    Volume(f64),      // milliliters
+    Temperature(f64), // kelvin
+    Currency { amount: f64, code: String },
+    Coordinates { lat: f64, lon: f64 },
+    // ... and more unit types
 }
 
 // Result of parsing input
@@ -132,18 +142,22 @@ pub struct Interpretation {
     pub value: CoreValue,
     pub source_format: String,   // "hex", "base64", etc.
     pub confidence: f32,          // 0.0 - 1.0
-    pub description: String,
+    pub description: String,      // Plain-text fallback
+    pub rich_display: Vec<RichDisplayOption>, // Structured display for GUIs
 }
 
 // Result of converting a value
 pub struct Conversion {
     pub value: CoreValue,
     pub target_format: String,
-    pub display: String,          // Ready-to-show output
+    pub display: String,          // Plain-text fallback
     pub path: Vec<String>,        // How we got here
     pub is_lossy: bool,
+    pub priority: ConversionPriority, // Primary, Structured, Semantic, Encoding, Raw
     pub kind: ConversionKind,     // Conversion, Representation, or Trait
     pub display_only: bool,       // If true, don't explore further in BFS
+    pub hidden: bool,             // If true, don't show in output (internal chaining)
+    pub rich_display: Vec<RichDisplayOption>, // Structured display for GUIs
 }
 
 // Distinguishes types of conversions for UI grouping
@@ -152,7 +166,47 @@ pub enum ConversionKind {
     Representation, // Same value, different notation (1024 → 0x400, 5e-9 m → 5 nm)
     Trait,          // Observation/property (is prime, is power-of-2, is fibonacci)
 }
+
+// Priority for output ordering
+pub enum ConversionPriority {
+    Primary,    // Canonical result (expression results)
+    Structured, // JSON, MessagePack, Protobuf
+    Semantic,   // DateTime, UUID, IP, Color
+    Encoding,   // Hex, Base64, URL encoding
+    Raw,        // Bytes, raw integers
+}
 ```
+
+### Rich Display System
+
+The `rich_display` field provides structured data for GUI rendering. When `rich_display` is populated, GUIs should render it instead of `description`/`display` to avoid redundancy.
+
+```rust
+pub enum RichDisplay {
+    KeyValue { pairs: Vec<(String, String)> },  // IP parts, codepoints
+    Table { headers: Vec<String>, rows: Vec<Vec<String>> },
+    Tree { root: TreeNode },                     // JSON, protobuf
+    Color { r: u8, g: u8, b: u8, a: u8 },       // Color swatch
+    Map { lat: f64, lon: f64, label: Option<String> },
+    Mermaid { source: String },                  // Diagram
+    Dot { source: String },                      // Graphviz
+    Code { language: String, content: String },
+    Duration { millis: u64, human: String },
+    DateTime { iso: String, relative: String },
+    DataSize { bytes: u64, human: String },
+    PacketLayout { segments: Vec<PacketSegment>, ... }, // Binary layout
+    // ... and more
+}
+
+pub struct RichDisplayOption {
+    pub preferred: RichDisplay,
+    pub alternatives: Vec<RichDisplay>,
+}
+```
+
+**Display Strategy for UI Apps:**
+1. If `rich_display` is not empty → render `rich_display[0].preferred`, hide `description`
+2. If `rich_display` is empty → fall back to `description` as plain text
 
 ## Key Design Decisions
 
@@ -242,6 +296,62 @@ Set `display_only: true` on representations to prevent the BFS from treating
 the display string as input for further conversions (e.g., converting "5 nm"
 as ASCII bytes → hex).
 
+### 6. Noise Control and Blocking
+
+The BFS conversion graph can produce excessive noise. We control this with:
+
+**Root-based blocking** (`ROOT_BLOCKED_TARGETS` in `convert.rs`):
+Block conversions based on the original interpretation, regardless of path.
+
+```rust
+// In convert.rs
+const ROOT_BLOCKED_TARGETS: &[(&str, &str)] = &[
+    // Text bytes shouldn't become IPs, colors, timestamps, UUIDs
+    ("text", "ipv4"),
+    ("text", "uuid"),
+    ("text", "epoch-seconds"),
+    // Hex bytes shouldn't become IPs or colors
+    ("hex", "ipv4"),
+    ("hex", "color-rgb"),
+];
+```
+
+**Path-based blocking** (`BLOCKED_PATHS`):
+Block specific immediate conversions.
+
+```rust
+const BLOCKED_PATHS: &[(&str, &str)] = &[
+    ("bytes", "int-be"),  // Require explicit hex interpretation first
+];
+```
+
+**When to add blocking:**
+- If `forb "some input"` produces duplicate or nonsense conversions
+- If any 16 bytes becoming a UUID, any 4 bytes becoming an IP, etc.
+- Test with `-l 0` to see full output and identify noise
+
+### 7. Heuristics for False Positives
+
+Many formats overlap syntactically. Use heuristics to reject false positives:
+
+```rust
+// In base64.rs - reject pure hex strings
+fn looks_like_hex(s: &str) -> bool {
+    s.len() >= 2 && s.len() % 2 == 0 && s.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+// In hash.rs - don't detect 8-char hex as CRC-32
+// "DEADBEEF" is hex, not a hash
+const HASH_TYPES: &[(&str, usize, &str)] = &[
+    ("MD5", 32, "128-bit"),
+    ("SHA-1", 40, "160-bit"),
+    // CRC-32 (8 chars) removed - too ambiguous
+];
+
+// In color.rs - require # prefix for 6/8 char colors
+// "DEADBE" without # is hex, not a color
+```
+
 ## File Organization
 
 ```
@@ -296,6 +406,45 @@ impl Format for MyFormat {
     }
 }
 ```
+
+### Adding Constants and Magic Numbers
+
+Constants (well-known values) are defined in `formats/constants.rs`:
+
+```rust
+// Named constants (parsed from input like "SIGKILL" or "HTTP 404")
+const NAMED_CONSTANTS: &[Constant] = &[
+    Constant {
+        name: "SIGKILL",
+        aliases: &["kill"],
+        value: 9,
+        trait_display: "SIGKILL (Unix signal: kill)",
+        parse_display: "SIGKILL = 9",
+    },
+];
+
+// Magic numbers (shown as traits on matching integers)
+const MAGIC_NUMBERS: &[Constant] = &[
+    Constant {
+        name: "DEADBEEF",
+        aliases: &[],
+        value: 0xDEADBEEF,
+        trait_display: "DEADBEEF (debug memory marker)",
+        parse_display: "0xDEADBEEF (debug memory marker)",
+    },
+    Constant {
+        name: "CAFEBABE",
+        aliases: &[],
+        value: 0xCAFEBABE,
+        trait_display: "CAFEBABE (Java class file)",
+        parse_display: "0xCAFEBABE (Java class file)",
+    },
+];
+```
+
+Constants appear:
+- As interpretations when input matches the name (e.g., "SIGKILL" → 9)
+- As traits on integers when value matches (e.g., 3735928559 → "DEADBEEF")
 
 ### Adding a Conversion Edge
 
@@ -390,6 +539,59 @@ cargo audit
 cargo build --release --profile=release-lto
 ```
 
+## Snapshot Testing Philosophy
+
+Snapshots in `crates/core/tests/snapshots.rs` capture expected user-facing output.
+
+### Golden Rule
+
+**Never blindly accept snapshot changes.** Before running `cargo insta accept`:
+
+1. **Review the diff** - What changed and why?
+2. **Evaluate from end-user perspective** - Is this an improvement or regression?
+3. **Check conversion counts** - Did noise increase? (see `*_conversion_count` snapshots)
+
+### Types of Snapshot Tests
+
+```rust
+// Interpretation snapshots - what does the parser understand?
+stable_snapshot!("ipv4_private_interpretation", &result.interpretation);
+
+// Conversion snapshots - what outputs are generated?
+stable_snapshot!("color_hex_conversions", &result.conversions);
+
+// Count snapshots - noise regression detection
+let count = result.conversions.len();
+stable_snapshot!("hex_conversion_count", count);  // Should NOT increase unexpectedly
+```
+
+### When Snapshot Changes Are OK
+
+- **Adding new useful conversions** (e.g., new hash algorithm)
+- **Improving descriptions** (clearer wording)
+- **Fixing bugs** (wrong values corrected)
+- **Adding rich_display** (new structured data)
+
+### When Snapshot Changes Are NOT OK
+
+- **Conversion count increased significantly** without clear benefit
+- **Duplicate information** appearing (same data via different paths)
+- **Noise formats** being detected (DEADBEEF as base64, arbitrary bytes as UUID)
+- **Regressions** in confidence scores without justification
+
+### Reviewing Snapshots
+
+```bash
+# Run tests, see what changed
+cargo test -p formatorbit-core
+
+# Review changes interactively
+cargo insta review
+
+# Or accept after careful review
+cargo insta accept
+```
+
 ## Questions to Ask Yourself
 
 When implementing a feature:
@@ -399,3 +601,6 @@ When implementing a feature:
 3. Did I handle both endianness options?
 4. Is the path tracking correct?
 5. Are there tests for edge cases (empty input, huge numbers, invalid UTF-8)?
+6. **Does this add noise?** Test with `forb "input" -l 0` to see full output
+7. **Should this be blocked?** Would this conversion make sense to an end user?
+8. **Are snapshots affected?** Review changes from end-user perspective
