@@ -11,7 +11,6 @@ use std::fs;
 use std::io::{self, IsTerminal, Read};
 use std::path::Path;
 
-use base64::Engine;
 use clap::Parser;
 use colored::{control::set_override, Colorize};
 use formatorbit_core::{
@@ -386,8 +385,8 @@ fn print_formats() {
 enum InputData {
     /// Text input to be parsed as string
     Text(String),
-    /// Binary data from file, encoded as base64 for processing
-    Binary { base64: String, path: String },
+    /// Binary data from file (raw bytes, core handles encoding)
+    Binary { data: Vec<u8>, path: String },
 }
 
 /// Fetch content from a URL with timeout and size limits.
@@ -441,18 +440,16 @@ fn fetch_url(url: &str, timeout_secs: u64, max_size: u64) -> Result<InputData, S
             Ok(text) => Ok(InputData::Text(text)),
             Err(e) => {
                 // Fall back to binary if not valid UTF-8
-                let b64 = base64::engine::general_purpose::STANDARD.encode(e.into_bytes());
                 Ok(InputData::Binary {
-                    base64: b64,
+                    data: e.into_bytes(),
                     path: url.to_string(),
                 })
             }
         }
     } else {
-        // Binary content - encode as base64
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&buffer);
+        // Binary content
         Ok(InputData::Binary {
-            base64: b64,
+            data: buffer,
             path: url.to_string(),
         })
     }
@@ -488,10 +485,9 @@ fn read_input(input: &str, url_timeout: u64, url_max_size: u64) -> Result<InputD
             }
         }
 
-        // Binary data - encode as base64
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&buffer);
+        // Binary data
         return Ok(InputData::Binary {
-            base64: b64,
+            data: buffer,
             path: "stdin".to_string(),
         });
     }
@@ -514,10 +510,9 @@ fn read_input(input: &str, url_timeout: u64, url_max_size: u64) -> Result<InputD
         }
     }
 
-    // Binary data - encode as base64 for processing
-    let b64 = base64::engine::general_purpose::STANDARD.encode(&buffer);
+    // Binary data
     Ok(InputData::Binary {
-        base64: b64,
+        data: buffer,
         path: path.to_string(),
     })
 }
@@ -821,9 +816,9 @@ fn main() {
         tracker.record_file_input();
     }
 
-    let (input, file_path) = match read_input(&raw_input, url_timeout, url_max_size) {
-        Ok(InputData::Text(text)) => (text, None),
-        Ok(InputData::Binary { base64, path }) => (base64, Some(path)),
+    let (input, binary_data, file_path) = match read_input(&raw_input, url_timeout, url_max_size) {
+        Ok(InputData::Text(text)) => (text, None, None),
+        Ok(InputData::Binary { data, path }) => (String::new(), Some(data), Some(path)),
         Err(e) => {
             eprintln!("{}: {}", "error".red().bold(), e);
             std::process::exit(1);
@@ -872,7 +867,14 @@ fn main() {
         }
     }
 
-    let results = if let Some(ref from_format) = cli.from {
+    let results = if let Some(ref data) = binary_data {
+        // Binary data - use convert_bytes
+        if let Some(ref from_format) = cli.from {
+            forb.convert_bytes_filtered(data, std::slice::from_ref(from_format))
+        } else {
+            forb.convert_bytes_filtered(data, &format_filter)
+        }
+    } else if let Some(ref from_format) = cli.from {
         // Force specific format interpretation
         forb.convert_all_filtered(&input, std::slice::from_ref(from_format))
     } else {
@@ -892,29 +894,38 @@ fn main() {
             // Silent failure for raw mode
             std::process::exit(1);
         }
-        let display_input = file_path.as_ref().map_or(input.as_str(), |p| p.as_str());
+        let display_input = if let Some(ref path) = file_path {
+            path.as_str()
+        } else if binary_data.is_some() {
+            "(binary data)"
+        } else {
+            input.as_str()
+        };
 
         // If a specific format was requested, try to show a validation error
-        if let Some(ref from_format) = cli.from {
-            if let Some(error) = forb.validate(&input, from_format) {
-                eprintln!(
-                    "{}: Cannot parse as {}: {}",
-                    "error".red().bold(),
-                    from_format.yellow(),
-                    error
-                );
-                std::process::exit(1);
-            }
-        } else if format_filter.len() == 1 {
-            // Single format in --only filter
-            if let Some(error) = forb.validate(&input, &format_filter[0]) {
-                eprintln!(
-                    "{}: Cannot parse as {}: {}",
-                    "error".red().bold(),
-                    format_filter[0].yellow(),
-                    error
-                );
-                std::process::exit(1);
+        // (only for text input - binary validation not supported)
+        if binary_data.is_none() {
+            if let Some(ref from_format) = cli.from {
+                if let Some(error) = forb.validate(&input, from_format) {
+                    eprintln!(
+                        "{}: Cannot parse as {}: {}",
+                        "error".red().bold(),
+                        from_format.yellow(),
+                        error
+                    );
+                    std::process::exit(1);
+                }
+            } else if format_filter.len() == 1 {
+                // Single format in --only filter
+                if let Some(error) = forb.validate(&input, &format_filter[0]) {
+                    eprintln!(
+                        "{}: Cannot parse as {}: {}",
+                        "error".red().bold(),
+                        format_filter[0].yellow(),
+                        error
+                    );
+                    std::process::exit(1);
+                }
             }
         }
 
@@ -945,15 +956,22 @@ fn main() {
         results_to_show
     };
 
+    // For graph display, use file path if binary, otherwise input text
+    let graph_label = if let Some(ref path) = file_path {
+        path.clone()
+    } else {
+        input.clone()
+    };
+
     // Handle --dot output
     if cli.dot {
-        print_dot_graph(&input, &results_to_show);
+        print_dot_graph(&graph_label, &results_to_show);
         return;
     }
 
     // Handle --mermaid output
     if cli.mermaid {
-        print_mermaid_graph(&input, &results_to_show);
+        print_mermaid_graph(&graph_label, &results_to_show);
         return;
     }
 

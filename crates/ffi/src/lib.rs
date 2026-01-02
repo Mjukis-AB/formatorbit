@@ -83,6 +83,97 @@ pub fn convert_from(input: String, from_format: String) -> Vec<FfiConversionResu
     results.into_iter().map(Into::into).collect()
 }
 
+/// Convert raw bytes and return all possible interpretations.
+///
+/// This is useful for binary data like images, archives, etc.
+/// The bytes are base64-encoded internally for format detection.
+#[uniffi::export]
+pub fn convert_bytes(data: Vec<u8>) -> Vec<FfiConversionResult> {
+    let results = get_instance().convert_bytes(&data);
+    results.into_iter().map(Into::into).collect()
+}
+
+/// Convert raw bytes, forcing interpretation as a specific format.
+#[uniffi::export]
+pub fn convert_bytes_from(data: Vec<u8>, from_format: String) -> Vec<FfiConversionResult> {
+    let results = if from_format.is_empty() {
+        get_instance().convert_bytes(&data)
+    } else {
+        get_instance().convert_bytes_filtered(&data, &[from_format])
+    };
+    results.into_iter().map(Into::into).collect()
+}
+
+/// Read a file and return all possible interpretations.
+///
+/// For text files, the content is parsed directly.
+/// For binary files, the bytes are base64-encoded for format detection.
+#[uniffi::export]
+pub fn convert_file(path: String) -> Result<Vec<FfiConversionResult>, String> {
+    use base64::Engine;
+    use std::fs;
+    use std::path::Path;
+
+    let file_path = Path::new(&path);
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    let data = fs::read(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+
+    // Try to interpret as UTF-8 text first
+    let input = if let Ok(text) = String::from_utf8(data.clone()) {
+        // If it's valid UTF-8 and doesn't look like binary, treat as text
+        if !text.contains('\0') {
+            text
+        } else {
+            base64::engine::general_purpose::STANDARD.encode(&data)
+        }
+    } else {
+        // Binary data - encode as base64
+        base64::engine::general_purpose::STANDARD.encode(&data)
+    };
+
+    let results = get_instance().convert_all(&input);
+    Ok(results.into_iter().map(Into::into).collect())
+}
+
+/// Read a file, forcing interpretation as a specific format.
+#[uniffi::export]
+pub fn convert_file_from(
+    path: String,
+    from_format: String,
+) -> Result<Vec<FfiConversionResult>, String> {
+    use base64::Engine;
+    use std::fs;
+    use std::path::Path;
+
+    let file_path = Path::new(&path);
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    let data = fs::read(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+
+    // Try to interpret as UTF-8 text first
+    let input = if let Ok(text) = String::from_utf8(data.clone()) {
+        if !text.contains('\0') {
+            text
+        } else {
+            base64::engine::general_purpose::STANDARD.encode(&data)
+        }
+    } else {
+        base64::engine::general_purpose::STANDARD.encode(&data)
+    };
+
+    let results = if from_format.is_empty() {
+        get_instance().convert_all(&input)
+    } else {
+        get_instance().convert_all_filtered(&input, &[from_format])
+    };
+    Ok(results.into_iter().map(Into::into).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,5 +216,33 @@ mod tests {
     fn test_convert_first() {
         let result = convert_first("691E01B8".to_string());
         assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_convert_bytes() {
+        // PNG magic bytes
+        let png_header = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        let results = convert_bytes(png_header);
+        assert!(!results.is_empty());
+        // Should detect as base64 (since we encode it)
+        let has_base64 = results
+            .iter()
+            .any(|r| r.interpretation.source_format == "base64");
+        assert!(has_base64);
+    }
+
+    #[test]
+    fn test_convert_bytes_from() {
+        let data = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let results = convert_bytes_from(data, "base64".to_string());
+        assert!(!results.is_empty());
+        assert_eq!(results[0].interpretation.source_format, "base64");
+    }
+
+    #[test]
+    fn test_convert_file_not_found() {
+        let result = convert_file("/nonexistent/path/to/file.txt".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("File not found"));
     }
 }

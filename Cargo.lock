@@ -773,7 +773,6 @@ dependencies = [
 name = "formatorbit-cli"
 version = "0.7.0"
 dependencies = [
- "base64",
  "chrono",
  "clap 4.5.53",
  "colored",
