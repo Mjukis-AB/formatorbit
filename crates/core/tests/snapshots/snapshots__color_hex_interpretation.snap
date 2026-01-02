@@ -14,5 +14,16 @@ expression: "&result.interpretation"
   },
   "source_format": "color-hex",
   "confidence": 0.95,
-  "description": "RGB: RGB(255, 85, 0) / HSL(20°, 100%, 50%)"
+  "description": "RGB: RGB(255, 85, 0) / HSL(20°, 100%, 50%)",
+  "rich_display": [
+    {
+      "preferred": {
+        "type": "Color",
+        "r": 255,
+        "g": 85,
+        "b": 0,
+        "a": 255
+      }
+    }
+  ]
 }
