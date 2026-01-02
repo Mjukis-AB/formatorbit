@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **ISO 8601 date-only parsing** - `2025-11-19` now recognized as datetime at 95% confidence
+- **More date format parsing**:
+  - ISO 8601 date-only: `2025-11-19` (95% confidence)
+  - Asian/ISO with slashes: `2025/11/19` (90% confidence)
+  - European dot format: `19.11.2025` (85% confidence)
+  - Short dates without year: `11/19`, `25/2` (45-65% confidence, so expr wins for ambiguous cases)
 
 ### Changed
 - **Expression confidence now dynamic** - complex expressions like `5*9*3*9/23` now score 95% instead of fixed 60%
