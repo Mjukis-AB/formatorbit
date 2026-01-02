@@ -425,6 +425,7 @@ impl DateTimeFormat {
                         kind: ConversionKind::default(),
                         hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                            epoch_millis: secs * 1000,
                             iso: iso.clone(),
                             relative,
                         })],
@@ -451,6 +452,7 @@ impl DateTimeFormat {
                         kind: ConversionKind::default(),
                         hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                            epoch_millis: secs,
                             iso: iso.clone(),
                             relative,
                         })],
@@ -476,6 +478,7 @@ impl DateTimeFormat {
                         kind: ConversionKind::default(),
                         hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                            epoch_millis: unix_secs * 1000,
                             iso: iso.clone(),
                             relative,
                         })],
@@ -503,6 +506,7 @@ impl DateTimeFormat {
                         kind: ConversionKind::default(),
                         hidden: false,
                         rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                            epoch_millis: unix_secs * 1000 + (nanos / 1_000_000) as i64,
                             iso: iso.clone(),
                             relative,
                         })],

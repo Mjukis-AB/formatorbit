@@ -60,9 +60,11 @@ pub enum RichDisplay {
 
     /// DateTime with relative time
     DateTime {
+        /// Unix epoch milliseconds (enables client-side ticking)
+        epoch_millis: i64,
         /// ISO 8601 timestamp
         iso: String,
-        /// Relative time, e.g. "2 hours ago"
+        /// Relative time snapshot, e.g. "2 hours ago"
         relative: String,
     },
 

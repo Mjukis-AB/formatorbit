@@ -153,6 +153,7 @@ pub enum FfiRichDisplay {
         human: String,
     },
     DateTime {
+        epoch_millis: i64,
         iso: String,
         relative: String,
     },
@@ -196,7 +197,15 @@ impl From<RichDisplay> for FfiRichDisplay {
             RichDisplay::Dot { source } => Self::Dot { source },
             RichDisplay::Code { language, content } => Self::Code { language, content },
             RichDisplay::Duration { millis, human } => Self::Duration { millis, human },
-            RichDisplay::DateTime { iso, relative } => Self::DateTime { iso, relative },
+            RichDisplay::DateTime {
+                epoch_millis,
+                iso,
+                relative,
+            } => Self::DateTime {
+                epoch_millis,
+                iso,
+                relative,
+            },
             RichDisplay::DataSize { bytes, human } => Self::DataSize { bytes, human },
             RichDisplay::PacketLayout {
                 segments,
