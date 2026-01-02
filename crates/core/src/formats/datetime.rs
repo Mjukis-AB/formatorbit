@@ -205,6 +205,126 @@ impl DateTimeFormat {
             .map(|dt| dt.and_utc())
     }
 
+    /// Try to parse EU dot format: DD.MM.YYYY
+    fn parse_eu_dot_date(input: &str) -> Option<DateTime<Utc>> {
+        use chrono::NaiveDate;
+
+        let trimmed = input.trim();
+        let parts: Vec<&str> = trimmed.split('.').collect();
+        if parts.len() != 3 {
+            return None;
+        }
+
+        let day: u32 = parts[0].parse().ok()?;
+        let month: u32 = parts[1].parse().ok()?;
+        let year: i32 = parts[2].parse().ok()?;
+
+        // Validate
+        if day > 31 || month > 12 || !(1900..=2100).contains(&year) {
+            return None;
+        }
+
+        NaiveDate::from_ymd_opt(year, month, day)?
+            .and_hms_opt(0, 0, 0)
+            .map(|dt| dt.and_utc())
+    }
+
+    /// Try to parse Asian/ISO slash format: YYYY/MM/DD
+    fn parse_asian_date(input: &str) -> Option<DateTime<Utc>> {
+        use chrono::NaiveDate;
+
+        let trimmed = input.trim();
+        let parts: Vec<&str> = trimmed.split('/').collect();
+        if parts.len() != 3 {
+            return None;
+        }
+
+        // Year must be 4 digits and come first
+        let year_str = parts[0];
+        if year_str.len() != 4 {
+            return None;
+        }
+
+        let year: i32 = year_str.parse().ok()?;
+        let month: u32 = parts[1].parse().ok()?;
+        let day: u32 = parts[2].parse().ok()?;
+
+        // Validate
+        if day > 31 || month > 12 || !(1900..=2100).contains(&year) {
+            return None;
+        }
+
+        NaiveDate::from_ymd_opt(year, month, day)?
+            .and_hms_opt(0, 0, 0)
+            .map(|dt| dt.and_utc())
+    }
+
+    /// Try to parse short date without year: MM/DD or DD/MM
+    /// Returns both interpretations with low confidence (so expr can win for ambiguous cases like 25/2)
+    fn parse_short_date(input: &str) -> Vec<(DateTime<Utc>, f32, String)> {
+        use chrono::{Datelike, Local, NaiveDate};
+
+        let trimmed = input.trim();
+        let parts: Vec<&str> = trimmed.split('/').collect();
+        if parts.len() != 2 {
+            return vec![];
+        }
+
+        let a: u32 = match parts[0].parse() {
+            Ok(v) => v,
+            Err(_) => return vec![],
+        };
+        let b: u32 = match parts[1].parse() {
+            Ok(v) => v,
+            Err(_) => return vec![],
+        };
+
+        // Both must be reasonable day/month values
+        if a > 31 || b > 31 || a == 0 || b == 0 {
+            return vec![];
+        }
+
+        let mut results = vec![];
+        let current_year = Local::now().year();
+
+        // Try US format: MM/DD (a = month, b = day)
+        if a <= 12 && b <= 31 {
+            if let Some(date) = NaiveDate::from_ymd_opt(current_year, a, b) {
+                let dt = date.and_hms_opt(0, 0, 0).map(|dt| dt.and_utc());
+                if let Some(dt) = dt {
+                    // Low confidence - could be division, and no year specified
+                    let confidence = if b > 12 { 0.65 } else { 0.45 };
+                    let desc = format!(
+                        "{} {} (MM/DD, year {})",
+                        Self::month_name(a),
+                        b,
+                        current_year
+                    );
+                    results.push((dt, confidence, desc));
+                }
+            }
+        }
+
+        // Try EU format: DD/MM (a = day, b = month)
+        if b <= 12 && a <= 31 && a != b {
+            if let Some(date) = NaiveDate::from_ymd_opt(current_year, b, a) {
+                let dt = date.and_hms_opt(0, 0, 0).map(|dt| dt.and_utc());
+                if let Some(dt) = dt {
+                    let confidence = if a > 12 { 0.65 } else { 0.45 };
+                    let desc = format!(
+                        "{} {} (DD/MM, year {})",
+                        a,
+                        Self::month_name(b),
+                        current_year
+                    );
+                    results.push((dt, confidence, desc));
+                }
+            }
+        }
+
+        results
+    }
+
     /// Try to parse "Dec 28, 2025" or "December 28, 2025" format.
     fn parse_month_day_year(input: &str) -> Option<DateTime<Utc>> {
         use chrono::NaiveDate;
@@ -594,6 +714,28 @@ impl Format for DateTimeFormat {
             }];
         }
 
+        // Try Asian/ISO slash format: YYYY/MM/DD
+        if let Some(dt) = Self::parse_asian_date(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt),
+                source_format: "datetime".to_string(),
+                confidence: 0.90,
+                description: "Date (YYYY/MM/DD)".to_string(),
+                rich_display: vec![],
+            }];
+        }
+
+        // Try EU dot format: DD.MM.YYYY
+        if let Some(dt) = Self::parse_eu_dot_date(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt),
+                source_format: "datetime".to_string(),
+                confidence: 0.85,
+                description: "European date (DD.MM.YYYY)".to_string(),
+                rich_display: vec![],
+            }];
+        }
+
         // Try RFC 2822 format
         if let Ok(dt) = DateTime::parse_from_rfc2822(input) {
             return vec![Interpretation {
@@ -642,6 +784,22 @@ impl Format for DateTimeFormat {
         let numeric_results = Self::parse_numeric_date(input);
         if !numeric_results.is_empty() {
             return numeric_results
+                .into_iter()
+                .map(|(dt, confidence, desc)| Interpretation {
+                    value: CoreValue::DateTime(dt),
+                    source_format: "datetime".to_string(),
+                    confidence,
+                    description: desc,
+                    rich_display: vec![],
+                })
+                .collect();
+        }
+
+        // Try short date without year: MM/DD or DD/MM
+        // Low confidence so expr wins for ambiguous cases like 25/2
+        let short_results = Self::parse_short_date(input);
+        if !short_results.is_empty() {
+            return short_results
                 .into_iter()
                 .map(|(dt, confidence, desc)| Interpretation {
                     value: CoreValue::DateTime(dt),
