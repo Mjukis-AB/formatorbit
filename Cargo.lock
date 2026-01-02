@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "formatorbit-cli"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "chrono",
  "clap 4.5.53",
@@ -792,7 +792,7 @@ dependencies = [
 
 [[package]]
 name = "formatorbit-core"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base64",
  "blake2",
@@ -836,11 +836,12 @@ dependencies = [
 
 [[package]]
 name = "formatorbit-ffi"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "base64",
  "formatorbit-core",
  "serde_json",
+ "thiserror 2.0.17",
  "uniffi",
 ]
 
