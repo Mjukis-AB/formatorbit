@@ -304,7 +304,12 @@ impl ColorFormat {
             source_format: source_format.to_string(),
             confidence: if high_confidence { 0.95 } else { 0.6 },
             description,
-            rich_display: vec![],
+            rich_display: vec![RichDisplayOption::new(RichDisplay::Color {
+                r,
+                g,
+                b,
+                a: a.unwrap_or(255),
+            })],
         }
     }
 
