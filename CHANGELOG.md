@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-02
+
+### Added
+- **Natural language date/time parsing** - parse human-friendly date expressions:
+  - Time of day: `15:00`, `3:30pm`, `9am` → datetime (today at that time)
+  - Relative words: `now`, `today`, `tomorrow`, `yesterday`
+  - Relative periods: `next week`, `last month`, `next year`
+  - Weekdays: `monday`, `next friday`, `last tuesday`, `this wednesday`
+  - Relative offsets: `in 2 days`, `3 weeks ago`, `a month from now`
+  - Month + day: `15 dec`, `march 15th`, `jan 1`
+  - Special dates: `christmas`, `halloween`, `new years`, `valentines`
+  - Period boundaries: `end of month`, `eom`, `start of year`, `soy`
+  - Quarters: `q1`, `q2`, `next quarter`, `last quarter`
+  - Example: `forb "next friday"` → datetime with epoch conversions
+- **RichDisplay::LiveClock** - special display type for "now" input enabling live-ticking clock in GUIs
+- **Bytes and file APIs** - new FFI and core methods for binary data:
+  - `convert_bytes(data)` - convert raw bytes directly (no base64 encoding needed)
+  - `convert_bytes_filtered(data, formats)` - with format filter
+  - `convert_file(path)` - read and convert file by path
+  - `convert_file_from(path, format)` - with forced format
+  - GUI apps can now pass `Data`/`[UInt8]` directly instead of pre-encoding
+- **--graph flag** - show static format conversion graph without input data
+  - `forb --graph --dot` - Graphviz DOT output of all format relationships
+  - `forb --graph --mermaid` - Mermaid diagram output
+- **RichDisplay enhancements** for GUI apps:
+  - `RichDisplay::Color` on color interpretations (was only on conversions)
+  - `RichDisplay::DateTime` with `epoch_millis` field for client-side relative time ticking
+  - `RichDisplay::Duration` and `RichDisplay::DataSize` on interpretations
+  - `RichDisplay::Epoch` with millisecond timestamps
+- **Golden corpus tests** - comprehensive test suite for format interpretation confidence
+
+### Changed
+- **Hex confidence lowered** for short digit-only inputs like `15:00` (50%) so natural-date wins over hex
+- **Geohash confidence refined** - measurements like `500cm` no longer match as coordinates
+- **ISBN-10 confidence refined** - better detection with proper check digit validation
+- **Duration confidence refined** - more accurate scoring based on input complexity
+
+### Fixed
+- **DOT/Mermaid reserved keywords** - `graph` format no longer collides with Graphviz/Mermaid syntax
+- **DOT/Mermaid special characters** - proper escaping for quotes, backslashes, newlines
+- **Graph format validation** - no longer accepts arbitrary strings as valid graph notation
+- **Text→UUID blocking** - prevents duplicate checksum conversions
+
 ## [0.7.0] - 2025-12-31
 
 ### Added
