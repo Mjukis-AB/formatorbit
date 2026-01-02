@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Expression confidence now dynamic** - complex expressions like `5*9*3*9/23` now score 95% instead of fixed 60%
+  - Multiple operators (`*`, `/`, `%`, `^`): 95%
+  - Shifts/bitwise (`<<`, `>>`, `|`, `&`): 95%
+  - Single multiply/divide: 85%
+  - Addition/subtraction: 75%
+  - Bare literals like `0xFF`: 50% (so hex wins)
+
+### Fixed
+- **Large file performance** - 4MB image now processes in <1s (was 14s)
+  - Skip expensive hashes (SHA-256+) for data >1MB
+  - Avoid duplicate hash computation for binary files
+  - Single interpretation for file/bytes input instead of redundant base64
+
 ## [0.8.0] - 2026-01-02
 
 ### Added

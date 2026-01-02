@@ -1,12 +1,23 @@
 //! Hash digest calculation format.
 //!
 //! Calculates various hash digests from byte data.
+//!
+//! Performance note: Hash computation is expensive for large data.
+//! We skip expensive algorithms (SHA-512, Blake) for data > 1MB.
 
 use blake2::{digest::consts::U32, Blake2b, Digest as Blake2Digest};
 use crc32fast::Hasher as Crc32Hasher;
 use md5::{Digest as Md5Digest, Md5};
 use sha1::{Digest as Sha1Digest, Sha1};
 use sha2::{Digest as Sha2Digest, Sha256, Sha512};
+
+/// Maximum size for computing all hashes (1 MB).
+/// Above this, only fast hashes (CRC32, MD5) are computed.
+const FAST_HASH_THRESHOLD: usize = 1024 * 1024;
+
+/// Maximum size for computing any hashes (10 MB).
+/// Above this, only CRC32 is computed.
+const MAX_HASH_SIZE: usize = 10 * 1024 * 1024;
 
 /// Blake2b with 256-bit output.
 type Blake2b256 = Blake2b<U32>;
@@ -82,21 +93,32 @@ impl Format for DigestFormat {
             return vec![];
         };
 
+        let size = bytes.len();
         let mut conversions = Vec::new();
 
-        // CRC32
+        // CRC32 - always compute (very fast)
         let mut crc = Crc32Hasher::new();
         crc.update(bytes);
         let crc_value = crc.finalize();
         conversions.push(Self::make_conversion("crc32", format!("{:08x}", crc_value)));
 
-        // MD5
+        // Skip all other hashes for very large data
+        if size > MAX_HASH_SIZE {
+            return conversions;
+        }
+
+        // MD5 - compute for data up to 10MB
         let md5_hash = <Md5 as Md5Digest>::digest(bytes);
         conversions.push(Self::make_conversion("md5", Self::hex_encode(&md5_hash)));
 
-        // SHA-1
+        // SHA-1 - compute for data up to 10MB
         let sha1_hash = <Sha1 as Sha1Digest>::digest(bytes);
         conversions.push(Self::make_conversion("sha1", Self::hex_encode(&sha1_hash)));
+
+        // Skip expensive hashes for large data (> 1MB)
+        if size > FAST_HASH_THRESHOLD {
+            return conversions;
+        }
 
         // SHA-256
         let sha256_hash = <Sha256 as Sha2Digest>::digest(bytes);

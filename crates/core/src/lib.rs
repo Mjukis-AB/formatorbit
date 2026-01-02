@@ -278,8 +278,8 @@ impl Formatorbit {
 
     /// Convert raw bytes and return all possible interpretations.
     ///
-    /// The bytes are base64-encoded internally for format detection.
-    /// This is useful for binary data like images, archives, etc.
+    /// This creates a single bytes interpretation and runs the conversion graph.
+    /// Specialized formats (image, archive, etc.) will be detected from bytes.
     ///
     /// # Examples
     ///
@@ -293,9 +293,7 @@ impl Formatorbit {
     /// ```
     #[must_use]
     pub fn convert_bytes(&self, data: &[u8]) -> Vec<ConversionResult> {
-        use base64::Engine;
-        let base64 = base64::engine::general_purpose::STANDARD.encode(data);
-        self.convert_all(&base64)
+        self.convert_bytes_internal(data, &[])
     }
 
     /// Convert raw bytes with only the specified formats.
@@ -305,9 +303,86 @@ impl Formatorbit {
         data: &[u8],
         format_filter: &[String],
     ) -> Vec<ConversionResult> {
+        self.convert_bytes_internal(data, format_filter)
+    }
+
+    /// Internal: Convert raw bytes with optional format filter.
+    ///
+    /// Creates interpretations directly from bytes:
+    /// 1. Try specialized binary formats (image, archive, etc.)
+    /// 2. Fall back to generic "bytes" interpretation
+    fn convert_bytes_internal(
+        &self,
+        data: &[u8],
+        format_filter: &[String],
+    ) -> Vec<ConversionResult> {
         use base64::Engine;
-        let base64 = base64::engine::general_purpose::STANDARD.encode(data);
-        self.convert_all_filtered(&base64, format_filter)
+
+        // For specialized formats (image, archive, etc.), we need to pass
+        // the data as base64 since they expect string input.
+        // But we only create ONE interpretation to avoid duplicate processing.
+        let base64_input = base64::engine::general_purpose::STANDARD.encode(data);
+
+        let mut interpretations = Vec::new();
+
+        // Try specialized binary formats that can parse base64-encoded data
+        let binary_formats = [
+            "image", "archive", "video", "audio", "font", "pdf", "office",
+        ];
+
+        for format in &self.formats {
+            // If filter is active, check if format matches
+            if !format_filter.is_empty() {
+                let matches = format_filter.iter().any(|name| format.matches_name(name));
+                if !matches {
+                    continue;
+                }
+            }
+
+            // Only try formats that handle binary data
+            let is_binary_format = binary_formats
+                .iter()
+                .any(|&bf| format.id() == bf || format.aliases().contains(&bf));
+            if !is_binary_format {
+                continue;
+            }
+
+            // Skip blocked formats
+            if let Some(ref config) = self.config {
+                if config.blocking.is_format_blocked(format.id()) {
+                    continue;
+                }
+            }
+
+            interpretations.extend(format.parse(&base64_input));
+        }
+
+        // If no specialized format matched, create a generic bytes interpretation
+        if interpretations.is_empty() {
+            interpretations.push(Interpretation {
+                value: CoreValue::Bytes(data.to_vec()),
+                source_format: "bytes".to_string(),
+                confidence: 1.0,
+                description: format!("{} bytes", data.len()),
+                rich_display: vec![],
+            });
+        }
+
+        // Sort by confidence, highest first
+        interpretations.sort_by(|a, b| b.confidence.total_cmp(&a.confidence));
+
+        // Convert each interpretation
+        interpretations
+            .into_iter()
+            .map(|interp| {
+                let conversions = self.convert_excluding(&interp.value, &interp.source_format);
+                ConversionResult {
+                    input: base64_input.clone(),
+                    interpretation: interp,
+                    conversions,
+                }
+            })
+            .collect()
     }
 
     /// Get info about all registered formats (for help/documentation).
