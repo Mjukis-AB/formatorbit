@@ -147,9 +147,29 @@ impl Format for ExprFormat {
             _ => return vec![],
         };
 
-        // Confidence: lower than direct format detection
-        // We want "0xFF" to be detected as hex first, not as an expression
-        let confidence = 0.6;
+        // Dynamic confidence based on expression complexity
+        // More operators = more likely to be an intentional expression
+        let mult_div_count = trimmed
+            .chars()
+            .filter(|c| matches!(c, '*' | '/' | '%' | '^'))
+            .count();
+        let has_bitwise = trimmed.contains('|') || trimmed.contains('&');
+        let has_shift = trimmed.contains("<<") || trimmed.contains(">>");
+        let add_sub_count = trimmed.chars().filter(|c| matches!(c, '+' | '-')).count();
+
+        let confidence = if mult_div_count >= 2 || has_shift || has_bitwise {
+            // Complex expression: 5*9*3*9/23, 1<<8, a|b
+            0.95
+        } else if mult_div_count == 1 {
+            // Single multiply/divide: 5*9, 10/2
+            0.85
+        } else if add_sub_count >= 1 {
+            // Addition/subtraction only - lower because +/- appear in dates, UUIDs
+            0.75
+        } else {
+            // Bare literal that evaluates (0xFF) - let hex/bin/oct win
+            0.5
+        };
 
         vec![Interpretation {
             value: core_value,

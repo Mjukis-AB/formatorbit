@@ -1,6 +1,6 @@
 ---
 source: crates/core/tests/snapshots.rs
-assertion_line: 248
+assertion_line: 261
 expression: "&result.interpretation"
 ---
 {
@@ -11,6 +11,6 @@ expression: "&result.interpretation"
     }
   },
   "source_format": "expr",
-  "confidence": 0.6,
+  "confidence": 0.75,
   "description": "2 + 2 = 4"
 }
