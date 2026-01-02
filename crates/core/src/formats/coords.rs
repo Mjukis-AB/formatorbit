@@ -218,28 +218,87 @@ impl CoordsFormat {
     }
 
     /// Check if a string is purely numeric (0-9 only).
-    /// Pure numeric strings are unlikely to be intentional geohashes.
     fn is_pure_numeric(s: &str) -> bool {
         !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
     }
 
+    /// Calculate alphabet diversity score for geohash.
+    /// Real geohashes tend to use a good mix of the base32 alphabet.
+    /// Low diversity (e.g., all same chars, or very few unique chars) = less likely geohash.
+    fn geohash_alphabet_diversity(s: &str) -> f32 {
+        if s.is_empty() {
+            return 0.0;
+        }
+
+        let s_lower = s.to_lowercase();
+        let unique_chars: std::collections::HashSet<char> = s_lower.chars().collect();
+        let unique_count = unique_chars.len();
+        let len = s.len();
+
+        // Ratio of unique chars to length
+        // "aaaaaaa" = 1/7 = 0.14 (low)
+        // "u4pruyd" = 6/7 = 0.86 (high)
+        // "2h30m" = 4/5 = 0.80 but it's a duration pattern
+        let diversity_ratio = unique_count as f32 / len as f32;
+
+        // Also check if we have both letters and digits (real geohashes usually do)
+        let has_letters = s_lower.chars().any(|c| c.is_ascii_lowercase());
+        let has_digits = s_lower.chars().any(|c| c.is_ascii_digit());
+        let has_both = has_letters && has_digits;
+
+        // Base score from diversity
+        let mut score = diversity_ratio;
+
+        // Bonus for having both letters and digits
+        if has_both {
+            score += 0.2;
+        }
+
+        // Penalty for very short strings (more likely to be random matches)
+        if len <= 5 {
+            score -= 0.2;
+        }
+
+        score.clamp(0.0, 1.0)
+    }
+
+    /// Check if string looks like a word/identifier (all letters, reasonable length).
+    /// Words like "rustfmt", "prettier", "username" are not geohashes.
+    ///
+    /// Real geohashes almost always contain digits mixed with letters because
+    /// the base32 encoding naturally produces both. All-letter strings are
+    /// almost certainly words, identifiers, or tool names.
+    fn looks_like_word(s: &str) -> bool {
+        let s_lower = s.to_lowercase();
+
+        // Must be all ASCII letters (no digits, no special chars)
+        if !s_lower.chars().all(|c| c.is_ascii_lowercase()) {
+            return false;
+        }
+
+        // Reasonable word/identifier length (4-15 chars)
+        // Shorter strings are too ambiguous
+        s.len() >= 4 && s.len() <= 15
+    }
+
     /// Parse geohash format.
     /// Returns (lat, lon, format_name, confidence).
-    /// Confidence is lowered for pure numeric strings since real geohashes
-    /// almost always contain letters.
+    ///
+    /// Geohash confidence is based on how "geohash-like" the input looks.
+    /// Real geohashes have a mix of letters and digits from the base32 alphabet.
     fn parse_geohash_with_confidence(input: &str) -> Option<(f64, f64, String, f32)> {
         let input_lower = input.to_lowercase();
         if !patterns().geohash.is_match(&input_lower) {
             return None;
         }
 
-        // Skip if it looks like a measurement (e.g., "500cm", "10km")
+        // Skip things that are clearly NOT geohashes
+        // Measurements have explicit units (500cm, 10km) - not ambiguous
         if Self::looks_like_measurement(&input_lower) {
             return None;
         }
 
-        // Skip if it looks like hex (e.g., "691E01B8")
-        // Real geohash strings use only lowercase letters
+        // Uppercase hex (DEADBEEF) is clearly hex, not geohash
         if Self::looks_like_hex(input) {
             return None;
         }
@@ -247,13 +306,28 @@ impl CoordsFormat {
         let (coord, _, _) = geohash::decode(&input_lower).ok()?;
         let precision = input.len();
 
-        // Pure numeric strings (like "1704067200") are very unlikely to be
-        // intentional geohashes - they're probably timestamps or IDs.
-        // Real geohashes use base32 which includes letters.
-        let confidence = if Self::is_pure_numeric(input) {
-            0.3 // Low confidence for pure numeric
+        // Calculate confidence based on how "geohash-like" the input looks
+        let has_letters = input_lower.chars().any(|c| c.is_ascii_lowercase());
+        let has_digits = input_lower.chars().any(|c| c.is_ascii_digit());
+        let diversity = Self::geohash_alphabet_diversity(input);
+
+        let confidence: f32 = if Self::is_pure_numeric(input) {
+            // Pure numeric = very unlikely to be geohash (timestamps, IDs)
+            0.15
+        } else if Self::looks_like_word(input) {
+            // All letters, word-like - probably identifier/word, not geohash
+            0.20
+        } else if has_letters && has_digits {
+            // Mix of letters AND digits - this is the hallmark of real geohashes!
+            // Base confidence 0.60, boost for diversity and length
+            let base = 0.60;
+            let diversity_boost = diversity * 0.15; // 0-0.15
+            let length_boost = if input.len() >= 8 { 0.10 } else { 0.0 };
+            (base + diversity_boost + length_boost).min(0.85)
         } else {
-            0.9 // Normal confidence for alphanumeric
+            // Only letters (but not word-like) or edge cases
+            // Low confidence but not as low as words
+            0.35 + (diversity * 0.15) // 0.35-0.50
         };
 
         Some((
@@ -817,7 +891,12 @@ mod tests {
         let results = format.parse("u6sce");
 
         assert_eq!(results.len(), 1);
-        assert!(results[0].confidence >= 0.9); // Alphanumeric geohash gets high confidence
+        // Short geohash with digits gets moderate confidence
+        assert!(
+            results[0].confidence >= 0.6,
+            "Expected >= 0.6, got {}",
+            results[0].confidence
+        );
         if let CoreValue::Coordinates { lat, lon } = &results[0].value {
             // u6sce is roughly Stockholm area
             assert!(*lat > 59.0 && *lat < 60.0);
@@ -825,6 +904,36 @@ mod tests {
         } else {
             panic!("Expected Coordinates");
         }
+    }
+
+    #[test]
+    fn test_geohash_long_with_digits() {
+        let format = CoordsFormat;
+        // Longer geohash with good mix of letters and digits
+        let results = format.parse("u4pruydqqvj");
+
+        assert_eq!(results.len(), 1);
+        // Longer geohash with digits gets higher confidence
+        assert!(
+            results[0].confidence >= 0.7,
+            "Expected >= 0.7, got {}",
+            results[0].confidence
+        );
+    }
+
+    #[test]
+    fn test_geohash_word_like_low_confidence() {
+        let format = CoordsFormat;
+        // All-letter string that looks like a word
+        let results = format.parse("rustfmt");
+
+        assert_eq!(results.len(), 1);
+        // Word-like geohash gets very low confidence
+        assert!(
+            results[0].confidence <= 0.3,
+            "Word-like input should have low confidence, got {}",
+            results[0].confidence
+        );
     }
 
     #[test]

@@ -281,16 +281,14 @@ const NUMBER_CASES: &[GoldenCase] = &[
 // =============================================================================
 
 const DURATION_CASES: &[GoldenCase] = &[
-    // Note: many duration strings also match geohash (coords) at 90%
-    // This is a known conflict - durations like "2h30m" are valid geohashes
-    // We just verify duration is recognized with high confidence
-    GoldenCase::present("2h30m", "duration", "Hours and minutes", 0.85),
-    GoldenCase::present("1d12h", "duration", "Day and hours", 0.85),
+    // Duration should be TOP for all these - geohash may also match but lower confidence
+    GoldenCase::top("2h30m", "duration", "Hours and minutes"),
+    GoldenCase::top("1d12h", "duration", "Day and hours"),
     GoldenCase::top("500ms", "duration", "Milliseconds"),
-    GoldenCase::present("1h30m45s", "duration", "H:M:S format", 0.85),
-    // ISO 8601 duration - PT2H30M still matches geohash surprisingly
-    // Use a longer form that doesn't
-    GoldenCase::present("PT2H30M", "duration", "ISO 8601 duration", 0.85),
+    GoldenCase::top("1h30m45s", "duration", "H:M:S format"),
+    // ISO 8601 duration - very specific format = 95% confidence
+    GoldenCase::top("PT2H30M", "duration", "ISO 8601 duration"),
+    GoldenCase::top("P5D", "duration", "ISO 8601 5 days"),
 ];
 
 // =============================================================================
@@ -467,10 +465,11 @@ const ADVERSARIAL_CASES: &[GoldenCase] = &[
     ),
     // Short hex that could be color without #
     GoldenCase::top("CAFE", "hex", "4-char hex (not color without #)"),
-    // Strings that look like identifiers - these match geohash/coords
-    // because they're valid geohash characters. This is a known limitation.
-    GoldenCase::present("rustfmt", "text", "Tool name (geohash wins)", 0.10),
-    GoldenCase::present("prettier", "text", "Tool name (coords wins)", 0.10),
+    // Word-like strings with geohash-valid chars get low geohash confidence (20%)
+    // but text is only 10%. This is acceptable - 20% signals low confidence.
+    GoldenCase::present("rustfmt", "coords", "Tool name (geohash low conf)", 0.15),
+    // "prettier" has 'i' which is NOT in geohash base32 alphabet, so text wins
+    GoldenCase::present("prettier", "text", "Tool name (not valid geohash)", 0.10),
     // Numbers that could be many things
     GoldenCase::top("65535", "decimal", "Max uint16 (not port primarily)"),
 ];

@@ -94,23 +94,78 @@ impl Duration {
     }
 }
 
+/// Result of parsing a duration with confidence information.
+struct DurationParseResult {
+    duration: Duration,
+    confidence: f32,
+    format_hint: &'static str,
+}
+
 impl DurationFormat {
     /// Parse duration string in various formats.
-    fn parse_duration(s: &str) -> Option<Duration> {
+    /// Returns duration and confidence score.
+    fn parse_duration_with_confidence(s: &str) -> Option<DurationParseResult> {
         let s = s.trim();
 
-        // Try ISO 8601 format first (P5D, PT2H30M)
+        // Try ISO 8601 format first (P5D, PT2H30M) - VERY specific format = high confidence
         if let Some(dur) = Self::parse_iso8601(s) {
-            return Some(dur);
+            return Some(DurationParseResult {
+                duration: dur,
+                confidence: 0.95, // ISO 8601 is unambiguous
+                format_hint: "ISO 8601",
+            });
         }
 
-        // Try HH:MM:SS format
+        // Try HH:MM:SS format - fairly specific
         if let Some(dur) = Self::parse_hms(s) {
-            return Some(dur);
+            return Some(DurationParseResult {
+                duration: dur,
+                confidence: 0.90,
+                format_hint: "HH:MM:SS",
+            });
         }
 
         // Try human-readable formats (handles all: compact, decimal, spelled out, mixed)
-        Self::parse_human_readable(s)
+        if let Some(dur) = Self::parse_human_readable(s) {
+            // Determine confidence based on format specificity
+            let confidence = Self::human_readable_confidence(s);
+            return Some(DurationParseResult {
+                duration: dur,
+                confidence,
+                format_hint: "human-readable",
+            });
+        }
+
+        None
+    }
+
+    /// Calculate confidence for human-readable duration strings.
+    fn human_readable_confidence(s: &str) -> f32 {
+        let s_lower = s.to_lowercase();
+
+        // Spelled out units are very clear: "5 days", "2 hours"
+        let spelled_out_units = [
+            "millisecond",
+            "second",
+            "minute",
+            "hour",
+            "day",
+            "week",
+            "month",
+            "year",
+        ];
+        if spelled_out_units.iter().any(|u| s_lower.contains(u)) {
+            return 0.95;
+        }
+
+        // Mixed format with spaces: "5 d", "2 h 30 m"
+        if s.contains(' ') {
+            return 0.90;
+        }
+
+        // Compound format: "2h30m", "1d12h" - clear but could conflict with geohash
+        // Still give it good confidence since we're filtering durations from geohash
+        0.90
     }
 
     /// Parse ISO 8601 duration format: P5D, PT2H30M, P1DT12H30M15S
@@ -353,14 +408,20 @@ impl Format for DurationFormat {
     }
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
-        let Some(duration) = Self::parse_duration(input) else {
+        let Some(result) = Self::parse_duration_with_confidence(input) else {
             return vec![];
         };
 
-        let secs = duration.as_seconds();
+        let secs = result.duration.as_seconds();
         let absolute = Self::format_absolute(secs as i64);
 
-        let description = format!("{} = {} seconds ({})", input.trim(), secs, absolute);
+        let description = format!(
+            "{} = {} seconds ({}) [{}]",
+            input.trim(),
+            secs,
+            absolute,
+            result.format_hint
+        );
 
         vec![Interpretation {
             value: CoreValue::Int {
@@ -368,7 +429,7 @@ impl Format for DurationFormat {
                 original_bytes: None,
             },
             source_format: "duration".to_string(),
-            confidence: 0.90,
+            confidence: result.confidence,
             description,
             rich_display: vec![],
         }]
