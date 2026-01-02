@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **ISO 8601 date-only parsing** - `2025-11-19` now recognized as datetime at 95% confidence
+
 ### Changed
 - **Expression confidence now dynamic** - complex expressions like `5*9*3*9/23` now score 95% instead of fixed 60%
   - Multiple operators (`*`, `/`, `%`, `^`): 95%
