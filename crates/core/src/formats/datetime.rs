@@ -173,6 +173,38 @@ impl DateTimeFormat {
         ]
     }
 
+    /// Try to parse ISO 8601 date-only format: YYYY-MM-DD
+    fn parse_iso_date(input: &str) -> Option<DateTime<Utc>> {
+        use chrono::NaiveDate;
+
+        let trimmed = input.trim();
+
+        // Must be exactly 10 chars: YYYY-MM-DD
+        if trimmed.len() != 10 {
+            return None;
+        }
+
+        // Check format: digits, dash, digits, dash, digits
+        let chars: Vec<char> = trimmed.chars().collect();
+        if chars[4] != '-' || chars[7] != '-' {
+            return None;
+        }
+
+        // Parse components
+        let year: i32 = trimmed[0..4].parse().ok()?;
+        let month: u32 = trimmed[5..7].parse().ok()?;
+        let day: u32 = trimmed[8..10].parse().ok()?;
+
+        // Validate reasonable year range (1900-2100)
+        if !(1900..=2100).contains(&year) {
+            return None;
+        }
+
+        NaiveDate::from_ymd_opt(year, month, day)?
+            .and_hms_opt(0, 0, 0)
+            .map(|dt| dt.and_utc())
+    }
+
     /// Try to parse "Dec 28, 2025" or "December 28, 2025" format.
     fn parse_month_day_year(input: &str) -> Option<DateTime<Utc>> {
         use chrono::NaiveDate;
@@ -540,13 +572,24 @@ impl Format for DateTimeFormat {
     }
 
     fn parse(&self, input: &str) -> Vec<Interpretation> {
-        // Try to parse ISO 8601 / RFC 3339 format
+        // Try to parse ISO 8601 / RFC 3339 format (full datetime with timezone)
         if let Ok(dt) = DateTime::parse_from_rfc3339(input) {
             return vec![Interpretation {
                 value: CoreValue::DateTime(dt.with_timezone(&Utc)),
                 source_format: "datetime".to_string(),
                 confidence: 0.95,
                 description: "ISO 8601 / RFC 3339 datetime".to_string(),
+                rich_display: vec![],
+            }];
+        }
+
+        // Try ISO 8601 date-only format: YYYY-MM-DD
+        if let Some(dt) = Self::parse_iso_date(input) {
+            return vec![Interpretation {
+                value: CoreValue::DateTime(dt),
+                source_format: "datetime".to_string(),
+                confidence: 0.95,
+                description: "ISO 8601 date".to_string(),
                 rich_display: vec![],
             }];
         }
