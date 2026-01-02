@@ -164,6 +164,7 @@ impl Format for DataSizeFormat {
             }
         );
 
+        let human = Self::format_iec(bytes);
         vec![Interpretation {
             value: CoreValue::Int {
                 value: bytes as i128,
@@ -172,7 +173,10 @@ impl Format for DataSizeFormat {
             source_format: "datasize".to_string(),
             confidence: 0.90,
             description,
-            rich_display: vec![],
+            rich_display: vec![RichDisplayOption::new(RichDisplay::DataSize {
+                bytes,
+                human,
+            })],
         }]
     }
 

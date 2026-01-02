@@ -423,6 +423,7 @@ impl Format for DurationFormat {
             result.format_hint
         );
 
+        let human = Self::seconds_to_human(secs);
         vec![Interpretation {
             value: CoreValue::Int {
                 value: secs as i128,
@@ -431,7 +432,10 @@ impl Format for DurationFormat {
             source_format: "duration".to_string(),
             confidence: result.confidence,
             description,
-            rich_display: vec![],
+            rich_display: vec![RichDisplayOption::new(RichDisplay::Duration {
+                millis: result.duration.millis,
+                human,
+            })],
         }]
     }
 
