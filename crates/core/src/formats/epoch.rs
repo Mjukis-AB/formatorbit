@@ -7,7 +7,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use tracing::{debug, trace};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{CoreValue, Interpretation};
+use crate::types::{CoreValue, Interpretation, RichDisplay, RichDisplayOption};
 
 use super::datetime::{
     MAX_EPOCH_MICROS, MAX_EPOCH_MILLIS, MAX_EPOCH_NANOS, MAX_EPOCH_SECONDS, MIN_EPOCH_MICROS,
@@ -124,7 +124,11 @@ impl Format for EpochFormat {
                     source_format: "epoch-seconds".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
-                    rich_display: vec![],
+                    rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                        epoch_millis: value * 1000,
+                        iso: iso.clone(),
+                        relative,
+                    })],
                 });
             }
         }
@@ -151,7 +155,11 @@ impl Format for EpochFormat {
                     source_format: "epoch-millis".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
-                    rich_display: vec![],
+                    rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                        epoch_millis: value,
+                        iso: iso.clone(),
+                        relative,
+                    })],
                 });
             }
         }
@@ -176,7 +184,11 @@ impl Format for EpochFormat {
                     source_format: "epoch-micros".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
-                    rich_display: vec![],
+                    rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                        epoch_millis: value / 1000,
+                        iso: iso.clone(),
+                        relative,
+                    })],
                 });
             }
         }
@@ -201,7 +213,11 @@ impl Format for EpochFormat {
                     source_format: "epoch-nanos".to_string(),
                     confidence,
                     description: format!("{} ({})", iso, relative),
-                    rich_display: vec![],
+                    rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                        epoch_millis: value / 1_000_000,
+                        iso: iso.clone(),
+                        relative,
+                    })],
                 });
             }
         }

@@ -12,5 +12,14 @@ expression: "&result.interpretation"
   },
   "source_format": "duration",
   "confidence": 0.9,
-  "description": "[description with dynamic timestamp]"
+  "description": "[description with dynamic timestamp]",
+  "rich_display": [
+    {
+      "preferred": {
+        "type": "Duration",
+        "millis": 9000000,
+        "human": "2h30m"
+      }
+    }
+  ]
 }

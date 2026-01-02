@@ -12,5 +12,14 @@ expression: "&result.interpretation"
   },
   "source_format": "datasize",
   "confidence": 0.9,
-  "description": "1024 bytes = 1,024 bytes (decimal)"
+  "description": "1024 bytes = 1,024 bytes (decimal)",
+  "rich_display": [
+    {
+      "preferred": {
+        "type": "DataSize",
+        "bytes": 1024,
+        "human": "1 KiB"
+      }
+    }
+  ]
 }
