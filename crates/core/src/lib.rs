@@ -276,6 +276,40 @@ impl Formatorbit {
             .collect()
     }
 
+    /// Convert raw bytes and return all possible interpretations.
+    ///
+    /// The bytes are base64-encoded internally for format detection.
+    /// This is useful for binary data like images, archives, etc.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use formatorbit_core::Formatorbit;
+    ///
+    /// let forb = Formatorbit::new();
+    /// let png_header = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    /// let results = forb.convert_bytes(&png_header);
+    /// assert!(!results.is_empty());
+    /// ```
+    #[must_use]
+    pub fn convert_bytes(&self, data: &[u8]) -> Vec<ConversionResult> {
+        use base64::Engine;
+        let base64 = base64::engine::general_purpose::STANDARD.encode(data);
+        self.convert_all(&base64)
+    }
+
+    /// Convert raw bytes with only the specified formats.
+    #[must_use]
+    pub fn convert_bytes_filtered(
+        &self,
+        data: &[u8],
+        format_filter: &[String],
+    ) -> Vec<ConversionResult> {
+        use base64::Engine;
+        let base64 = base64::engine::general_purpose::STANDARD.encode(data);
+        self.convert_all_filtered(&base64, format_filter)
+    }
+
     /// Get info about all registered formats (for help/documentation).
     #[must_use]
     pub fn format_infos(&self) -> Vec<FormatInfo> {
