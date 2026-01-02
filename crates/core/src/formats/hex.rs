@@ -283,9 +283,22 @@ impl Format for HexFormat {
             return vec![];
         };
 
+        // Check if the hex contains any letters (A-F) - makes it unambiguously hex
+        let has_hex_letters = normalized.hex.chars().any(|c| c.is_ascii_alphabetic());
+
         // Determine confidence based on format detection
+        // Short digit-only colon-separated inputs (like "15:00") could be times
         let confidence = if normalized.high_confidence {
-            0.92
+            if !has_hex_letters && bytes.len() <= 2 {
+                // Could be time like "15:00" - lower confidence
+                0.50
+            } else if !has_hex_letters && bytes.len() <= 4 {
+                // Could be IP-like or time - moderate confidence
+                0.70
+            } else {
+                // Has letters or is long enough to be unambiguous
+                0.92
+            }
         } else if bytes.len() >= 2 {
             0.6
         } else {
