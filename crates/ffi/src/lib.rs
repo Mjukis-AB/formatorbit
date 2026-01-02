@@ -12,6 +12,17 @@ use std::sync::OnceLock;
 
 uniffi::setup_scaffolding!();
 
+// =============================================================================
+// Error Types
+// =============================================================================
+
+/// Error type for FFI operations that can fail.
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum FfiError {
+    #[error("{message}")]
+    FileError { message: String },
+}
+
 static INSTANCE: OnceLock<Formatorbit> = OnceLock::new();
 
 fn get_instance() -> &'static Formatorbit {
@@ -109,17 +120,21 @@ pub fn convert_bytes_from(data: Vec<u8>, from_format: String) -> Vec<FfiConversi
 /// For text files, the content is parsed directly.
 /// For binary files, the bytes are base64-encoded for format detection.
 #[uniffi::export]
-pub fn convert_file(path: String) -> Result<Vec<FfiConversionResult>, String> {
+pub fn convert_file(path: String) -> Result<Vec<FfiConversionResult>, FfiError> {
     use base64::Engine;
     use std::fs;
     use std::path::Path;
 
     let file_path = Path::new(&path);
     if !file_path.exists() {
-        return Err(format!("File not found: {}", path));
+        return Err(FfiError::FileError {
+            message: format!("File not found: {}", path),
+        });
     }
 
-    let data = fs::read(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+    let data = fs::read(file_path).map_err(|e| FfiError::FileError {
+        message: format!("Failed to read file: {}", e),
+    })?;
 
     // Try to interpret as UTF-8 text first
     let input = if let Ok(text) = String::from_utf8(data.clone()) {
@@ -143,17 +158,21 @@ pub fn convert_file(path: String) -> Result<Vec<FfiConversionResult>, String> {
 pub fn convert_file_from(
     path: String,
     from_format: String,
-) -> Result<Vec<FfiConversionResult>, String> {
+) -> Result<Vec<FfiConversionResult>, FfiError> {
     use base64::Engine;
     use std::fs;
     use std::path::Path;
 
     let file_path = Path::new(&path);
     if !file_path.exists() {
-        return Err(format!("File not found: {}", path));
+        return Err(FfiError::FileError {
+            message: format!("File not found: {}", path),
+        });
     }
 
-    let data = fs::read(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+    let data = fs::read(file_path).map_err(|e| FfiError::FileError {
+        message: format!("Failed to read file: {}", e),
+    })?;
 
     // Try to interpret as UTF-8 text first
     let input = if let Ok(text) = String::from_utf8(data.clone()) {
@@ -243,6 +262,10 @@ mod tests {
     fn test_convert_file_not_found() {
         let result = convert_file("/nonexistent/path/to/file.txt".to_string());
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("File not found"));
+        match result.unwrap_err() {
+            FfiError::FileError { message } => {
+                assert!(message.contains("File not found"));
+            }
+        }
     }
 }
