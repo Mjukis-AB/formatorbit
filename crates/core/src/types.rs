@@ -105,6 +105,13 @@ pub enum RichDisplay {
 
     /// Markdown-formatted text
     Markdown { content: String },
+
+    /// Live clock display for "now" input
+    /// GUI should show a ticking clock, not a fixed timestamp
+    LiveClock {
+        /// Display label, e.g. "Now", "Current time"
+        label: String,
+    },
 }
 
 /// A node in a tree structure for hierarchical data display.
@@ -187,6 +194,7 @@ impl RichDisplay {
                 // First line or truncated
                 content.lines().next().unwrap_or("").to_string()
             }
+            Self::LiveClock { label } => label.clone(),
         }
     }
 
@@ -217,6 +225,7 @@ impl RichDisplay {
             Self::Image { data, .. } => data.clone(),
             Self::Progress { value, .. } => format!("{:.4}", value),
             Self::Markdown { content } => content.clone(),
+            Self::LiveClock { label } => label.clone(),
         }
     }
 }

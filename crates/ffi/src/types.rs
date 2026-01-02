@@ -178,6 +178,9 @@ pub enum FfiRichDisplay {
     Markdown {
         content: String,
     },
+    LiveClock {
+        label: String,
+    },
 }
 
 impl From<RichDisplay> for FfiRichDisplay {
@@ -223,6 +226,7 @@ impl From<RichDisplay> for FfiRichDisplay {
             },
             RichDisplay::Progress { value, label } => Self::Progress { value, label },
             RichDisplay::Markdown { content } => Self::Markdown { content },
+            RichDisplay::LiveClock { label } => Self::LiveClock { label },
         }
     }
 }
