@@ -218,6 +218,52 @@ const DATETIME_CASES: &[GoldenCase] = &[
 ];
 
 // =============================================================================
+// Golden Corpus: Natural Language Dates
+// =============================================================================
+
+const NATURAL_DATE_CASES: &[GoldenCase] = &[
+    // Time of day - should beat hex for "15:00"
+    GoldenCase::top("15:00", "natural-date", "24-hour time"),
+    GoldenCase::top("09:30", "natural-date", "Morning time"),
+    GoldenCase::top("3:30pm", "natural-date", "12-hour with pm"),
+    GoldenCase::top("9am", "natural-date", "Hour with am"),
+    GoldenCase::top("12:00:00", "natural-date", "Noon with seconds"),
+    // Relative words
+    GoldenCase::top("now", "natural-date", "Current time"),
+    GoldenCase::top("today", "natural-date", "Today"),
+    GoldenCase::top("tomorrow", "natural-date", "Tomorrow"),
+    GoldenCase::top("yesterday", "natural-date", "Yesterday"),
+    // Relative periods
+    GoldenCase::top("next week", "natural-date", "Next week"),
+    GoldenCase::top("last month", "natural-date", "Last month"),
+    GoldenCase::top("next year", "natural-date", "Next year"),
+    // Weekdays
+    GoldenCase::top("monday", "natural-date", "Weekday name"),
+    GoldenCase::top("next friday", "natural-date", "Next weekday"),
+    GoldenCase::top("last tuesday", "natural-date", "Last weekday"),
+    // Relative offsets
+    GoldenCase::top("in 2 days", "natural-date", "In N days"),
+    GoldenCase::top("3 weeks ago", "natural-date", "N weeks ago"),
+    GoldenCase::top("a month from now", "natural-date", "A month from now"),
+    // Month + day
+    GoldenCase::top("dec 15", "natural-date", "Month day (short)"),
+    GoldenCase::top("15 december", "natural-date", "Day month (long)"),
+    GoldenCase::top("march 15th", "natural-date", "Month day with ordinal"),
+    // Special dates
+    GoldenCase::top("christmas", "natural-date", "Christmas"),
+    GoldenCase::top("halloween", "natural-date", "Halloween"),
+    GoldenCase::top("new years", "natural-date", "New Year's"),
+    // Period boundaries
+    GoldenCase::top("end of month", "natural-date", "End of month"),
+    GoldenCase::top("eom", "natural-date", "EOM abbreviation"),
+    GoldenCase::top("start of year", "natural-date", "Start of year"),
+    // Quarters
+    GoldenCase::top("q1", "natural-date", "Quarter 1"),
+    GoldenCase::top("q2", "natural-date", "Quarter 2"),
+    GoldenCase::top("next quarter", "natural-date", "Next quarter"),
+];
+
+// =============================================================================
 // Golden Corpus: ISBNs (formatted should win, unformatted may not)
 // =============================================================================
 
@@ -598,6 +644,11 @@ fn test_golden_colors() {
 #[test]
 fn test_golden_datetime() {
     run_golden_tests(DATETIME_CASES, "DateTime");
+}
+
+#[test]
+fn test_golden_natural_dates() {
+    run_golden_tests(NATURAL_DATE_CASES, "NaturalDate");
 }
 
 #[test]
