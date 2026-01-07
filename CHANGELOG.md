@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-01-07
+
+### Added
+- **`source_conversions()` trait method** - new Format trait method for format-specific conversions that should only appear when that format was the source parser. Unlike `conversions()` which is called on all values during BFS, `source_conversions()` is called once for the source format only.
+- **Expression result as Primary conversion** - expressions now emit a Primary priority "result" conversion, ensuring UIs display the computed result prominently instead of falling back to text codepoints.
+
 ## [0.9.1] - 2026-01-07
 
 ### Fixed
