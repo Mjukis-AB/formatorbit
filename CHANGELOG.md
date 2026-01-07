@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.9.1] - 2026-01-07
+
+### Fixed
+- **ANSI escape codes in pipe mode** - colorized log output (e.g., from log colorization scripts) now works correctly. ANSI codes are stripped before tokenization so UUIDs, IPs, hex values etc. are properly detected.
+
 ## [0.9.0] - 2026-01-07
 
 ### Added
