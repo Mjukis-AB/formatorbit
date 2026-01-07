@@ -2,6 +2,7 @@
 name = "formatorbit-ffi"
 version.workspace = true
 edition.workspace = true
+publish = false  # FFI bindings are not published to crates.io
 
 [lib]
 crate-type = ["cdylib", "staticlib"]

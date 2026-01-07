@@ -6,8 +6,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
+readme = "../../README.md"
 description = "Core library for data format detection and conversion"
-keywords = ["converter", "hex", "base64", "encoding", "parser"]
+keywords = ["format-detection", "data-conversion", "hex", "base64", "decoder"]
 categories = ["encoding", "parsing"]
 
 [features]

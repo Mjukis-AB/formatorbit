@@ -8,11 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **String reinterpretation in BFS** - when hex/base64 decodes to a string, automatically parse it as other formats:
+  - Hex-encoded JSON: `7b22...` → `hex → utf8 → json`
+  - Hex-encoded IP: `31 39 32 2e...` → `hex → utf8 → ipv4`
+  - Hex-encoded UUID: `35 35 30 65...` → `hex → utf8 → uuid`
+  - Configurable threshold via `--reinterpret-threshold` (default 0.7, set to 1.0 to disable)
+- **xxd-style hex input** - space-separated multi-byte hex groups now supported:
+  - `7b22 6865 6c6c 6f22` (2-byte groups from xxd default output)
+  - `7b226865 6c6c6f22` (4-byte word groupings)
 - **More date format parsing**:
   - ISO 8601 date-only: `2025-11-19` (95% confidence)
   - Asian/ISO with slashes: `2025/11/19` (90% confidence)
   - European dot format: `19.11.2025` (85% confidence)
   - Short dates without year: `11/19`, `25/2` (45-65% confidence, so expr wins for ambiguous cases)
+- **crates.io publishing** - releases now automatically publish to crates.io
 
 ### Changed
 - **Expression confidence now dynamic** - complex expressions like `5*9*3*9/23` now score 95% instead of fixed 60%
@@ -21,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Single multiply/divide: 85%
   - Addition/subtraction: 75%
   - Bare literals like `0xFF`: 50% (so hex wins)
+- **Updated crate keywords** for better discoverability on crates.io
 
 ### Fixed
 - **Large file performance** - 4MB image now processes in <1s (was 14s)

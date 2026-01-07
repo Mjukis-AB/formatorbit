@@ -6,8 +6,9 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
+readme = "../../README.md"
 description = "CLI tool that shows all possible interpretations of any data input"
-keywords = ["converter", "hex", "base64", "cli", "encoding"]
+keywords = ["cli", "devtools", "hex", "base64", "decoder"]
 categories = ["command-line-utilities", "encoding"]
 
 [[bin]]
