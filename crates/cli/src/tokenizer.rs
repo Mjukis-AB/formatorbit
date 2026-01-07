@@ -2,8 +2,65 @@
 //!
 //! Extracts tokens from log lines with position tracking and smart grouping
 //! for hex-like sequences (e.g., "69 1E 01 B8" -> single token).
+//!
+//! Also handles ANSI escape codes from colorized output (e.g., piped from
+//! log colorization scripts).
 
 use unicode_width::UnicodeWidthStr;
+
+/// Strip ANSI escape codes from a string.
+///
+/// Handles:
+/// - CSI sequences: `\x1b[...m` (colors, styles)
+/// - OSC sequences: `\x1b]...ST` (terminal titles, links)
+/// - Simple escapes: `\x1b[A-Z]` (cursor movement)
+pub fn strip_ansi_codes(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // Start of escape sequence
+            match chars.peek() {
+                Some('[') => {
+                    // CSI sequence: \x1b[...m
+                    chars.next(); // consume '['
+                                  // Skip until we hit a letter (the final byte)
+                    while let Some(&next) = chars.peek() {
+                        chars.next();
+                        if next.is_ascii_alphabetic() {
+                            break;
+                        }
+                    }
+                }
+                Some(']') => {
+                    // OSC sequence: \x1b]...ST (where ST is \x1b\ or \x07)
+                    chars.next(); // consume ']'
+                    while let Some(next) = chars.next() {
+                        if next == '\x07' {
+                            break;
+                        }
+                        if next == '\x1b' && chars.peek() == Some(&'\\') {
+                            chars.next();
+                            break;
+                        }
+                    }
+                }
+                Some(c) if c.is_ascii_alphabetic() => {
+                    // Simple escape: \x1b followed by a letter
+                    chars.next();
+                }
+                _ => {
+                    // Unknown escape, skip just the ESC
+                }
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    result
+}
 
 /// A token extracted from a line with its position information.
 #[derive(Debug, Clone)]
@@ -315,5 +372,55 @@ mod tests {
         assert!(!looks_like_hex_dump("87A369")); // No spaces
         assert!(!looks_like_hex_dump("hello world")); // Not hex
         assert!(!looks_like_hex_dump("87")); // Single byte
+    }
+
+    #[test]
+    fn test_strip_ansi_codes_colors() {
+        // Red text: \x1b[31m...\x1b[0m
+        assert_eq!(strip_ansi_codes("\x1b[31mERROR\x1b[0m"), "ERROR");
+
+        // Yellow text
+        assert_eq!(strip_ansi_codes("\x1b[33mWARNING\x1b[0m"), "WARNING");
+
+        // Bold text: \x1b[1m...\x1b[0m
+        assert_eq!(strip_ansi_codes("\x1b[1mbold\x1b[0m"), "bold");
+
+        // Combined: bold red
+        assert_eq!(strip_ansi_codes("\x1b[1;31mERROR\x1b[0m"), "ERROR");
+    }
+
+    #[test]
+    fn test_strip_ansi_codes_full_line() {
+        // Simulates colorlogJack.py output for an error line
+        let colored = "\x1b[31m[2024-01-15 10:30:00] E Some error occurred\x1b[0m";
+        let stripped = strip_ansi_codes(colored);
+        assert_eq!(stripped, "[2024-01-15 10:30:00] E Some error occurred");
+    }
+
+    #[test]
+    fn test_strip_ansi_codes_no_codes() {
+        // Plain text should pass through unchanged
+        assert_eq!(strip_ansi_codes("hello world"), "hello world");
+        assert_eq!(strip_ansi_codes("192.168.1.1"), "192.168.1.1");
+    }
+
+    #[test]
+    fn test_strip_ansi_codes_multiple() {
+        // Multiple color changes in one line
+        let colored = "\x1b[32mOK\x1b[0m: \x1b[33muser123\x1b[0m logged in";
+        assert_eq!(strip_ansi_codes(colored), "OK: user123 logged in");
+    }
+
+    #[test]
+    fn test_strip_ansi_codes_preserves_content() {
+        // Ensure hex values and UUIDs are preserved
+        let colored = "\x1b[36m550e8400-e29b-41d4-a716-446655440000\x1b[0m";
+        assert_eq!(
+            strip_ansi_codes(colored),
+            "550e8400-e29b-41d4-a716-446655440000"
+        );
+
+        let colored = "\x1b[33m691E01B8\x1b[0m";
+        assert_eq!(strip_ansi_codes(colored), "691E01B8");
     }
 }

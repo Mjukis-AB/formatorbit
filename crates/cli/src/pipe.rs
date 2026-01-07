@@ -9,7 +9,7 @@ use colored::Colorize;
 use formatorbit_core::{ConversionResult, Formatorbit, RichDisplay};
 
 use crate::pretty::{self, PacketMode, PrettyConfig};
-use crate::tokenizer::{is_interesting_candidate, tokenize, Token};
+use crate::tokenizer::{is_interesting_candidate, strip_ansi_codes, tokenize, Token};
 
 /// Configuration for pipe mode.
 pub struct PipeModeConfig {
@@ -42,8 +42,10 @@ pub fn run_pipe_mode(forb: &Formatorbit, config: &PipeModeConfig) -> io::Result<
 
     for line_result in handle.lines() {
         let line = line_result?;
-        let annotations = process_line(forb, &line, config);
-        print_line_result(&mut out, &line, &annotations, config)?;
+        // Strip ANSI escape codes from colorized output (e.g., from log colorization scripts)
+        let clean_line = strip_ansi_codes(&line);
+        let annotations = process_line(forb, &clean_line, config);
+        print_line_result(&mut out, &clean_line, &annotations, config)?;
     }
 
     Ok(())
