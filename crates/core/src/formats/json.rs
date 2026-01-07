@@ -59,36 +59,72 @@ impl Format for JsonFormat {
     }
 
     fn conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        // JSON is a terminal format - we only produce formatted output, no further conversions
-        let CoreValue::Json(json) = value else {
-            return vec![];
-        };
+        match value {
+            CoreValue::Json(json) => {
+                // Only offer formatting if the original might have been minified
+                // (i.e., the JSON has some structure worth formatting)
+                if !json.is_object() && !json.is_array() {
+                    return vec![];
+                }
 
-        // Only offer formatting if the original might have been minified
-        // (i.e., the JSON has some structure worth formatting)
-        if !json.is_object() && !json.is_array() {
-            return vec![];
+                let formatted = serde_json::to_string_pretty(json).unwrap_or_default();
+
+                vec![Conversion {
+                    value: CoreValue::Json(json.clone()),
+                    target_format: "json-formatted".to_string(),
+                    display: formatted.clone(),
+                    path: vec!["json-formatted".to_string()],
+                    steps: vec![ConversionStep {
+                        format: "json-formatted".to_string(),
+                        value: CoreValue::Json(json.clone()),
+                        display: formatted,
+                    }],
+                    is_lossy: false,
+                    priority: ConversionPriority::Structured,
+                    display_only: false,
+                    kind: ConversionKind::default(),
+                    hidden: false,
+                    rich_display: vec![],
+                }]
+            }
+            CoreValue::String(s) => {
+                // Try to parse string as JSON (enables hex → utf8 → json chain)
+                let trimmed = s.trim();
+                if !trimmed.starts_with('{') && !trimmed.starts_with('[') {
+                    return vec![];
+                }
+
+                let Ok(json) = serde_json::from_str::<serde_json::Value>(trimmed) else {
+                    return vec![];
+                };
+
+                // Only convert objects and arrays
+                if !json.is_object() && !json.is_array() {
+                    return vec![];
+                }
+
+                let formatted = serde_json::to_string_pretty(&json).unwrap_or_default();
+
+                vec![Conversion {
+                    value: CoreValue::Json(json.clone()),
+                    target_format: "json".to_string(),
+                    display: formatted.clone(),
+                    path: vec!["json".to_string()],
+                    steps: vec![ConversionStep {
+                        format: "json".to_string(),
+                        value: CoreValue::Json(json),
+                        display: formatted,
+                    }],
+                    is_lossy: false,
+                    priority: ConversionPriority::Structured,
+                    display_only: true, // Don't explore further from JSON
+                    kind: ConversionKind::default(),
+                    hidden: false,
+                    rich_display: vec![],
+                }]
+            }
+            _ => vec![],
         }
-
-        let formatted = serde_json::to_string_pretty(json).unwrap_or_default();
-
-        vec![Conversion {
-            value: CoreValue::Json(json.clone()),
-            target_format: "json-formatted".to_string(),
-            display: formatted.clone(),
-            path: vec!["json-formatted".to_string()],
-            steps: vec![ConversionStep {
-                format: "json-formatted".to_string(),
-                value: CoreValue::Json(json.clone()),
-                display: formatted,
-            }],
-            is_lossy: false,
-            priority: ConversionPriority::Structured,
-            display_only: false,
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![],
-        }]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

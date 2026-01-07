@@ -99,9 +99,9 @@ impl HexFormat {
             }
         }
 
-        // 4. Try space-separated bytes: 69 1E 01 B8
+        // 4. Try space-separated bytes: 69 1E 01 B8 or 691E 01B8 (xxd style)
         if trimmed.contains(' ') {
-            if let Some(normalized) = Self::parse_separated(trimmed, ' ') {
+            if let Some(normalized) = Self::parse_space_separated(trimmed) {
                 return Some(NormalizedHex {
                     hex: normalized,
                     format_hint: "space-separated",
@@ -145,7 +145,9 @@ impl HexFormat {
         None
     }
 
-    /// Parse separator-delimited hex bytes (space, colon, dash).
+    /// Parse separator-delimited hex bytes (colon, dash).
+    /// Only allows single bytes (1-2 hex chars per part) to avoid
+    /// conflicting with IPv6 which uses 4-char hex groups with colons.
     fn parse_separated(input: &str, sep: char) -> Option<String> {
         let mut result = String::new();
 
@@ -161,7 +163,7 @@ impl HexFormat {
                 .or_else(|| part.strip_prefix("0X"))
                 .unwrap_or(part);
 
-            // Each part should be 1-2 hex chars (allow single digit like "9" -> "09")
+            // Each part should be 1-2 hex chars (a single byte)
             if hex.is_empty() || hex.len() > 2 || !Self::is_valid_hex(hex) {
                 return None;
             }
@@ -170,6 +172,52 @@ impl HexFormat {
                 result.push('0');
             }
             result.push_str(&hex.to_uppercase());
+        }
+
+        if result.is_empty() {
+            None
+        } else {
+            Some(result)
+        }
+    }
+
+    /// Parse space-separated hex with flexible grouping.
+    /// Supports various groupings (for xxd-style output):
+    /// - Single byte: "7b 22 68" (xxd -p style)
+    /// - Two bytes: "7b22 6865" (xxd default style)
+    /// - Four bytes: "7b226865 6c6c6f22" (word grouping)
+    /// - Single digit: "9 1e" -> "09 1e"
+    fn parse_space_separated(input: &str) -> Option<String> {
+        let mut result = String::new();
+
+        for part in input.split(' ') {
+            let part = part.trim();
+            if part.is_empty() {
+                continue;
+            }
+
+            // Strip 0x prefix if present
+            let hex = part
+                .strip_prefix("0x")
+                .or_else(|| part.strip_prefix("0X"))
+                .unwrap_or(part);
+
+            // Validate: must be valid hex and even length (or single digit)
+            if hex.is_empty() || !Self::is_valid_hex(hex) {
+                return None;
+            }
+
+            // Single digit gets zero-padded
+            if hex.len() == 1 {
+                result.push('0');
+                result.push_str(&hex.to_uppercase());
+            } else if hex.len() % 2 == 0 {
+                // Even length: 2, 4, 6, 8... bytes - all valid
+                result.push_str(&hex.to_uppercase());
+            } else {
+                // Odd length > 1: invalid hex byte sequence
+                return None;
+            }
         }
 
         if result.is_empty() {
