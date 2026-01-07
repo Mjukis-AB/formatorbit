@@ -398,9 +398,8 @@ $ forb 'rgb(35, 50, 35)'
 ```bash
 $ forb '0xFF + 1'
 
-▶ expr (60% confidence)
+▶ expr (85% confidence)
   0xFF + 1 = 256
-  ≈ result: 256
   ≈ hex-int: 0x100
   ≈ binary-int: 0b100000000
   ✓ power-of-2: 2^8
@@ -566,27 +565,150 @@ $ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655
 
 ## How It Works
 
-1. **Parse**: Try all format parsers on the input
-2. **Rank**: Sort interpretations by confidence score
-3. **Convert**: For each interpretation, find all possible conversions via graph traversal
-4. **Prioritize**: Sort conversions by usefulness (structured data first, then semantic types, then encodings)
-5. **Display**: Show results with the most likely interpretation first, limited to top 5 conversions by default
+### Overview
 
-**Confidence score** (0-100%) indicates how likely each interpretation is:
-- **90%+**: Strong indicators (0x prefix, UUID dashes, base64 padding)
-- **70-90%**: Plausible match (valid hex chars, reasonable timestamp range)
-- **<70%**: Possible but less certain
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              Input: "691E01B8"                          │
+└─────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  1. PARSING: Try all format parsers, each returns confidence score      │
+│     • HexFormat.parse() → 92% (valid hex, has letters A-F)              │
+│     • DecimalFormat.parse() → 70% (valid number, but very large)        │
+│     • Base64Format.parse() → 0% (invalid base64)                        │
+└─────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  2. INTERPRETATION: Each successful parse produces a CoreValue          │
+│     • hex (92%) → CoreValue::Bytes([0x69, 0x1E, 0x01, 0xB8])            │
+│     • decimal (70%) → CoreValue::Int(691_801_800)                       │
+└─────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  3. BFS CONVERSION: For each interpretation, explore conversion graph   │
+│     • Bytes → IPv4, integers, base64, hashes, text...                   │
+│     • Int → epoch timestamp, hex notation, binary notation...           │
+│     • String → reinterpret as UUID, IP, JSON, datetime...               │
+└─────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  4. OUTPUT: Rank by confidence, sort conversions by priority            │
+│     ▶ hex (92%) → ipv4, epoch-seconds, base64, binary...                │
+│     ▶ decimal (70%) → epoch-seconds, hex-int, binary-int...             │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-**Conversion priority** - most useful conversions shown first:
-1. Structured data (JSON, MessagePack, Protobuf - pretty-printed with colors)
-2. Semantic types (datetime, UUID, IP address, color)
-3. Encodings (hex, base64, url-encoded)
-4. Raw values (integers, bytes)
+### Core Types
 
-**Conversion kinds** - shown with different symbols in CLI:
-- `→` **Conversion**: Actual data transformation (metric → imperial, epoch → datetime)
-- `≈` **Representation**: Same value in different notation (256 → 0x100, 5e-9 m → 5 nm)
-- `✓` **Trait**: Property of the value (is power-of-2, is prime)
+The system is built around three core types:
+
+- **CoreValue**: The internal representation of data. Can be `Bytes`, `String`, `Int`, `Float`, `DateTime`, `Json`, `Coordinates`, `Color`, and various unit types (Length, Weight, etc.)
+
+- **Interpretation**: Result of parsing input. Contains the `CoreValue`, source format ID, confidence score (0.0-1.0), and display description.
+
+- **Conversion**: Result of converting a value. Contains the target `CoreValue`, format ID, display string, conversion path, and metadata (priority, kind, lossy flag).
+
+### Parsing & Confidence
+
+Each format parser analyzes the input and returns a confidence score:
+
+| Confidence | Meaning | Examples |
+|------------|---------|----------|
+| **90-100%** | Strong structural indicators | `0x` prefix, UUID dashes, base64 `=` padding, JSON braces |
+| **70-90%** | Valid format, plausible content | Valid hex chars, reasonable timestamp range, valid IP octets |
+| **50-70%** | Ambiguous, could be multiple things | Pure digits (decimal? hex? timestamp?), short strings |
+| **<50%** | Weak match, shown as fallback | Plain text interpretation |
+
+Confidence is **dynamic** based on input characteristics. For example, math expressions:
+- `5*9*3*9/23` (complex) → 95% confidence
+- `5*9` (simple multiply) → 85%
+- `2+2` (simple addition) → 75% (lower because `+` appears in dates, URLs)
+
+### BFS Conversion Graph
+
+Conversions are discovered via **breadth-first search** through a graph where:
+- **Nodes** are `CoreValue`s
+- **Edges** are format conversions
+
+```
+                    ┌─────────┐
+                    │  Bytes  │
+                    └────┬────┘
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+     ┌─────────┐   ┌──────────┐   ┌──────────┐
+     │  Int-BE │   │  Base64  │   │   Text   │
+     └────┬────┘   └──────────┘   └────┬─────┘
+          │                            │
+          ▼                            ▼ (reinterpret)
+     ┌─────────┐                  ┌─────────┐
+     │ DateTime│                  │  UUID   │
+     └─────────┘                  └─────────┘
+```
+
+The BFS explores up to 5 levels deep, tracking visited nodes to prevent cycles. Each format's `conversions()` method defines outgoing edges from its value type.
+
+### String Reinterpretation
+
+When a conversion produces a `CoreValue::String`, the BFS **re-parses** that string to discover nested formats:
+
+```bash
+$ forb '7b22 6865 6c6c 6f22 3a22 686f 6922 7d'
+
+▶ hex (92% confidence)
+  15 bytes (space-separated)
+  → json: (via hex → utf8 → json)    # String reinterpretation!
+    {
+      "hello": "hoi"
+    }
+```
+
+This enables chains like:
+- `hex → utf8 → json` (hex-encoded JSON)
+- `hex → utf8 → uuid` (hex-encoded UUID string)
+- `hex → utf8 → ipv4` (hex-encoded IP address)
+- `base64 → utf8 → json` (base64-encoded JSON)
+
+Controlled by `--reinterpret-threshold` (default: 0.7). Only high-confidence reinterpretations are explored.
+
+### Conversion Kinds
+
+Conversions are categorized by what they represent:
+
+| Symbol | Kind | Description | Example |
+|--------|------|-------------|---------|
+| `→` | **Conversion** | Actual data transformation | `1703456789` → `2023-12-24T23:06:29Z` |
+| `≈` | **Representation** | Same value, different notation | `256` → `0x100` |
+| `✓` | **Trait** | Property/observation about the value | `256` → `power-of-2: 2^8` |
+
+### Conversion Priority
+
+Conversions are sorted by usefulness:
+
+1. **Primary** - Direct results (expression evaluation)
+2. **Structured** - JSON, MessagePack, Protobuf (pretty-printed)
+3. **Semantic** - DateTime, UUID, IP, Color (meaningful types)
+4. **Encoding** - Hex, Base64, URL-encoded (format conversions)
+5. **Raw** - Integers, bytes, hashes
+
+### Noise Control
+
+The conversion graph can produce excessive results. Noise is controlled via:
+
+**Root-based blocking**: Prevent nonsensical chains based on input type
+- Text bytes → IPv4 blocked (ASCII "test" isn't `116.101.115.116`)
+- Hex bytes → Color blocked (random hex isn't a color)
+
+**Path-based blocking**: Block specific immediate conversions
+- Configurable in `config.toml` via `[blocking]` section
+
+**Confidence threshold**: Only explore high-confidence reinterpretations
+- String reinterpretation requires ≥70% confidence by default
 
 Use `-l 0` to show all conversions, or `-l N` to show top N.
 
@@ -600,6 +722,7 @@ Settings can be configured via CLI flags, environment variables, or a config fil
 |---------|----------|---------|---------|
 | limit | `-l`, `--limit` | `FORB_LIMIT` | 5 |
 | threshold | `-t`, `--threshold` | `FORB_THRESHOLD` | 0.8 |
+| reinterpret_threshold | `--reinterpret-threshold` | - | 0.7 |
 | no_color | `-C`, `--no-color` | `FORB_NO_COLOR` | false |
 | url_timeout | `--url-timeout` | `FORB_URL_TIMEOUT` | 30 |
 | url_max_size | `--url-max-size` | `FORB_URL_MAX_SIZE` | 10M |
