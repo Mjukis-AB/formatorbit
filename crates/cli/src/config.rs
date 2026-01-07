@@ -276,6 +276,7 @@ impl Config {
             _ => Some(ConversionConfig {
                 priority: priority.unwrap_or_default(),
                 blocking: blocking.unwrap_or_default(),
+                reinterpret_threshold: 0.0, // Use default (0.7) - will be overridden by CLI if set
             }),
         }
     }

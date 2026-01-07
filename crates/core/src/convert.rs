@@ -406,6 +406,9 @@ pub fn find_all_conversions(
         }
     }
 
+    // Get reinterpret threshold from config (default 0.7)
+    let reinterpret_threshold = config.map(|c| c.reinterpret_threshold()).unwrap_or(0.7);
+
     // BFS through conversions
     let mut depth = 0;
 
@@ -419,6 +422,85 @@ pub fn find_all_conversions(
 
             // Get the immediate source format (last element of current path, or root)
             let immediate_source = current_path.last().map(|s| s.as_str()).unwrap_or("");
+
+            // String reinterpretation: when we have a decoded string (not from original input),
+            // try parsing it as other formats (UUID, IP, JSON, datetime, etc.)
+            if let CoreValue::String(s) = &current_value {
+                // Only reinterpret if this came from a conversion (not original input)
+                // and reinterpretation is enabled (threshold < 1.0)
+                if !current_path.is_empty() && reinterpret_threshold < 1.0 {
+                    for format in formats {
+                        // Skip text format to prevent infinite loops
+                        if format.id() == "text" {
+                            continue;
+                        }
+
+                        for interp in format.parse(s) {
+                            // Only consider high-confidence interpretations
+                            if interp.confidence < reinterpret_threshold {
+                                continue;
+                            }
+
+                            let target_format = interp.source_format.clone();
+
+                            // Check blocking - but skip root-based blocking for string reinterpretation
+                            // because we're now in a different semantic domain (text content, not raw bytes).
+                            // E.g., hex bytes→ipv4 is blocked, but hex→utf8("192.168.1.1")→ipv4 should be allowed.
+                            if is_blocked(
+                                immediate_source,
+                                &target_format,
+                                None, // Skip root blocking for string reinterpretation
+                                &current_path,
+                                blocking,
+                            ) {
+                                continue;
+                            }
+
+                            // Format the interpreted value for display
+                            let display = format
+                                .format(&interp.value)
+                                .unwrap_or_else(|| interp.description.clone());
+
+                            let result_key = (target_format.clone(), display.clone());
+                            let bfs_key = (target_format.clone(), display.clone());
+
+                            // Build path
+                            let mut full_path = current_path.clone();
+                            full_path.push(target_format.clone());
+
+                            // Build steps
+                            let mut full_steps = current_steps.clone();
+                            full_steps.push(ConversionStep {
+                                format: target_format.clone(),
+                                value: interp.value.clone(),
+                                display: display.clone(),
+                            });
+
+                            // Add to results
+                            if seen_results.insert(result_key) {
+                                results.push(Conversion {
+                                    value: interp.value.clone(),
+                                    target_format: target_format.clone(),
+                                    display: display.clone(),
+                                    path: full_path.clone(),
+                                    steps: full_steps.clone(),
+                                    is_lossy: false,
+                                    priority: ConversionPriority::Structured,
+                                    kind: ConversionKind::Conversion,
+                                    display_only: false,
+                                    hidden: false,
+                                    rich_display: interp.rich_display.clone(),
+                                });
+                            }
+
+                            // Add to queue for further exploration
+                            if seen_for_bfs.insert(bfs_key) {
+                                queue.push_back((interp.value, full_path, full_steps));
+                            }
+                        }
+                    }
+                }
+            }
 
             // Get conversions from all formats
             for format in formats {

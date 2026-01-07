@@ -211,6 +211,14 @@ struct Cli {
     #[arg(long)]
     show_paths: bool,
 
+    /// Minimum confidence for reinterpreting decoded strings (0.0-1.0)
+    ///
+    /// When hex/base64 decodes to a string, try parsing that string as
+    /// other formats (UUID, IP, JSON, etc). Only formats with confidence
+    /// >= this threshold are explored. Set to 1.0 to disable.
+    #[arg(long, value_name = "THRESHOLD")]
+    reinterpret_threshold: Option<f32>,
+
     /// Show packet layout for binary formats (protobuf, msgpack)
     ///
     /// Displays byte-level structure with offsets, lengths, and decoded values.
@@ -729,13 +737,25 @@ fn main() {
     }
 
     // Create Formatorbit with optional conversion config from file
-    let forb = if let Some(conv_config) = file_config.conversion_config() {
-        if cli.verbose > 0 {
-            tracing::debug!("Using custom priority/blocking config from config file");
+    let forb = {
+        let mut conv_config = file_config.conversion_config().unwrap_or_default();
+
+        // Apply CLI override for reinterpret threshold
+        if let Some(threshold) = cli.reinterpret_threshold {
+            conv_config.reinterpret_threshold = threshold;
+            if cli.verbose > 0 {
+                tracing::debug!("reinterpret_threshold = {} (from CLI)", threshold);
+            }
         }
-        Formatorbit::with_config(conv_config)
-    } else {
-        Formatorbit::new()
+
+        if conv_config.is_customized() || cli.reinterpret_threshold.is_some() {
+            if cli.verbose > 0 && conv_config.is_customized() {
+                tracing::debug!("Using custom priority/blocking config from config file");
+            }
+            Formatorbit::with_config(conv_config)
+        } else {
+            Formatorbit::new()
+        }
     };
 
     // Parse packet mode early (needed for both pipe and direct mode)

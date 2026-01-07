@@ -666,6 +666,20 @@ pub struct ConversionConfig {
     /// Blocking settings.
     #[serde(default)]
     pub blocking: BlockingConfig,
+
+    /// Minimum confidence threshold for reinterpreting decoded strings.
+    ///
+    /// When a conversion produces a `CoreValue::String` (e.g., hex → utf8),
+    /// the BFS will try to parse that string as other formats (UUID, IP, JSON, etc.)
+    /// Only interpretations with confidence >= this threshold are explored.
+    ///
+    /// Default: 0.7 (70%). Set to 1.0 to disable reinterpretation.
+    #[serde(default = "default_reinterpret_threshold")]
+    pub reinterpret_threshold: f32,
+}
+
+fn default_reinterpret_threshold() -> f32 {
+    0.7
 }
 
 impl ConversionConfig {
@@ -673,6 +687,16 @@ impl ConversionConfig {
     #[must_use]
     pub fn is_customized(&self) -> bool {
         self.priority.is_customized() || self.blocking.is_customized()
+    }
+
+    /// Get the reinterpret threshold, with default fallback.
+    #[must_use]
+    pub fn reinterpret_threshold(&self) -> f32 {
+        if self.reinterpret_threshold == 0.0 {
+            default_reinterpret_threshold()
+        } else {
+            self.reinterpret_threshold
+        }
     }
 }
 
