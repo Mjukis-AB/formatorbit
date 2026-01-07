@@ -7,7 +7,7 @@
 //! - `2 ^ 16` → 65536
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
 
 pub struct ExprFormat;
 
@@ -189,13 +189,47 @@ impl Format for ExprFormat {
     }
 
     fn conversions(&self, _value: &CoreValue) -> Vec<Conversion> {
-        // Expression results are shown in the interpretation description (e.g., "0xFF + 1 = 256")
-        // We don't emit conversions here because:
-        // 1. The result is already visible in the description
-        // 2. DecimalFormat already provides hex-int, binary-int, octal-int representations
-        // 3. Having ExprFormat emit these would cause duplicate "result" conversions
-        //    when non-expression integers flow through the BFS conversion graph
+        // Don't emit result conversions here - they would pollute other interpretations.
+        // Use source_conversions() instead for expr-specific results.
         vec![]
+    }
+
+    fn source_conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        // Emit a Primary priority conversion for the expression result.
+        // This is only called when expr was the source parser, so it won't
+        // pollute other interpretations like color-hex or datasize.
+        match value {
+            CoreValue::Int { value: i, .. } => vec![Conversion {
+                value: CoreValue::Int {
+                    value: *i,
+                    original_bytes: None,
+                },
+                target_format: "result".to_string(),
+                display: i.to_string(),
+                path: vec![], // Will be set by BFS
+                is_lossy: false,
+                steps: vec![], // Will be set by BFS
+                priority: ConversionPriority::Primary,
+                kind: ConversionKind::Conversion,
+                display_only: true, // Don't explore further from result
+                hidden: false,
+                rich_display: vec![],
+            }],
+            CoreValue::Float(f) => vec![Conversion {
+                value: CoreValue::Float(*f),
+                target_format: "result".to_string(),
+                display: f.to_string(),
+                path: vec![], // Will be set by BFS
+                is_lossy: false,
+                steps: vec![], // Will be set by BFS
+                priority: ConversionPriority::Primary,
+                kind: ConversionKind::Conversion,
+                display_only: true, // Don't explore further from result
+                hidden: false,
+                rich_display: vec![],
+            }],
+            _ => vec![],
+        }
     }
 
     fn aliases(&self) -> &'static [&'static str] {

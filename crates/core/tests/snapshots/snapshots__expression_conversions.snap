@@ -6,6 +6,35 @@ expression: "&result.conversions"
 [
   {
     "value": {
+      "type": "Int",
+      "value": {
+        "value": 4
+      }
+    },
+    "target_format": "result",
+    "display": "4",
+    "path": [
+      "expr",
+      "result"
+    ],
+    "steps": [
+      {
+        "format": "result",
+        "value": {
+          "type": "Int",
+          "value": {
+            "value": 4
+          }
+        },
+        "display": "4"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Primary",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
       "type": "String",
       "value": "0x4"
     },

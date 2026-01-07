@@ -65,7 +65,22 @@ pub trait Format: Send + Sync {
     fn format(&self, value: &CoreValue) -> Option<String>;
 
     /// Get possible conversions from a value (for graph traversal).
+    ///
+    /// Called on ALL values during BFS traversal, regardless of which format
+    /// originally parsed the input. Use this for conversions that apply to
+    /// any value of a given type (e.g., DecimalFormat converting any Int to hex).
     fn conversions(&self, _value: &CoreValue) -> Vec<Conversion> {
+        vec![]
+    }
+
+    /// Get conversions that should only appear when this format was the source.
+    ///
+    /// Called once per interpretation, only for the format that originally parsed
+    /// the input. Use this for conversions that are specific to this format's
+    /// interpretation (e.g., ExprFormat showing the expression result).
+    ///
+    /// These conversions are added before BFS traversal begins.
+    fn source_conversions(&self, _value: &CoreValue) -> Vec<Conversion> {
         vec![]
     }
 

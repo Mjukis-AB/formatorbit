@@ -371,6 +371,32 @@ pub fn find_all_conversions(
         .unwrap_or_default();
     queue.push_back((initial.clone(), initial_path, vec![]));
 
+    // Call source_conversions() for the source format only.
+    // These are conversions specific to the format that parsed the input,
+    // not applicable to values from other sources during BFS.
+    if let Some(source_fmt) = source_format {
+        if let Some(format) = formats.iter().find(|f| f.id() == source_fmt) {
+            for mut conv in format.source_conversions(initial) {
+                // Build path including source format
+                let mut path = vec![source_fmt.to_string()];
+                path.push(conv.target_format.clone());
+                conv.path = path;
+
+                // Build steps
+                conv.steps = vec![ConversionStep {
+                    format: conv.target_format.clone(),
+                    value: conv.value.clone(),
+                    display: conv.display.clone(),
+                }];
+
+                let result_key = (conv.target_format.clone(), conv.display.clone());
+                if seen_results.insert(result_key) {
+                    results.push(conv);
+                }
+            }
+        }
+    }
+
     // Also format the initial value with all applicable formats
     for format in formats {
         if format.can_format(initial) {
