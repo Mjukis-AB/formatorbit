@@ -40,6 +40,11 @@ pub struct AnalyticsData {
     #[serde(default)]
     pub conversion_targets: HashMap<String, u64>,
 
+    /// Conversion path counts (full paths like "hex → int-be → epoch-seconds").
+    /// Only paths used 3+ times are stored, capped at 100 entries.
+    #[serde(default)]
+    pub conversion_paths: HashMap<String, u64>,
+
     /// Config customization tracking.
     #[serde(default)]
     pub config_changes: ConfigChangeStats,
@@ -240,6 +245,37 @@ impl AnalyticsTracker {
             .conversion_targets
             .entry(target.to_string())
             .or_insert(0) += 1;
+        self.dirty = true;
+    }
+
+    /// Record a conversion path (e.g., ["hex", "int-be", "epoch-seconds"]).
+    ///
+    /// Paths are stored as "hex → int-be → epoch-seconds".
+    /// Only paths used 3+ times are kept, capped at 100 entries.
+    pub fn record_conversion_path(&mut self, path: &[String]) {
+        if !self.enabled || path.len() < 2 {
+            return;
+        }
+
+        let path_str = path.join(" → ");
+
+        // Increment count
+        let count = self.data.conversion_paths.entry(path_str).or_insert(0);
+        *count += 1;
+
+        // Prune: remove paths with count < 3 if we're over 100 entries
+        if self.data.conversion_paths.len() > 100 {
+            self.data.conversion_paths.retain(|_, &mut v| v >= 3);
+        }
+
+        // If still over 100, keep only top 100 by count
+        if self.data.conversion_paths.len() > 100 {
+            let mut entries: Vec<_> = self.data.conversion_paths.drain().collect();
+            entries.sort_by(|a, b| b.1.cmp(&a.1));
+            entries.truncate(100);
+            self.data.conversion_paths = entries.into_iter().collect();
+        }
+
         self.dirty = true;
     }
 
@@ -465,6 +501,21 @@ pub fn format_status(data: &AnalyticsData, enabled: bool) -> String {
         formats.sort_by(|a, b| b.1.cmp(a.1));
         for (format, count) in formats.iter().take(10) {
             out.push_str(&format!("  {}: {}\n", format, count));
+        }
+    }
+
+    // Top conversion paths (only show paths with 3+ uses)
+    let frequent_paths: Vec<_> = data
+        .conversion_paths
+        .iter()
+        .filter(|(_, &count)| count >= 3)
+        .collect();
+    if !frequent_paths.is_empty() {
+        out.push_str("\nTop conversion paths:\n");
+        let mut paths: Vec<_> = frequent_paths;
+        paths.sort_by(|a, b| b.1.cmp(a.1));
+        for (path, count) in paths.iter().take(10) {
+            out.push_str(&format!("  {}: {}\n", path, count));
         }
     }
 

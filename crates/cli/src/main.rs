@@ -911,11 +911,15 @@ fn main() {
         forb.convert_all_filtered(&input, &format_filter)
     };
 
-    // Track format usage and conversion targets for analytics
+    // Track format usage, conversion targets, and paths for analytics
     for result in &results {
         tracker.record_format_usage(&result.interpretation.source_format);
         for conv in &result.conversions {
             tracker.record_conversion_target(&conv.target_format);
+            // Track full conversion paths (e.g., ["hex", "int-be", "epoch-seconds"])
+            if conv.path.len() >= 2 {
+                tracker.record_conversion_path(&conv.path);
+            }
         }
     }
 
