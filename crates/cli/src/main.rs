@@ -249,8 +249,18 @@ struct Cli {
     #[arg(long)]
     config_init: bool,
 
-    /// Analytics subcommand (status, show, clear, enable, disable)
-    #[arg(long, value_name = "COMMAND")]
+    /// Manage local usage analytics
+    ///
+    /// Commands:
+    ///   status     - Show analytics status and summary
+    ///   show       - Show full analytics data (TOML)
+    ///   preview    - Preview what would be sent
+    ///   contribute - Send anonymous usage data to TelemetryDeck
+    ///   clear      - Clear all analytics data
+    ///   enable     - Show how to enable analytics
+    ///   disable    - Show how to disable analytics
+    ///   path       - Show analytics file path
+    #[arg(long, value_name = "COMMAND", default_missing_value = "status", num_args = 0..=1)]
     analytics: Option<String>,
 
     /// Show format conversion graph (without input data)
