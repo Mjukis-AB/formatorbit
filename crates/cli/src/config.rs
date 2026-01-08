@@ -78,6 +78,18 @@ url_max_size = "10M"
 #
 # # Days between automatic contributions (if contribute = true)
 # contribute_interval = 7
+
+# ============================================================================
+# Updates Configuration (optional)
+# ============================================================================
+# Check for new versions automatically.
+
+# [updates]
+# # Enable update checking (default: true)
+# # Checks GitHub releases once per day
+# check = true
+#
+# # Can also be disabled via: FORB_CHECK_UPDATES=0
 "#;
 
 /// Priority configuration as stored in TOML.
@@ -124,6 +136,20 @@ impl Default for CliAnalyticsConfig {
     }
 }
 
+/// Updates configuration.
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct CliUpdatesConfig {
+    /// Enable update checking (default: true).
+    pub check: bool,
+}
+
+impl Default for CliUpdatesConfig {
+    fn default() -> Self {
+        Self { check: true }
+    }
+}
+
 /// Configuration loaded from file and environment.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -141,6 +167,9 @@ pub struct Config {
     /// Analytics configuration.
     #[serde(default)]
     pub analytics: CliAnalyticsConfig,
+    /// Updates configuration.
+    #[serde(default)]
+    pub updates: CliUpdatesConfig,
 }
 
 impl Config {
@@ -236,6 +265,15 @@ impl Config {
     #[allow(dead_code)]
     pub fn analytics_contribute(&self) -> bool {
         self.analytics.contribute
+    }
+
+    /// Get update checking enabled with precedence: env > config > default (true).
+    pub fn updates_enabled(&self) -> bool {
+        // FORB_CHECK_UPDATES=0 or FORB_CHECK_UPDATES=false disables checking
+        if let Ok(val) = std::env::var("FORB_CHECK_UPDATES") {
+            return !matches!(val.to_lowercase().as_str(), "0" | "false" | "no" | "off");
+        }
+        self.updates.check
     }
 
     /// Convert CLI config to core ConversionConfig.

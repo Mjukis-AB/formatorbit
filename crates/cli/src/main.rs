@@ -4,6 +4,7 @@ mod graph;
 mod pipe;
 mod pretty;
 mod tokenizer;
+mod updates;
 
 use config::Config;
 
@@ -273,6 +274,10 @@ struct Cli {
     /// Output format controlled by --dot (default: mermaid)
     #[arg(long, value_name = "MODE")]
     graph: Option<String>,
+
+    /// Check for available updates
+    #[arg(long)]
+    check_updates: bool,
 }
 
 /// Parse size string like "10M", "50M", "1G" into bytes.
@@ -568,6 +573,12 @@ fn main() {
     // Handle --analytics subcommand (early, before config loading for disable)
     if let Some(ref cmd) = cli.analytics {
         handle_analytics_command(cmd);
+        return;
+    }
+
+    // Handle --check-updates (explicit update check)
+    if cli.check_updates {
+        handle_check_updates();
         return;
     }
 
@@ -1212,6 +1223,19 @@ fn main() {
         }
         println!();
     }
+
+    // Background update check (after output, to stderr)
+    // Skip for JSON output, raw output, pipe mode, or when updates are disabled
+    if file_config.updates_enabled() && !cli.json && !cli.raw {
+        if let Some(new_version) = check_for_updates_background() {
+            use updates::{InstallMethod, VERSION};
+            let hint = InstallMethod::detect().upgrade_hint();
+            eprintln!(
+                "Update available: v{} → v{} ({})",
+                VERSION, new_version, hint
+            );
+        }
+    }
 }
 
 /// Format a conversion's display string, applying pretty-printing for structured data.
@@ -1500,6 +1524,84 @@ fn handle_analytics_command(cmd: &str) {
             std::process::exit(1);
         }
     }
+}
+
+/// Handle --check-updates command.
+fn handle_check_updates() {
+    use colored::Colorize;
+    use updates::{InstallMethod, VERSION};
+
+    println!("Checking for updates...");
+
+    match updates::check_for_update() {
+        Ok(Some(new_version)) => {
+            let hint = InstallMethod::detect().upgrade_hint();
+            println!(
+                "{} Update available: {} (you have {})",
+                "✓".green().bold(),
+                format!("v{}", new_version).green().bold(),
+                format!("v{}", VERSION).dimmed()
+            );
+            println!("  Upgrade: {}", hint.cyan());
+
+            // Update the cache with this result
+            let mut data = analytics::AnalyticsData::load();
+            data.last_version_check = Some(chrono::Utc::now());
+            data.latest_known_version = Some(new_version);
+            let _ = data.save();
+        }
+        Ok(None) => {
+            println!(
+                "{} You're on the latest version ({})",
+                "✓".green().bold(),
+                format!("v{}", VERSION).green()
+            );
+
+            // Update the cache
+            let mut data = analytics::AnalyticsData::load();
+            data.last_version_check = Some(chrono::Utc::now());
+            data.latest_known_version = Some(VERSION.to_string());
+            let _ = data.save();
+        }
+        Err(e) => {
+            eprintln!(
+                "{}: Failed to check for updates: {}",
+                "error".red().bold(),
+                e
+            );
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Check for updates in background (cached, silent on errors).
+///
+/// Returns `Some(new_version)` if an update is available and should be shown.
+fn check_for_updates_background() -> Option<String> {
+    use updates::VERSION;
+
+    let data = analytics::AnalyticsData::load();
+
+    // Check if we should fetch (24h since last check)
+    if !updates::should_check(data.last_version_check) {
+        // Use cached result if available
+        if let Some(ref cached) = data.latest_known_version {
+            return updates::compare_versions(VERSION, cached);
+        }
+        return None;
+    }
+
+    // Fetch latest version (silently fail on errors)
+    let latest = updates::fetch_latest_version().ok()?;
+
+    // Update cache
+    let mut data = data;
+    data.last_version_check = Some(chrono::Utc::now());
+    data.latest_known_version = Some(latest.clone());
+    let _ = data.save();
+
+    // Return if newer
+    updates::compare_versions(VERSION, &latest)
 }
 
 /// Handle --graph command for static format graphs.

@@ -52,6 +52,14 @@ pub struct AnalyticsData {
     /// Session statistics.
     #[serde(default)]
     pub session_stats: SessionStats,
+
+    /// Last version check timestamp.
+    #[serde(default)]
+    pub last_version_check: Option<DateTime<Utc>>,
+
+    /// Latest known version from GitHub API.
+    #[serde(default)]
+    pub latest_known_version: Option<String>,
 }
 
 /// Statistics about config customization.
