@@ -337,7 +337,10 @@ impl Format for HexFormat {
         // Determine confidence based on format detection
         // Short digit-only colon-separated inputs (like "15:00") could be times
         let confidence = if normalized.high_confidence {
-            if !has_hex_letters && bytes.len() <= 2 {
+            // 0x prefix is unambiguous hex - always high confidence
+            if normalized.format_hint == "0x prefix" {
+                0.95
+            } else if !has_hex_letters && bytes.len() <= 2 {
                 // Could be time like "15:00" - lower confidence
                 0.50
             } else if !has_hex_letters && bytes.len() <= 4 {

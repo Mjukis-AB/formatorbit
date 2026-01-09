@@ -29,6 +29,11 @@ impl Base64Format {
         s.chars().all(|c| c.is_ascii_hexdigit())
     }
 
+    /// Check if string has a hex prefix (0x or 0X).
+    fn has_hex_prefix(s: &str) -> bool {
+        s.starts_with("0x") || s.starts_with("0X")
+    }
+
     /// Check if the string looks like a word or identifier rather than base64 data.
     /// These are almost never base64-encoded data.
     fn looks_like_word_or_identifier(s: &str) -> bool {
@@ -142,7 +147,7 @@ impl Format for Base64Format {
         }
 
         // Determine confidence
-        let confidence = if input.ends_with("==") {
+        let base_confidence = if input.ends_with("==") {
             0.9 // Padding is a strong indicator
         } else if input.ends_with('=') {
             0.85
@@ -150,6 +155,13 @@ impl Format for Base64Format {
             0.7 // Valid length, no padding needed
         } else {
             0.5
+        };
+
+        // Penalize if it looks like hex (0x prefix) - valid base64 but probably hex
+        let confidence = if Self::has_hex_prefix(input) {
+            base_confidence * 0.3 // Significantly lower confidence for hex-prefixed strings
+        } else {
+            base_confidence
         };
 
         debug!(bytes_len = bytes.len(), confidence, "base64: matched");
@@ -304,5 +316,28 @@ mod tests {
         assert!(format.parse("cafebabe").is_empty());
         assert!(format.parse("0123456789abcdef").is_empty());
         assert!(format.parse("CAFED00D").is_empty());
+    }
+
+    #[test]
+    fn test_hex_prefix_low_confidence() {
+        // Strings with 0x prefix should have very low confidence as base64
+        let format = Base64Format;
+
+        // 0x87 is valid base64 but should have low confidence
+        let results = format.parse("0x87");
+        assert_eq!(results.len(), 1);
+        assert!(
+            results[0].confidence < 0.3,
+            "0x87 should have low base64 confidence"
+        );
+
+        // 0xDEADBEEF - longer hex-prefixed string
+        let results = format.parse("0xDEADBEEF");
+        if !results.is_empty() {
+            assert!(
+                results[0].confidence < 0.3,
+                "0xDEADBEEF should have low base64 confidence"
+            );
+        }
     }
 }
