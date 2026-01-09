@@ -476,6 +476,52 @@ impl Format for HexFormat {
             rich_display: vec![],
         }]
     }
+
+    fn source_conversions(&self, value: &CoreValue) -> Vec<Conversion> {
+        let CoreValue::Bytes(bytes) = value else {
+            return vec![];
+        };
+
+        // For small hex values (1-4 bytes), emit a Primary decimal representation
+        // This signals to UIs that for "0xff" the user wants to see "255" prominently,
+        // not "4m15s" (duration) or other less useful conversions.
+        //
+        // Up to 4 bytes (u32) because these are common "number" sizes:
+        // - 1 byte: 0-255
+        // - 2 bytes: 0-65535 (ports, u16)
+        // - 4 bytes: 0-4B (IDs, counts, timestamps)
+        // - 8+ bytes: more likely hashes, addresses where decimal is less useful
+        if bytes.len() <= 4 {
+            let int_value: i128 = bytes.iter().fold(0i128, |acc, &b| (acc << 8) | (b as i128));
+            let display = int_value.to_string();
+
+            return vec![Conversion {
+                value: CoreValue::Int {
+                    value: int_value,
+                    original_bytes: Some(bytes.clone()),
+                },
+                target_format: "decimal".to_string(),
+                display: display.clone(),
+                path: vec!["decimal".to_string()],
+                steps: vec![ConversionStep {
+                    format: "decimal".to_string(),
+                    value: CoreValue::Int {
+                        value: int_value,
+                        original_bytes: None,
+                    },
+                    display,
+                }],
+                is_lossy: false,
+                priority: ConversionPriority::Primary,
+                display_only: true,
+                kind: ConversionKind::Representation,
+                hidden: false,
+                rich_display: vec![],
+            }];
+        }
+
+        vec![]
+    }
 }
 
 #[cfg(test)]

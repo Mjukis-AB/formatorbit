@@ -924,13 +924,16 @@ impl Format for BytesToIntFormat {
         let be_display = be_value.to_string();
 
         let mut conversions = vec![Conversion {
-            value: be_int.clone(),
+            value: be_int,
             target_format: "int-be".to_string(),
             display: be_display.clone(),
             path: vec!["int-be".to_string()],
             steps: vec![ConversionStep {
                 format: "int-be".to_string(),
-                value: be_int,
+                value: CoreValue::Int {
+                    value: be_value,
+                    original_bytes: Some(bytes.clone()),
+                },
                 display: be_display,
             }],
             is_lossy: false,
