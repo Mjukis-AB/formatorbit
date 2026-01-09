@@ -121,12 +121,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arrayref"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
-
-[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -233,28 +227,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "680575de65ce8b916b82a447458b94a48776707d9c2681a9d8da351c06886a1f"
 dependencies = [
  "core2",
-]
-
-[[package]]
-name = "blake2"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
-dependencies = [
- "digest",
-]
-
-[[package]]
-name = "blake3"
-version = "1.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3888aaa89e4b2a40fca9848e400f6a658a5a3978de7be858e209cafa8be9a4a0"
-dependencies = [
- "arrayref",
- "arrayvec",
- "cc",
- "cfg-if",
- "constant_time_eq",
 ]
 
 [[package]]
@@ -795,10 +767,7 @@ name = "formatorbit-core"
 version = "0.9.2"
 dependencies = [
  "base64",
- "blake2",
- "blake3",
  "chrono",
- "crc32fast",
  "dirs",
  "evalexpr",
  "flate2",
@@ -810,7 +779,6 @@ dependencies = [
  "libloading",
  "lopdf",
  "matroska",
- "md-5",
  "percent-encoding",
  "plist",
  "pluscodes",
@@ -821,8 +789,6 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
- "sha1",
- "sha2",
  "symphonia",
  "tar",
  "tempfile",

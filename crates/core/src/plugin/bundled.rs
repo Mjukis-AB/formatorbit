@@ -47,6 +47,11 @@ const BUNDLED_PLUGINS: &[BundledPlugin] = &[
         source: include_str!("../../../../bundled-plugins/dev_traits.py"),
         active: false,
     },
+    BundledPlugin {
+        filename: "checksums.py",
+        source: include_str!("../../../../bundled-plugins/checksums.py"),
+        active: false,
+    },
 ];
 
 /// Install bundled plugins to the data directory if they don't exist.
