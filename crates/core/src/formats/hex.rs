@@ -63,12 +63,25 @@ impl HexFormat {
             .strip_prefix("0x")
             .or_else(|| trimmed.strip_prefix("0X"))
         {
-            if Self::is_valid_hex(hex) && hex.len().is_multiple_of(2) {
-                return Some(NormalizedHex {
-                    hex: hex.to_uppercase(),
-                    format_hint: "0x prefix",
-                    high_confidence: true,
-                });
+            if Self::is_valid_hex(hex) {
+                if hex.len().is_multiple_of(2) {
+                    return Some(NormalizedHex {
+                        hex: hex.to_uppercase(),
+                        format_hint: "0x prefix",
+                        high_confidence: true,
+                    });
+                } else {
+                    // Odd-length with 0x prefix: zero-pad (0xfff → 0x0fff)
+                    // Still high confidence since 0x prefix is unambiguous
+                    let mut padded = String::with_capacity(hex.len() + 1);
+                    padded.push('0');
+                    padded.push_str(&hex.to_uppercase());
+                    return Some(NormalizedHex {
+                        hex: padded,
+                        format_hint: "0x prefix (odd-length, zero-padded)",
+                        high_confidence: true,
+                    });
+                }
             }
         }
 
@@ -351,9 +364,10 @@ impl Format for HexFormat {
         // Determine confidence based on format detection
         // Short digit-only colon-separated inputs (like "15:00") could be times
         let is_odd_length = normalized.format_hint.contains("odd-length");
+        let has_0x_prefix = normalized.format_hint.starts_with("0x prefix");
         let confidence = if normalized.high_confidence {
-            // 0x prefix is unambiguous hex - always high confidence
-            if normalized.format_hint == "0x prefix" {
+            // 0x prefix is unambiguous hex - always high confidence (even if odd-length)
+            if has_0x_prefix {
                 0.95
             } else if is_odd_length {
                 // Odd-length hex is ambiguous - lower confidence
