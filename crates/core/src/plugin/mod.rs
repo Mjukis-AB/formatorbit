@@ -25,6 +25,7 @@
 //! }
 //! ```
 
+pub mod bundled;
 pub mod discovery;
 
 #[cfg(feature = "python")]
@@ -158,10 +159,15 @@ pub trait CurrencyPlugin: Send + Sync {
     /// Plugin metadata.
     fn meta(&self) -> &PluginMeta;
 
-    /// Get current exchange rate to USD.
+    /// Get current exchange rate.
+    ///
+    /// Returns `(rate, base_currency)` where `rate` is how much 1 unit of this
+    /// currency is worth in the base currency.
+    ///
+    /// For example, for BTC returning `(42000.0, "USD")` means 1 BTC = 42000 USD.
     ///
     /// Returns None if rate is unavailable.
-    fn rate_to_usd(&self) -> Option<f64>;
+    fn rate(&self) -> Option<(f64, String)>;
 }
 
 /// Trait for trait plugins that observe properties of values.
@@ -368,9 +374,19 @@ impl PluginRegistry {
         Self::default()
     }
 
-    /// Load plugins from the default directory (~/.config/forb/plugins/).
+    /// Load plugins from the default directories.
+    ///
+    /// This first installs bundled plugins (if not already present), then
+    /// loads all plugins from:
+    /// 1. User's config directory (~/.config/forb/plugins/)
+    /// 2. Bundled plugins directory (~/.local/share/forb/plugins/)
     #[cfg(feature = "python")]
     pub fn load_default(&mut self) -> Result<PluginLoadReport, PluginError> {
+        // Install bundled plugins if not present
+        if let Err(e) = bundled::install_bundled_plugins() {
+            tracing::debug!(error = %e, "Could not install bundled plugins");
+        }
+
         let plugin_dirs = discovery::discover_plugin_dirs();
         let mut report = PluginLoadReport::default();
 

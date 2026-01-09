@@ -7,11 +7,14 @@ use std::path::PathBuf;
 ///
 /// Returns directories in priority order:
 /// 1. User's config directory (~/.config/forb/plugins/ on Linux/macOS)
-/// 2. Additional paths from config (if any)
+/// 2. Bundled plugins directory (for default plugins shipped with forb)
+/// 3. Additional paths from config (if any)
+///
+/// Directories are deduplicated (on macOS config_dir and data_dir may be the same).
 pub fn discover_plugin_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
 
-    // Primary plugin directory
+    // Primary user plugin directory
     if let Some(config_dir) = dirs::config_dir() {
         let plugin_dir = config_dir.join("forb").join("plugins");
         if plugin_dir.exists() {
@@ -19,10 +22,43 @@ pub fn discover_plugin_dirs() -> Vec<PathBuf> {
         }
     }
 
+    // Bundled plugins directory (shipped with forb)
+    // Check data directory for system-wide bundled plugins
+    if let Some(data_dir) = dirs::data_dir() {
+        let bundled_dir = data_dir.join("forb").join("plugins");
+        // Only add if different from config dir (they're the same on macOS)
+        if bundled_dir.exists() && !dirs.contains(&bundled_dir) {
+            dirs.push(bundled_dir);
+        }
+    }
+
     // TODO: Load additional paths from config file
     // This would read from ~/.config/forb/config.toml [plugins] paths = [...]
 
     dirs
+}
+
+/// Get the bundled plugins directory path.
+///
+/// Returns the path where bundled/default plugins should be installed.
+/// On Linux: `~/.local/share/forb/plugins/`
+/// On macOS: `~/Library/Application Support/forb/plugins/`
+/// On Windows: `%APPDATA%\forb\plugins\`
+pub fn bundled_plugin_dir() -> Option<PathBuf> {
+    dirs::data_dir().map(|p| p.join("forb").join("plugins"))
+}
+
+/// Ensure the bundled plugins directory exists.
+pub fn ensure_bundled_plugin_dir() -> Result<PathBuf, std::io::Error> {
+    let dir = bundled_plugin_dir().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "Could not determine data directory",
+        )
+    })?;
+
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
 }
 
 /// Find all plugin files in a directory.

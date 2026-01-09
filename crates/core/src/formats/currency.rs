@@ -13,7 +13,7 @@
 use std::env;
 
 use crate::format::{Format, FormatInfo};
-use crate::formats::currency_rates::RateCache;
+use crate::formats::currency_rates::{self, RateCache};
 use crate::formats::units::parse_number;
 use crate::types::{
     Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
@@ -71,6 +71,22 @@ const CURRENCY_CODES: &[&str] = &[
     "IDR", "PHP", "VND", "BRL", "MXN", "ARS", "CLP", "COP", "PEN", "ZAR", "EGP", "NGN", "KES",
     "ILS", "AED", "SAR", "QAR", "KWD", "BHD", "OMR", "UAH", "KZT", "GEL", "AZN",
 ];
+
+/// Check if a currency code is known (built-in or plugin).
+fn is_known_currency(code: &str) -> bool {
+    let code_upper = code.to_uppercase();
+    CURRENCY_CODES.iter().any(|c| *c == code_upper)
+        || currency_rates::plugin_currency_codes()
+            .iter()
+            .any(|c| c.eq_ignore_ascii_case(code))
+}
+
+/// Get all known currency codes (built-in + plugin).
+fn all_currency_codes() -> Vec<String> {
+    let mut codes: Vec<String> = CURRENCY_CODES.iter().map(|s| (*s).to_string()).collect();
+    codes.extend(currency_rates::plugin_currency_codes());
+    codes
+}
 
 /// Display currencies - these are shown in conversions.
 const DISPLAY_CURRENCIES: &[&str] = &[
@@ -206,21 +222,22 @@ impl CurrencyFormat {
         }
 
         // Try amount + code with SI prefix (e.g., 5kUSD, 2.5MEUR)
-        for code in CURRENCY_CODES {
-            if input.to_uppercase().ends_with(code) {
+        for code in all_currency_codes() {
+            let input_upper = input.to_uppercase();
+            if input_upper.ends_with(&code) {
                 let prefix_part = &input[..input.len() - code.len()];
                 if let Some((amount, multiplier)) = Self::parse_amount_with_si(prefix_part) {
-                    results.push((amount * multiplier, (*code).to_string(), 0.90));
+                    results.push((amount * multiplier, code.clone(), 0.90));
                     return results;
                 }
             }
         }
 
-        // Try amount + code with space (e.g., "100 USD", "50 EUR")
+        // Try amount + code with space (e.g., "100 USD", "50 EUR", "1 BTC")
         let parts: Vec<&str> = input.split_whitespace().collect();
         if parts.len() == 2 {
             let code_upper = parts[1].to_uppercase();
-            if CURRENCY_CODES.contains(&code_upper.as_str()) {
+            if is_known_currency(&code_upper) {
                 if let Some((amount, multiplier)) = Self::parse_amount_with_si(parts[0]) {
                     results.push((amount * multiplier, code_upper, 0.90));
                     return results;
@@ -380,6 +397,7 @@ impl Format for CurrencyFormat {
 
         let mut conversions = Vec::new();
 
+        // Convert to standard display currencies
         for target in DISPLAY_CURRENCIES {
             // Skip same currency
             if *target == code {
@@ -405,6 +423,47 @@ impl Format for CurrencyFormat {
                     value: CoreValue::Currency {
                         amount: converted,
                         code: (*target).to_string(),
+                    },
+                    display,
+                }],
+                priority: ConversionPriority::Semantic,
+                kind: ConversionKind::Representation,
+                display_only: true,
+                ..Default::default()
+            });
+        }
+
+        // Convert to/from plugin currencies
+        for plugin_code in currency_rates::plugin_currency_codes() {
+            // Skip same currency
+            if plugin_code.eq_ignore_ascii_case(code) {
+                continue;
+            }
+
+            let Some(converted) = cache.convert(*amount, code, &plugin_code) else {
+                continue;
+            };
+
+            // Get plugin info for symbol
+            let display = if let Some(info) = currency_rates::get_plugin_currency(&plugin_code) {
+                format!("{}{}", info.symbol, Self::format_number(converted))
+            } else {
+                format!("{} {}", Self::format_number(converted), plugin_code)
+            };
+
+            conversions.push(Conversion {
+                value: CoreValue::Currency {
+                    amount: converted,
+                    code: plugin_code.clone(),
+                },
+                target_format: plugin_code.to_lowercase(),
+                display: display.clone(),
+                path: vec![plugin_code.to_lowercase()],
+                steps: vec![ConversionStep {
+                    format: plugin_code.to_lowercase(),
+                    value: CoreValue::Currency {
+                        amount: converted,
+                        code: plugin_code.clone(),
                     },
                     display,
                 }],

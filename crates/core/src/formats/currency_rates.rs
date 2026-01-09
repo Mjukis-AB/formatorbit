@@ -2,11 +2,15 @@
 //!
 //! Fetches rates from Frankfurter API (European Central Bank data)
 //! and caches them locally with 24-hour TTL.
+//!
+//! Also supports plugin-provided currencies (like BTC, ETH) that provide
+//! rates to a known base currency (usually USD), which are then chained
+//! through the ECB rates for full convertibility.
 
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{LazyLock, Mutex, OnceLock, RwLock};
 
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -14,6 +18,25 @@ use serde::{Deserialize, Serialize};
 /// Cached exchange rates with retry support.
 /// Uses OnceLock for the Mutex itself, then Mutex for interior mutability.
 static RATE_CACHE: OnceLock<Mutex<CacheState>> = OnceLock::new();
+
+/// Plugin-provided currency rates.
+/// Maps currency code -> (rate, base_currency).
+/// For example, BTC -> (42000.0, "USD") means 1 BTC = 42000 USD.
+static PLUGIN_RATES: LazyLock<RwLock<HashMap<String, PluginCurrencyInfo>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+/// Information about a plugin-provided currency.
+#[derive(Debug, Clone)]
+pub struct PluginCurrencyInfo {
+    /// Exchange rate: 1 unit of this currency = rate units of base_currency.
+    pub rate: f64,
+    /// The base currency code (e.g., "USD").
+    pub base_currency: String,
+    /// Currency symbol (e.g., "₿").
+    pub symbol: String,
+    /// Number of decimal places.
+    pub decimals: u8,
+}
 
 /// Internal cache state that supports retry on failure.
 struct CacheState {
@@ -169,18 +192,84 @@ impl RateCache {
     }
 
     /// Convert amount from one currency to another.
+    ///
+    /// Supports both built-in ECB currencies and plugin-provided currencies.
+    /// Plugin currencies are chained through their base currency.
     pub fn convert(&self, amount: f64, from: &str, to: &str) -> Option<f64> {
         let from_upper = from.to_uppercase();
         let to_upper = to.to_uppercase();
 
-        // Get rates relative to EUR
-        let from_rate = self.rates.get(&from_upper)?;
-        let to_rate = self.rates.get(&to_upper)?;
+        if from_upper == to_upper {
+            return Some(amount);
+        }
 
-        // Convert: amount in FROM -> EUR -> TO
-        // EUR = amount / from_rate
-        // TO = EUR * to_rate
-        Some(amount / from_rate * to_rate)
+        // Get plugin rates (if any)
+        let plugin_rates = PLUGIN_RATES.read().ok()?;
+
+        // Check if FROM is a plugin currency
+        let from_in_eur = if let Some(plugin_info) = plugin_rates.get(&from_upper) {
+            // Plugin currency: convert to base, then to EUR
+            let amount_in_base = amount * plugin_info.rate;
+            let base_upper = plugin_info.base_currency.to_uppercase();
+            let base_rate = self.rates.get(&base_upper)?;
+            amount_in_base / base_rate
+        } else {
+            // Regular ECB currency: convert to EUR
+            let from_rate = self.rates.get(&from_upper)?;
+            amount / from_rate
+        };
+
+        // Check if TO is a plugin currency
+        if let Some(plugin_info) = plugin_rates.get(&to_upper) {
+            // Plugin currency: convert from EUR to base, then to plugin currency
+            let base_upper = plugin_info.base_currency.to_uppercase();
+            let base_rate = self.rates.get(&base_upper)?;
+            let amount_in_base = from_in_eur * base_rate;
+            Some(amount_in_base / plugin_info.rate)
+        } else {
+            // Regular ECB currency: convert from EUR
+            let to_rate = self.rates.get(&to_upper)?;
+            Some(from_in_eur * to_rate)
+        }
+    }
+
+    /// Check if a currency code is known (either ECB or plugin).
+    pub fn has_currency(&self, code: &str) -> bool {
+        let code_upper = code.to_uppercase();
+        if self.rates.contains_key(&code_upper) {
+            return true;
+        }
+        if let Ok(plugin_rates) = PLUGIN_RATES.read() {
+            return plugin_rates.contains_key(&code_upper);
+        }
+        false
+    }
+}
+
+/// Register a plugin-provided currency.
+pub fn register_plugin_currency(code: &str, info: PluginCurrencyInfo) {
+    if let Ok(mut rates) = PLUGIN_RATES.write() {
+        rates.insert(code.to_uppercase(), info);
+    }
+}
+
+/// Get information about a plugin currency.
+pub fn get_plugin_currency(code: &str) -> Option<PluginCurrencyInfo> {
+    PLUGIN_RATES.read().ok()?.get(&code.to_uppercase()).cloned()
+}
+
+/// Get all plugin currency codes.
+pub fn plugin_currency_codes() -> Vec<String> {
+    PLUGIN_RATES
+        .read()
+        .map(|rates| rates.keys().cloned().collect())
+        .unwrap_or_default()
+}
+
+/// Clear all plugin currencies (useful for testing).
+pub fn clear_plugin_currencies() {
+    if let Ok(mut rates) = PLUGIN_RATES.write() {
+        rates.clear();
     }
 }
 

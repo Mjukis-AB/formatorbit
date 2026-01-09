@@ -130,6 +130,9 @@ impl Formatorbit {
         // Set the global expression context for plugin variables/functions
         expr_context::set_from_registry(&registry);
 
+        // Register plugin currencies with the rate cache
+        Self::register_plugin_currencies(&registry);
+
         Ok((
             Self {
                 formats: Self::create_format_list(),
@@ -138,6 +141,26 @@ impl Formatorbit {
             },
             report,
         ))
+    }
+
+    /// Register plugin currencies with the rate cache.
+    #[cfg(feature = "python")]
+    fn register_plugin_currencies(registry: &PluginRegistry) {
+        use formats::currency_rates::{register_plugin_currency, PluginCurrencyInfo};
+
+        for currency in registry.currencies() {
+            if let Some((rate, base)) = currency.rate() {
+                register_plugin_currency(
+                    currency.code(),
+                    PluginCurrencyInfo {
+                        rate,
+                        base_currency: base,
+                        symbol: currency.symbol().to_string(),
+                        decimals: currency.decimals(),
+                    },
+                );
+            }
+        }
     }
 
     /// Set the plugin registry.

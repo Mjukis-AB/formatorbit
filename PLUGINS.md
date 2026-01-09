@@ -308,7 +308,9 @@ def visualize_json(value):
 
 ### Currencies
 
-Add custom currency exchange rates.
+Add custom currency exchange rates. Currency plugins return a `(rate, base_currency)` tuple, where `rate` is how much 1 unit of the currency is worth in the base currency.
+
+**Default Plugin:** Formatorbit ships with a bundled cryptocurrency plugin that provides BTC, ETH, and SOL rates from CoinGecko. This plugin is automatically installed on first run.
 
 ```python
 import forb
@@ -324,15 +326,29 @@ from urllib.request import urlopen
 def btc_rate():
     """
     Get current Bitcoin to USD exchange rate.
-    Return None if rate is unavailable.
+    Return (rate, base_currency) or None if unavailable.
     """
     try:
         url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
         with urlopen(url, timeout=5) as response:
             data = json.loads(response.read().decode())
-            return data["bitcoin"]["usd"]
+            rate = data["bitcoin"]["usd"]
+            return (rate, "USD")  # 1 BTC = rate USD
     except Exception:
         return None  # Rate unavailable
+```
+
+**Key points:**
+- Return `(rate, base_currency)` tuple - e.g., `(42000.0, "USD")` means 1 BTC = 42000 USD
+- The base currency can be any currency forb knows (USD, EUR, etc.)
+- Forb automatically chains conversions, so BTC can be converted to EUR, SEK, etc. through USD
+- Return `None` if the rate is unavailable
+
+**Usage:**
+```bash
+forb "1 BTC"      # Shows BTC in USD, EUR, SEK, etc.
+forb "100 USD"    # Shows USD value in BTC and other currencies
+forb "₿0.5"       # Bitcoin symbol works too
 ```
 
 ## Plugin Structure
@@ -484,7 +500,7 @@ import forb
 @forb.expr_func(name, description="")
 @forb.trait(id, name, value_types=[])
 @forb.visualizer(id, name, value_types=[])
-@forb.currency(code, symbol, name, decimals=2)
+@forb.currency(code, symbol, name, decimals=2)  # returns (rate, base_currency)
 ```
 
 ## Troubleshooting

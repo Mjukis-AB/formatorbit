@@ -11,7 +11,7 @@ mod constants;
 mod coords;
 mod cuid;
 mod currency;
-mod currency_rates;
+pub mod currency_rates;
 mod datasize;
 mod datetime;
 mod digest;

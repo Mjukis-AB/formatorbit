@@ -1,9 +1,7 @@
-# Cryptocurrency Rates Plugin for Formatorbit
+# Default Cryptocurrency Rates Plugin for Formatorbit
 #
-# This plugin adds cryptocurrency exchange rates from CoinGecko.
-# To enable: rename to crypto_rates.py (remove .sample suffix)
-#
-# Note: Rates are fetched live from CoinGecko API. Rate limiting may apply.
+# This plugin provides live cryptocurrency exchange rates from CoinGecko.
+# It's a bundled plugin that ships with forb and is enabled by default.
 
 __forb_plugin__ = {
     "name": "Crypto Rates",
@@ -53,8 +51,8 @@ def btc_rate():
     Get current Bitcoin to USD exchange rate.
 
     Example:
-        forb "1 BTC in USD"
-        forb "0.5 BTC"
+        forb "1 BTC"      # Shows BTC value in USD, EUR, SEK, etc.
+        forb "100 USD"    # Shows USD value in BTC and other currencies
     """
     rates = _fetch_rates()
     rate = rates.get("BTC")
@@ -63,13 +61,12 @@ def btc_rate():
     return (rate, "USD")  # 1 BTC = rate USD
 
 
-@forb.currency(code="ETH", symbol="\u039e", name="Ethereum", decimals=18)
+@forb.currency(code="ETH", symbol="\u039e", name="Ethereum", decimals=8)
 def eth_rate():
     """
     Get current Ethereum to USD exchange rate.
 
     Example:
-        forb "1 ETH in USD"
         forb "10 ETH"
     """
     rates = _fetch_rates()
@@ -85,7 +82,7 @@ def sol_rate():
     Get current Solana to USD exchange rate.
 
     Example:
-        forb "100 SOL in USD"
+        forb "100 SOL"
     """
     rates = _fetch_rates()
     rate = rates.get("SOL")

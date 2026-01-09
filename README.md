@@ -773,16 +773,21 @@ $ forb --show-paths 691E01B8
 
 ## Plugins
 
-Extend forb with Python plugins for custom decoders, expression functions, traits, and more. Requires Python 3.8+ installed on your system.
+Extend forb with Python plugins for custom decoders, expression functions, traits, currencies, and more. Requires Python 3.8+ installed on your system.
+
+**Bundled Plugin:** A cryptocurrency plugin (BTC, ETH, SOL rates from CoinGecko) is installed automatically on first run.
 
 ```bash
-# Enable sample plugins
+# Try the bundled crypto plugin
+forb "1 BTC"            # Shows BTC in USD, EUR, SEK, etc.
+forb "100 USD"          # Includes BTC conversion
+
+# Enable more sample plugins
 cp sample-plugins/math_ext.py.sample ~/.config/forb/plugins/math_ext.py
 
 # Use plugin functionality
 forb "factorial(10)"    # → 3628800
 forb "PI * 2"           # → 6.283185307179586
-forb "fib(20)"          # → 6765
 ```
 
 **Plugin types:**
@@ -791,7 +796,7 @@ forb "fib(20)"          # → 6765
 - **Expression functions** - Add functions like `factorial()`, `fib()`, `gcd()`
 - **Traits** - Detect properties like "semantic version" or "well-known port"
 - **Visualizers** - Custom rich display for GUI applications
-- **Currencies** - Custom exchange rates (e.g., cryptocurrencies)
+- **Currencies** - Custom exchange rates (e.g., cryptocurrencies) with automatic cross-conversion
 
 ```bash
 # List loaded plugins

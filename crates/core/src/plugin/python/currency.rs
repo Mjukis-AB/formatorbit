@@ -68,7 +68,7 @@ impl CurrencyPlugin for PyCurrencyPlugin {
         &self.meta
     }
 
-    fn rate_to_usd(&self) -> Option<f64> {
+    fn rate(&self) -> Option<(f64, String)> {
         Python::with_gil(|py| {
             match self.func.call0(py) {
                 Ok(result) => {
@@ -77,14 +77,14 @@ impl CurrencyPlugin for PyCurrencyPlugin {
                     if bound_result.is_none() {
                         return None;
                     }
-                    // Extract float rate
-                    match bound_result.extract::<f64>() {
-                        Ok(rate) => Some(rate),
+                    // Extract (rate, base_currency) tuple
+                    match bound_result.extract::<(f64, String)>() {
+                        Ok((rate, base)) => Some((rate, base)),
                         Err(e) => {
                             tracing::warn!(
                                 plugin = %self.code,
                                 error = %e,
-                                "Plugin returned non-float value"
+                                "Plugin returned invalid value, expected (float, str) tuple"
                             );
                             None
                         }
@@ -116,14 +116,20 @@ def currency(code, symbol, name, decimals=2):
     \"\"\"
     Decorator to register a currency plugin.
 
-    A currency plugin provides exchange rates to USD.
+    A currency plugin provides exchange rates. The function returns a tuple
+    of (rate, base_currency) where rate is how much 1 unit of this currency
+    is worth in the base currency.
 
     Usage:
         @forb.currency(code=\"BTC\", symbol=\"\\u20bf\", name=\"Bitcoin\", decimals=8)
-        def btc_rate() -> float | None:
-            # Fetch current rate from API
-            # Return None if unavailable
-            return 42000.0
+        def btc_rate() -> tuple[float, str] | None:
+            # Return (rate, base_currency) or None if unavailable
+            # This means 1 BTC = 42000 USD
+            return (42000.0, \"USD\")
+
+    The base currency can be any currency known to forb (USD, EUR, etc.).
+    Forb will automatically chain conversions, so BTC can be converted to
+    EUR, SEK, etc. through the base currency.
 
     Args:
         code: Currency code (e.g., \"BTC\", \"ETH\")
