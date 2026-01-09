@@ -105,6 +105,17 @@ url_max_size = "10M"
 #
 # # Disable specific plugins by ID
 # disabled = ["plugin-id-to-skip"]
+
+# ============================================================================
+# Currency Configuration (optional)
+# ============================================================================
+# Target currency for expression functions like USD(100), EUR(50).
+
+# [currency]
+# # Target currency code (auto-detected from system locale if not set)
+# target = "EUR"
+#
+# # Can also be set via: FORB_TARGET_CURRENCY=EUR
 "#;
 
 /// Priority configuration as stored in TOML.
@@ -187,6 +198,15 @@ impl Default for CliPluginsConfig {
     }
 }
 
+/// Currency configuration.
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+pub struct CliCurrencyConfig {
+    /// Target currency code for expression functions.
+    /// If not set, auto-detected from system locale or defaults to USD.
+    pub target: Option<String>,
+}
+
 /// Configuration loaded from file and environment.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -211,6 +231,9 @@ pub struct Config {
     #[serde(default)]
     #[allow(dead_code)]
     pub plugins: CliPluginsConfig,
+    /// Currency configuration.
+    #[serde(default)]
+    pub currency: CliCurrencyConfig,
 }
 
 impl Config {
@@ -337,6 +360,18 @@ impl Config {
     #[allow(dead_code)]
     pub fn disabled_plugins(&self) -> &[String] {
         &self.plugins.disabled
+    }
+
+    /// Get target currency with precedence: env > config.
+    ///
+    /// Returns None if not explicitly set (let core use locale detection).
+    pub fn target_currency(&self) -> Option<String> {
+        // Environment variable takes precedence
+        if let Ok(code) = std::env::var("FORB_TARGET_CURRENCY") {
+            return Some(code.to_uppercase());
+        }
+        // Then config file
+        self.currency.target.as_ref().map(|c| c.to_uppercase())
     }
 
     /// Convert CLI config to core ConversionConfig.

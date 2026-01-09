@@ -1,9 +1,12 @@
 //! Global expression evaluation context.
 //!
 //! This module provides a global context for evalexpr that can be populated
-//! with plugin-provided variables and functions.
+//! with plugin-provided variables and functions, as well as built-in currency
+//! conversion functions.
 
 use std::sync::RwLock;
+
+use crate::formats::currency_expr;
 
 /// Global expression context for evalexpr.
 ///
@@ -58,33 +61,75 @@ pub fn clear() {
 ///
 /// Falls back to evalexpr::eval() if no context is set.
 pub fn eval(expr: &str) -> Result<evalexpr::Value, evalexpr::EvalexprError> {
-    let guard = match EXPR_CONTEXT.read() {
-        Ok(g) => g,
-        Err(_) => return evalexpr::eval(expr),
-    };
+    #[cfg(feature = "python")]
+    use evalexpr::ContextWithMutableFunctions;
+    use evalexpr::ContextWithMutableVariables;
 
-    match &*guard {
-        Some(data) => {
-            #[cfg(feature = "python")]
-            use evalexpr::ContextWithMutableFunctions;
-            use evalexpr::ContextWithMutableVariables;
+    let mut context = evalexpr::HashMapContext::new();
 
-            let mut context = evalexpr::HashMapContext::new();
+    // 1. Add built-in currency functions FIRST (so plugins can override)
+    add_currency_functions(&mut context);
 
-            // Add variables
+    // 2. Add plugin context if available
+    if let Ok(guard) = EXPR_CONTEXT.read() {
+        if let Some(data) = &*guard {
+            // Add plugin variables
             for (name, value) in &data.variables {
                 let _ = context.set_value(name.clone(), value.clone());
             }
 
-            // Add functions
+            // Add plugin functions (these override currency functions if same name)
             #[cfg(feature = "python")]
             for (name, func) in &data.functions {
                 let _ = context.set_function(name.clone(), func.as_evalexpr_fn());
             }
-
-            evalexpr::eval_with_context(expr, &context)
         }
-        None => evalexpr::eval(expr),
+    }
+
+    evalexpr::eval_with_context(expr, &context)
+}
+
+/// Add currency conversion functions to the context.
+///
+/// Registers functions like USD(amount), EUR(amount), BTC(amount) that convert
+/// to the target currency.
+fn add_currency_functions(context: &mut evalexpr::HashMapContext) {
+    use evalexpr::ContextWithMutableFunctions;
+
+    for code in currency_expr::all_currency_codes() {
+        // Register uppercase version (USD, EUR, BTC)
+        let code_upper = code.to_uppercase();
+        let code_for_upper = code_upper.clone();
+        let _ = context.set_function(
+            code_upper,
+            evalexpr::Function::new(move |args| {
+                let amount = args.as_number()?;
+                match currency_expr::convert_to_target(amount, &code_for_upper) {
+                    Some(result) => Ok(evalexpr::Value::Float(result)),
+                    None => Err(evalexpr::EvalexprError::CustomMessage(format!(
+                        "Cannot convert {} to target currency (no exchange rates available)",
+                        code_for_upper
+                    ))),
+                }
+            }),
+        );
+
+        // Register lowercase version (usd, eur, btc)
+        let code_lower = code.to_lowercase();
+        let code_for_lower = code.to_uppercase(); // Still use uppercase for conversion
+        let _ = context.set_function(
+            code_lower,
+            evalexpr::Function::new(move |args| {
+                let amount = args.as_number()?;
+                match currency_expr::convert_to_target(amount, &code_for_lower) {
+                    Some(result) => Ok(evalexpr::Value::Float(result)),
+                    None => Err(evalexpr::EvalexprError::CustomMessage(format!(
+                        "Cannot convert {} to target currency (no exchange rates available)",
+                        code_for_lower
+                    ))),
+                }
+            }),
+        );
     }
 }
 

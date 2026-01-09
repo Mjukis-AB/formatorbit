@@ -294,6 +294,20 @@ struct Cli {
     #[cfg(feature = "plugins")]
     #[arg(long, value_name = "COMMAND", default_missing_value = "list", num_args = 0..=1, verbatim_doc_comment)]
     plugins: Option<String>,
+
+    /// Target currency for expression functions like USD(100), EUR(50)
+    ///
+    /// Without a value, shows current target and available currencies.
+    /// With a value, sets the target currency for this invocation.
+    ///
+    /// Examples:
+    ///   forb --currency          Show current target currency
+    ///   forb --currency EUR      Set target to EUR for this run
+    ///   forb --currency SEK "USD(100)"  Convert 100 USD to SEK
+    ///
+    /// Priority: --currency flag > FORB_TARGET_CURRENCY env > config > locale > USD
+    #[arg(long, value_name = "CODE", default_missing_value = "", num_args = 0..=1, verbatim_doc_comment)]
+    currency: Option<String>,
 }
 
 /// Parse size string like "10M", "50M", "1G" into bytes.
@@ -605,6 +619,16 @@ fn main() {
         return;
     }
 
+    // Handle --currency (show info or set target)
+    if let Some(ref code) = cli.currency {
+        if code.is_empty() {
+            // Show current target currency and available currencies
+            handle_currency_info();
+            return;
+        }
+        // Set target currency for this run (will be applied after config loading)
+    }
+
     // Handle --graph (static format graph, no input needed)
     if let Some(ref mode) = cli.graph {
         let forb = Formatorbit::new();
@@ -837,6 +861,30 @@ fn main() {
             base
         }
     };
+
+    // Set target currency for expression functions
+    // Priority: CLI flag > env > config > locale > default
+    {
+        use formatorbit_core::formats::currency_expr;
+
+        if let Some(ref code) = cli.currency {
+            if !code.is_empty() {
+                // CLI flag takes highest priority
+                currency_expr::set_target_currency(Some(code.to_uppercase()));
+                tracing::debug!("target_currency = {} (from CLI)", code.to_uppercase());
+            }
+        } else if let Some(target) = file_config.target_currency() {
+            // Config/env sets it
+            let source = if std::env::var("FORB_TARGET_CURRENCY").is_ok() {
+                "env FORB_TARGET_CURRENCY"
+            } else {
+                "config file"
+            };
+            currency_expr::set_target_currency(Some(target.clone()));
+            tracing::debug!("target_currency = {} (from {})", target, source);
+        }
+        // Otherwise leave it as None and let currency_expr use locale detection
+    }
 
     // Parse packet mode early (needed for both pipe and direct mode)
     let packet_mode = match cli.packet.as_deref() {
@@ -2038,4 +2086,73 @@ fn handle_plugin_toggle(name: &str) {
         eprintln!("Run {} to see available plugins.", "--plugins".cyan());
         std::process::exit(1);
     }
+}
+
+/// Handle --currency (show current target and available currencies).
+fn handle_currency_info() {
+    use colored::Colorize;
+    use formatorbit_core::formats::{currency_expr, currency_rates};
+
+    // Initialize plugins to get plugin currencies
+    #[cfg(feature = "plugins")]
+    {
+        use formatorbit_core::plugin::PluginRegistry;
+        let mut registry = PluginRegistry::new();
+        let _ = registry.load_default(); // Ignore errors, just want to load currencies
+    }
+
+    // Get current target currency and source
+    let (target, source) = currency_expr::get_target_currency_with_source();
+
+    println!("{}", "Currency Expression Functions".bold().underline());
+    println!();
+    println!(
+        "  {} {} (from {})",
+        "Target currency:".cyan(),
+        target.yellow().bold(),
+        source.dimmed()
+    );
+    println!();
+    println!(
+        "Use {} to convert amounts to your target currency.",
+        "USD(100), EUR(50), BTC(0.5)".yellow()
+    );
+    println!();
+    println!("{}", "Available currencies:".cyan());
+
+    // Built-in currencies
+    let builtin = currency_expr::builtin_currency_codes();
+    let builtin_display: Vec<_> = builtin.iter().take(15).copied().collect();
+    let remaining = builtin.len().saturating_sub(15);
+    print!("  Built-in: ");
+    print!("{}", builtin_display.join(", "));
+    if remaining > 0 {
+        print!(" {}", format!("(+{} more)", remaining).dimmed());
+    }
+    println!();
+
+    // Plugin currencies
+    let plugin_codes = currency_rates::plugin_currency_codes();
+    if !plugin_codes.is_empty() {
+        print!("  Plugins:  ");
+        println!("{}", plugin_codes.join(", ").yellow());
+    }
+
+    println!();
+    println!("{}", "Configuration:".cyan());
+    println!("  CLI:     {} \"USD(100)\"", "--currency EUR".yellow());
+    println!(
+        "  Env:     {} forb \"USD(100)\"",
+        "FORB_TARGET_CURRENCY=EUR".yellow()
+    );
+    println!(
+        "  Config:  {} {} in config file",
+        "[currency]".dimmed(),
+        "target = \"EUR\"".yellow()
+    );
+    println!();
+    println!(
+        "Without explicit config, currency is detected from system locale or defaults to {}.",
+        "USD".yellow()
+    );
 }

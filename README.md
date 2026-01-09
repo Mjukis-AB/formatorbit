@@ -208,7 +208,7 @@ forb --mermaid 691E01B8
 | **Encoding** | hex, base64, binary, octal, url-encoding, escape sequences (`\x48`, `\u0048`) |
 | **Hashing** | MD5, SHA-1, SHA-256, SHA-512 (detection by length) |
 | **Numbers** | decimal, binary, octal, data sizes (`1MB`, `1MiB`), temperature (`30°C`, `86°F`) |
-| **Math** | Expression evaluation (`2 + 2`, `0xFF + 1`, `1 << 8`, `0b1010 \| 0b0101`) |
+| **Math** | Expression evaluation (`2 + 2`, `0xFF + 1`, `1 << 8`, `0b1010 \| 0b0101`, `USD(100)`) |
 | **Units** | length, weight, volume, speed, pressure, energy, angle, area (with SI prefixes) |
 | **Currency** | `100 USD`, `$50`, `5kEUR`, `2.5MSEK` (with live exchange rates) |
 | **Time** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601, durations (`1h30m`) |
@@ -461,6 +461,49 @@ Ambiguous symbols show multiple interpretations:
 
 ```bash
 $ forb '$100'           # Shows USD, CAD, AUD, etc.
+```
+
+### Currency Expression Functions
+
+Use currency codes as functions in expressions to convert amounts to your target currency:
+
+```bash
+$ forb --currency SEK 'USD(100)'
+
+▶ expr (50% confidence)
+  USD(100) = 922.14
+```
+
+Mix currencies in expressions:
+
+```bash
+$ forb --currency EUR 'USD(100) + GBP(50)'
+
+▶ expr (75% confidence)
+  USD(100) + GBP(50) = 144.23
+```
+
+Works with plugin currencies too:
+
+```bash
+$ forb 'BTC(0.5)'       # 0.5 BTC in your target currency
+```
+
+Target currency is detected automatically from your system locale, or set explicitly:
+
+```bash
+# CLI flag (highest priority)
+forb --currency EUR "USD(100)"
+
+# Environment variable
+FORB_TARGET_CURRENCY=SEK forb "USD(100)"
+
+# Config file (~/.config/forb/config.toml)
+# [currency]
+# target = "SEK"
+
+# Show current target and available currencies
+forb --currency
 ```
 
 ### Unit Conversions
@@ -726,6 +769,7 @@ Settings can be configured via CLI flags, environment variables, or a config fil
 | no_color | `-C`, `--no-color` | `FORB_NO_COLOR` | false |
 | url_timeout | `--url-timeout` | `FORB_URL_TIMEOUT` | 30 |
 | url_max_size | `--url-max-size` | `FORB_URL_MAX_SIZE` | 10M |
+| target_currency | `--currency` | `FORB_TARGET_CURRENCY` | locale/USD |
 
 ```bash
 # Show config file location
