@@ -825,6 +825,7 @@ dependencies = [
  "sha2",
  "symphonia",
  "tar",
+ "tempfile",
  "thiserror 2.0.17",
  "tracing",
  "ttf-parser",

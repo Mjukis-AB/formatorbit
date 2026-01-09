@@ -63,3 +63,4 @@ optional = true
 [dev-dependencies]
 pretty_assertions = { workspace = true }
 insta = { version = "1", features = ["json", "redactions"] }
+tempfile = "3"

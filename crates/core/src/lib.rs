@@ -38,6 +38,11 @@
 //! ```
 
 pub mod convert;
+pub mod expr_context;
+pub mod format;
+pub mod formats;
+pub mod plugin;
+pub mod types;
 
 /// Truncate a string to at most `max_chars` characters, appending "..." if truncated.
 ///
@@ -52,11 +57,9 @@ pub fn truncate_str(s: &str, max_chars: usize) -> String {
         format!("{}...", truncated)
     }
 }
-pub mod format;
-pub mod formats;
-pub mod types;
 
 pub use format::{Format, FormatInfo};
+pub use plugin::{PluginError, PluginLoadReport, PluginRegistry};
 pub use types::*;
 
 use formats::{
@@ -75,6 +78,7 @@ use formats::{
 pub struct Formatorbit {
     formats: Vec<Box<dyn Format>>,
     config: Option<ConversionConfig>,
+    plugins: Option<PluginRegistry>,
 }
 
 impl Formatorbit {
@@ -94,6 +98,7 @@ impl Formatorbit {
         Self {
             formats: Self::create_format_list(),
             config: None,
+            plugins: None,
         }
     }
 
@@ -103,7 +108,49 @@ impl Formatorbit {
         Self {
             formats: Self::create_format_list(),
             config: Some(config),
+            plugins: None,
         }
+    }
+
+    /// Create a new converter with plugins enabled.
+    ///
+    /// Loads plugins from `~/.config/forb/plugins/` and any additional
+    /// configured directories.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Python runtime fails to initialize.
+    /// Individual plugin load failures are logged but don't prevent
+    /// the converter from being created.
+    #[cfg(feature = "python")]
+    pub fn with_plugins() -> Result<(Self, PluginLoadReport), PluginError> {
+        let mut registry = PluginRegistry::new();
+        let report = registry.load_default()?;
+
+        // Set the global expression context for plugin variables/functions
+        expr_context::set_from_registry(&registry);
+
+        Ok((
+            Self {
+                formats: Self::create_format_list(),
+                config: None,
+                plugins: Some(registry),
+            },
+            report,
+        ))
+    }
+
+    /// Set the plugin registry.
+    #[must_use]
+    pub fn set_plugins(mut self, plugins: PluginRegistry) -> Self {
+        self.plugins = Some(plugins);
+        self
+    }
+
+    /// Get the plugin registry (if any).
+    #[must_use]
+    pub fn plugins(&self) -> Option<&PluginRegistry> {
+        self.plugins.as_ref()
     }
 
     /// Set the configuration.
@@ -203,6 +250,8 @@ impl Formatorbit {
     #[must_use]
     pub fn interpret(&self, input: &str) -> Vec<Interpretation> {
         let mut results = Vec::new();
+
+        // Built-in formats
         for format in &self.formats {
             // Skip blocked formats
             if let Some(ref config) = self.config {
@@ -212,6 +261,20 @@ impl Formatorbit {
             }
             results.extend(format.parse(input));
         }
+
+        // Plugin decoders
+        if let Some(ref plugins) = self.plugins {
+            for decoder in plugins.decoders() {
+                // Skip blocked plugins
+                if let Some(ref config) = self.config {
+                    if config.blocking.is_format_blocked(decoder.id()) {
+                        continue;
+                    }
+                }
+                results.extend(decoder.parse(input));
+            }
+        }
+
         // Sort by confidence, highest first
         results.sort_by(|a, b| b.confidence.total_cmp(&a.confidence));
         results
@@ -227,13 +290,80 @@ impl Formatorbit {
     /// The source_format is also included in the path to show the full conversion chain.
     #[must_use]
     pub fn convert_excluding(&self, value: &CoreValue, source_format: &str) -> Vec<Conversion> {
-        convert::find_all_conversions(
+        #[allow(unused_mut)]
+        let mut conversions = convert::find_all_conversions(
             &self.formats,
             value,
             Some(source_format),
             Some(source_format),
             self.config.as_ref(),
-        )
+        );
+
+        // Add plugin traits
+        #[cfg(feature = "python")]
+        if let Some(ref plugins) = self.plugins {
+            conversions.extend(self.get_plugin_traits(value, source_format, plugins));
+        }
+
+        conversions
+    }
+
+    /// Get trait conversions from plugins.
+    #[cfg(feature = "python")]
+    fn get_plugin_traits(
+        &self,
+        value: &CoreValue,
+        source_format: &str,
+        plugins: &PluginRegistry,
+    ) -> Vec<Conversion> {
+        use types::{ConversionKind, ConversionPriority, ConversionStep};
+
+        let mut traits = Vec::new();
+
+        // Get the value type name for filtering
+        let value_type = match value {
+            CoreValue::Int { .. } => "int",
+            CoreValue::Float(_) => "float",
+            CoreValue::String(_) => "string",
+            CoreValue::Bytes(_) => "bytes",
+            CoreValue::Bool(_) => "bool",
+            CoreValue::DateTime(_) => "datetime",
+            CoreValue::Json(_) => "json",
+            _ => "",
+        };
+
+        for trait_plugin in plugins.traits() {
+            // Check if this trait applies to this value type
+            let applies = trait_plugin.value_types().is_empty()
+                || trait_plugin.value_types().iter().any(|t| t == value_type);
+
+            if !applies {
+                continue;
+            }
+
+            // Call the trait's check method
+            if let Some(description) = trait_plugin.check(value) {
+                traits.push(Conversion {
+                    value: value.clone(),
+                    target_format: trait_plugin.id().to_string(),
+                    display: description.clone(),
+                    path: vec![source_format.to_string(), trait_plugin.id().to_string()],
+                    is_lossy: false,
+                    steps: vec![ConversionStep {
+                        format: trait_plugin.id().to_string(),
+                        value: value.clone(),
+                        display: description,
+                    }],
+                    priority: ConversionPriority::Semantic,
+                    kind: ConversionKind::Trait,
+                    display_only: true,
+                    hidden: false,
+                    rich_display: vec![],
+                });
+            }
+        }
+
+        traits
     }
 
     /// Combined: interpret input and find all conversions.

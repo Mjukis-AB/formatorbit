@@ -771,6 +771,38 @@ $ forb --show-paths 691E01B8
   → epoch-seconds: 2025-11-19T17:43:20Z [hex:int-be:epoch-seconds]
 ```
 
+## Plugins
+
+Extend forb with Python plugins for custom decoders, expression functions, traits, and more. Requires Python 3.8+ installed on your system.
+
+```bash
+# Enable sample plugins
+cp sample-plugins/math_ext.py.sample ~/.config/forb/plugins/math_ext.py
+
+# Use plugin functionality
+forb "factorial(10)"    # → 3628800
+forb "PI * 2"           # → 6.283185307179586
+forb "fib(20)"          # → 6765
+```
+
+**Plugin types:**
+- **Decoders** - Parse custom input formats
+- **Expression variables** - Add constants like `PI`, `E`, `PHI`
+- **Expression functions** - Add functions like `factorial()`, `fib()`, `gcd()`
+- **Traits** - Detect properties like "semantic version" or "well-known port"
+- **Visualizers** - Custom rich display for GUI applications
+- **Currencies** - Custom exchange rates (e.g., cryptocurrencies)
+
+```bash
+# List loaded plugins
+forb --plugins
+
+# Show plugin directory
+forb --plugins path
+```
+
+See [PLUGINS.md](PLUGINS.md) for comprehensive documentation on creating and using plugins.
+
 ## Analytics
 
 Local usage tracking helps improve forb. Enabled by default, stored in human-readable TOML.

@@ -33,6 +33,12 @@ jobs:
       - name: Run tests
         run: cargo test --all-targets
 
+      - name: Build with plugins
+        run: cargo build -p formatorbit-cli --features plugins
+
+      - name: Test with plugins
+        run: cargo test -p formatorbit-core --features python
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

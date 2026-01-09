@@ -12,7 +12,7 @@ use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, In
 pub struct ExprFormat;
 
 impl ExprFormat {
-    /// Check if input looks like an expression (has operators).
+    /// Check if input looks like an expression (has operators or function calls).
     fn looks_like_expression(input: &str) -> bool {
         // Must contain at least one operator character
         // But not be ONLY operators (like "++")
@@ -20,6 +20,9 @@ impl ExprFormat {
             .chars()
             .any(|c| matches!(c, '+' | '-' | '*' | '/' | '%' | '^' | '|' | '&' | '<' | '>'));
         let has_alphanumeric = input.chars().any(|c| c.is_alphanumeric());
+
+        // Check for function call syntax: identifier followed by parentheses
+        let has_function_call = input.contains('(') && input.contains(')') && has_alphanumeric;
 
         // Exclude things that are clearly not expressions
         // - UUIDs (has dashes but also specific pattern)
@@ -30,7 +33,11 @@ impl ExprFormat {
         let looks_like_date =
             input.contains('/') && input.chars().filter(|c| *c == '/').count() >= 2;
 
-        has_operator && has_alphanumeric && !looks_like_uuid && !looks_like_url && !looks_like_date
+        (has_operator || has_function_call)
+            && has_alphanumeric
+            && !looks_like_uuid
+            && !looks_like_url
+            && !looks_like_date
     }
 
     /// Preprocess input to convert common operator syntax to evalexpr functions.
@@ -121,8 +128,8 @@ impl Format for ExprFormat {
         // Preprocess to handle bitwise operators
         let processed = Self::preprocess(trimmed);
 
-        // Try to evaluate
-        let result = match evalexpr::eval(&processed) {
+        // Try to evaluate using the global context (which may have plugin vars/funcs)
+        let result = match crate::expr_context::eval(&processed) {
             Ok(value) => value,
             Err(_) => return vec![],
         };

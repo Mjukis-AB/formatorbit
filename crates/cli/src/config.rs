@@ -90,6 +90,21 @@ url_max_size = "10M"
 # check = true
 #
 # # Can also be disabled via: FORB_CHECK_UPDATES=0
+
+# ============================================================================
+# Plugins Configuration (optional, requires --features plugins)
+# ============================================================================
+# Python plugins extend forb with custom decoders, traits, currencies, etc.
+
+# [plugins]
+# # Enable plugin loading (default: true)
+# enabled = true
+#
+# # Additional plugin directories (beyond ~/.config/forb/plugins/)
+# paths = ["/usr/local/share/forb/plugins", "~/myproject/.forb-plugins"]
+#
+# # Disable specific plugins by ID
+# disabled = ["plugin-id-to-skip"]
 "#;
 
 /// Priority configuration as stored in TOML.
@@ -150,6 +165,28 @@ impl Default for CliUpdatesConfig {
     }
 }
 
+/// Plugins configuration.
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct CliPluginsConfig {
+    /// Enable plugin loading (default: true).
+    pub enabled: bool,
+    /// Additional plugin directories.
+    pub paths: Vec<String>,
+    /// Disabled plugin IDs.
+    pub disabled: Vec<String>,
+}
+
+impl Default for CliPluginsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            paths: Vec::new(),
+            disabled: Vec::new(),
+        }
+    }
+}
+
 /// Configuration loaded from file and environment.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -170,6 +207,10 @@ pub struct Config {
     /// Updates configuration.
     #[serde(default)]
     pub updates: CliUpdatesConfig,
+    /// Plugins configuration.
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub plugins: CliPluginsConfig,
 }
 
 impl Config {
@@ -274,6 +315,28 @@ impl Config {
             return !matches!(val.to_lowercase().as_str(), "0" | "false" | "no" | "off");
         }
         self.updates.check
+    }
+
+    /// Get plugins enabled with precedence: env > config > default (true).
+    #[allow(dead_code)]
+    pub fn plugins_enabled(&self) -> bool {
+        // FORB_PLUGINS=0 or FORB_PLUGINS=false disables plugins
+        if let Ok(val) = std::env::var("FORB_PLUGINS") {
+            return !matches!(val.to_lowercase().as_str(), "0" | "false" | "no" | "off");
+        }
+        self.plugins.enabled
+    }
+
+    /// Get additional plugin paths from config.
+    #[allow(dead_code)]
+    pub fn plugin_paths(&self) -> &[String] {
+        &self.plugins.paths
+    }
+
+    /// Get disabled plugin IDs from config.
+    #[allow(dead_code)]
+    pub fn disabled_plugins(&self) -> &[String] {
+        &self.plugins.disabled
     }
 
     /// Convert CLI config to core ConversionConfig.

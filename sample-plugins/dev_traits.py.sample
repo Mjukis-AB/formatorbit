@@ -1,0 +1,254 @@
+# Developer Traits Plugin for Formatorbit
+#
+# This plugin adds developer-focused trait detection.
+# To enable: rename to dev_traits.py (remove .sample suffix)
+
+__forb_plugin__ = {
+    "name": "Developer Traits",
+    "version": "1.0.0",
+    "author": "Formatorbit",
+    "description": "Developer-focused traits: AWS regions, semver, ports, HTTP status codes"
+}
+
+import forb
+import re
+
+# AWS region codes
+AWS_REGIONS = {
+    "us-east-1": "N. Virginia",
+    "us-east-2": "Ohio",
+    "us-west-1": "N. California",
+    "us-west-2": "Oregon",
+    "af-south-1": "Cape Town",
+    "ap-east-1": "Hong Kong",
+    "ap-south-1": "Mumbai",
+    "ap-south-2": "Hyderabad",
+    "ap-southeast-1": "Singapore",
+    "ap-southeast-2": "Sydney",
+    "ap-southeast-3": "Jakarta",
+    "ap-southeast-4": "Melbourne",
+    "ap-northeast-1": "Tokyo",
+    "ap-northeast-2": "Seoul",
+    "ap-northeast-3": "Osaka",
+    "ca-central-1": "Canada",
+    "eu-central-1": "Frankfurt",
+    "eu-central-2": "Zurich",
+    "eu-west-1": "Ireland",
+    "eu-west-2": "London",
+    "eu-west-3": "Paris",
+    "eu-south-1": "Milan",
+    "eu-south-2": "Spain",
+    "eu-north-1": "Stockholm",
+    "il-central-1": "Tel Aviv",
+    "me-south-1": "Bahrain",
+    "me-central-1": "UAE",
+    "sa-east-1": "Sao Paulo",
+}
+
+# Well-known ports
+WELL_KNOWN_PORTS = {
+    20: "FTP Data",
+    21: "FTP Control",
+    22: "SSH",
+    23: "Telnet",
+    25: "SMTP",
+    53: "DNS",
+    67: "DHCP Server",
+    68: "DHCP Client",
+    80: "HTTP",
+    110: "POP3",
+    119: "NNTP",
+    123: "NTP",
+    143: "IMAP",
+    161: "SNMP",
+    194: "IRC",
+    443: "HTTPS",
+    445: "SMB",
+    465: "SMTPS",
+    514: "Syslog",
+    587: "SMTP Submission",
+    636: "LDAPS",
+    993: "IMAPS",
+    995: "POP3S",
+    1433: "MSSQL",
+    1521: "Oracle DB",
+    3306: "MySQL",
+    3389: "RDP",
+    5432: "PostgreSQL",
+    5672: "AMQP",
+    5900: "VNC",
+    6379: "Redis",
+    8080: "HTTP Alt",
+    8443: "HTTPS Alt",
+    9200: "Elasticsearch",
+    27017: "MongoDB",
+}
+
+# HTTP status codes
+HTTP_STATUS_CODES = {
+    100: "Continue",
+    101: "Switching Protocols",
+    200: "OK",
+    201: "Created",
+    202: "Accepted",
+    204: "No Content",
+    301: "Moved Permanently",
+    302: "Found",
+    303: "See Other",
+    304: "Not Modified",
+    307: "Temporary Redirect",
+    308: "Permanent Redirect",
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    405: "Method Not Allowed",
+    408: "Request Timeout",
+    409: "Conflict",
+    410: "Gone",
+    418: "I'm a teapot",
+    422: "Unprocessable Entity",
+    429: "Too Many Requests",
+    500: "Internal Server Error",
+    501: "Not Implemented",
+    502: "Bad Gateway",
+    503: "Service Unavailable",
+    504: "Gateway Timeout",
+}
+
+
+@forb.trait(id="aws-region", name="AWS Region", value_types=["string"])
+def check_aws_region(value):
+    """
+    Detect if a string is an AWS region code.
+
+    Example:
+        forb "us-east-1"
+        -> AWS Region: N. Virginia
+    """
+    if not isinstance(value, str):
+        return None
+
+    region = value.lower().strip()
+    if region in AWS_REGIONS:
+        return f"AWS Region: {AWS_REGIONS[region]} ({region})"
+    return None
+
+
+@forb.trait(id="semver", name="Semantic Version", value_types=["string"])
+def check_semver(value):
+    """
+    Detect semantic versioning strings.
+
+    Example:
+        forb "1.2.3"
+        -> Semantic Version: 1.2.3 (major=1, minor=2, patch=3)
+    """
+    if not isinstance(value, str):
+        return None
+
+    # Match semver pattern: MAJOR.MINOR.PATCH with optional prerelease/build
+    pattern = r'^v?(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.-]+))?(?:\+([a-zA-Z0-9.-]+))?$'
+    match = re.match(pattern, value.strip())
+
+    if not match:
+        return None
+
+    major, minor, patch = match.group(1), match.group(2), match.group(3)
+    prerelease = match.group(4)
+    build = match.group(5)
+
+    result = f"Semantic Version: {major}.{minor}.{patch}"
+    if prerelease:
+        result += f"-{prerelease}"
+    if build:
+        result += f"+{build}"
+
+    parts = [f"major={major}", f"minor={minor}", f"patch={patch}"]
+    if prerelease:
+        parts.append(f"prerelease={prerelease}")
+    if build:
+        parts.append(f"build={build}")
+
+    return f"{result} ({', '.join(parts)})"
+
+
+@forb.trait(id="well-known-port", name="Well-Known Port", value_types=["int"])
+def check_port(value):
+    """
+    Detect well-known network ports.
+
+    Example:
+        forb "443"
+        -> Well-Known Port: HTTPS (443/tcp)
+    """
+    if not isinstance(value, int):
+        return None
+
+    if value in WELL_KNOWN_PORTS:
+        return f"Well-Known Port: {WELL_KNOWN_PORTS[value]} ({value}/tcp)"
+    return None
+
+
+@forb.trait(id="http-status", name="HTTP Status Code", value_types=["int"])
+def check_http_status(value):
+    """
+    Detect HTTP status codes.
+
+    Example:
+        forb "404"
+        -> HTTP Status: 404 Not Found
+    """
+    if not isinstance(value, int):
+        return None
+
+    if value in HTTP_STATUS_CODES:
+        category = ""
+        if 100 <= value < 200:
+            category = "Informational"
+        elif 200 <= value < 300:
+            category = "Success"
+        elif 300 <= value < 400:
+            category = "Redirection"
+        elif 400 <= value < 500:
+            category = "Client Error"
+        elif 500 <= value < 600:
+            category = "Server Error"
+
+        return f"HTTP {value} {HTTP_STATUS_CODES[value]} ({category})"
+    return None
+
+
+@forb.trait(id="docker-port", name="Docker Port Mapping", value_types=["string"])
+def check_docker_port(value):
+    """
+    Detect Docker port mapping syntax.
+
+    Example:
+        forb "8080:80"
+        -> Docker Port Mapping: host 8080 -> container 80 (HTTP)
+    """
+    if not isinstance(value, str):
+        return None
+
+    # Match port:port pattern
+    pattern = r'^(\d+):(\d+)(?:/(tcp|udp))?$'
+    match = re.match(pattern, value.strip())
+
+    if not match:
+        return None
+
+    host_port = int(match.group(1))
+    container_port = int(match.group(2))
+    protocol = match.group(3) or "tcp"
+
+    container_service = WELL_KNOWN_PORTS.get(container_port, "")
+    host_service = WELL_KNOWN_PORTS.get(host_port, "")
+
+    result = f"Docker Port: {host_port} -> {container_port}/{protocol}"
+    if container_service:
+        result += f" ({container_service})"
+    elif host_service:
+        result += f" ({host_service})"
+
+    return result

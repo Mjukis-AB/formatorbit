@@ -278,6 +278,22 @@ struct Cli {
     /// Check for available updates
     #[arg(long)]
     check_updates: bool,
+
+    /// List or manage plugins (requires --features plugins)
+    ///
+    /// Without arguments, lists all loaded plugins.
+    ///
+    /// Commands:
+    ///   status  Show detailed status including load errors
+    ///   path    Print plugin directory path
+    ///
+    /// Plugins are Python files in ~/.config/forb/plugins/ (Linux/macOS)
+    /// or %APPDATA%\forb\plugins\ (Windows).
+    ///
+    /// See PLUGINS.md for documentation on creating plugins.
+    #[cfg(feature = "plugins")]
+    #[arg(long, value_name = "COMMAND", default_missing_value = "list", num_args = 0..=1, verbatim_doc_comment)]
+    plugins: Option<String>,
 }
 
 /// Parse size string like "10M", "50M", "1G" into bytes.
@@ -582,6 +598,13 @@ fn main() {
         return;
     }
 
+    // Handle --plugins (plugin management)
+    #[cfg(feature = "plugins")]
+    if let Some(ref cmd) = cli.plugins {
+        handle_plugins_command(cmd);
+        return;
+    }
+
     // Handle --graph (static format graph, no input needed)
     if let Some(ref mode) = cli.graph {
         let forb = Formatorbit::new();
@@ -757,7 +780,7 @@ fn main() {
         tracker.record_mermaid_output();
     }
 
-    // Create Formatorbit with optional conversion config from file
+    // Create Formatorbit with optional conversion config from file and plugins
     let forb = {
         let mut conv_config = file_config.conversion_config().unwrap_or_default();
 
@@ -769,13 +792,49 @@ fn main() {
             }
         }
 
+        #[cfg(feature = "plugins")]
+        let base = {
+            if file_config.plugins_enabled() {
+                match Formatorbit::with_plugins() {
+                    Ok((forb, report)) => {
+                        if report.has_plugins() {
+                            tracing::debug!(
+                                "Loaded {} plugin(s): {} decoders, {} expr_vars, {} expr_funcs, {} traits",
+                                report.total_loaded(),
+                                report.decoders.len(),
+                                report.expr_vars.len(),
+                                report.expr_funcs.len(),
+                                report.traits.len()
+                            );
+                        }
+                        if report.has_errors() {
+                            for (path, err) in &report.errors {
+                                tracing::warn!("Plugin error in {}: {}", path.display(), err);
+                            }
+                        }
+                        forb
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to initialize plugins: {}", e);
+                        Formatorbit::new()
+                    }
+                }
+            } else {
+                tracing::debug!("Plugins disabled via config");
+                Formatorbit::new()
+            }
+        };
+
+        #[cfg(not(feature = "plugins"))]
+        let base = Formatorbit::new();
+
         if conv_config.is_customized() || cli.reinterpret_threshold.is_some() {
             if cli.verbose > 0 && conv_config.is_customized() {
                 tracing::debug!("Using custom priority/blocking config from config file");
             }
-            Formatorbit::with_config(conv_config)
+            base.set_config(conv_config)
         } else {
-            Formatorbit::new()
+            base
         }
     };
 
@@ -1646,6 +1705,234 @@ fn handle_graph_command(forb: &Formatorbit, mode: &str, use_dot: bool) {
                     graph::format_to_mermaid(format_id, &related, &incoming, &outgoing)
                 );
             }
+        }
+    }
+}
+
+/// Handle --plugins command.
+#[cfg(feature = "plugins")]
+fn handle_plugins_command(cmd: &str) {
+    use colored::Colorize;
+    use formatorbit_core::plugin::{discovery, PluginRegistry, PythonRuntime};
+    use std::collections::HashMap;
+
+    match cmd {
+        "list" | "" => {
+            // Try to load plugins and list them
+            let mut registry = PluginRegistry::new();
+            match registry.load_default() {
+                Ok(report) => {
+                    if report.total_loaded() == 0 {
+                        println!("{}", "Plugins".bold().underline());
+                        println!();
+                        println!("{}", "No plugins loaded. To get started:".dimmed());
+                        println!();
+                        println!("  {} Create plugin directory:", "1.".bold());
+                        println!(
+                            "     {}",
+                            format!(
+                                "mkdir -p \"{}\"",
+                                discovery::default_plugin_dir()
+                                    .map(|p| p.display().to_string())
+                                    .unwrap_or_else(|| "~/.config/forb/plugins/".to_string())
+                            )
+                            .cyan()
+                        );
+                        println!();
+                        println!("  {} Copy a sample plugin:", "2.".bold());
+                        println!(
+                            "     {}",
+                            "cp sample-plugins/math_ext.py.sample ~/.config/forb/plugins/math_ext.py"
+                                .cyan()
+                        );
+                        println!();
+                        println!("  {} Try it out:", "3.".bold());
+                        println!("     {}", "forb \"factorial(10)\"".cyan());
+                        println!("     {}", "forb \"PI * 2\"".cyan());
+                        println!();
+                        println!(
+                            "See {} for documentation on creating plugins.",
+                            "PLUGINS.md".yellow()
+                        );
+                        return;
+                    }
+
+                    // Group plugins by source file
+                    let mut by_file: HashMap<String, Vec<_>> = HashMap::new();
+                    for info in &report.plugins {
+                        let file_name = info
+                            .source_file
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("unknown")
+                            .to_string();
+                        by_file.entry(file_name).or_default().push(info);
+                    }
+
+                    println!("{}", "Loaded Plugins".bold().underline());
+                    println!();
+
+                    for (_file_name, plugins) in &by_file {
+                        // Get plugin metadata from first plugin in the file
+                        let meta = &plugins[0].plugin_meta;
+                        let source_path = &plugins[0].source_file;
+                        println!(
+                            "  {} {} {}",
+                            "▶".blue(),
+                            meta.name.bold(),
+                            format!("v{}", meta.version).dimmed()
+                        );
+                        println!("    {}", source_path.display().to_string().dimmed());
+                        if let Some(ref author) = meta.author {
+                            println!("    {}", format!("by {}", author).dimmed());
+                        }
+                        if let Some(ref desc) = meta.description {
+                            println!("    {}", desc.dimmed());
+                        }
+                        println!();
+
+                        for info in plugins {
+                            let type_label = if report.decoders.contains(&info.id) {
+                                "decoder"
+                            } else if report.expr_vars.contains(&info.id) {
+                                "var"
+                            } else if report.expr_funcs.contains(&info.id) {
+                                "func"
+                            } else if report.traits.contains(&info.id) {
+                                "trait"
+                            } else if report.visualizers.contains(&info.id) {
+                                "visualizer"
+                            } else if report.currencies.contains(&info.id) {
+                                "currency"
+                            } else {
+                                "plugin"
+                            };
+
+                            print!("      {} {} ", "→".cyan(), info.name.yellow());
+                            print!("{}", format!("[{}]", type_label).dimmed());
+                            if let Some(ref desc) = info.description {
+                                print!(" {}", desc.dimmed());
+                            }
+                            println!();
+                        }
+                        println!();
+                    }
+
+                    // Show errors if any
+                    if !report.errors.is_empty() {
+                        println!("  {} Errors:", "✗".red().bold());
+                        for (path, err) in &report.errors {
+                            println!(
+                                "    {} {}",
+                                path.file_name()
+                                    .and_then(|s| s.to_str())
+                                    .unwrap_or("unknown")
+                                    .yellow(),
+                                err.to_string().red()
+                            );
+                        }
+                        println!();
+                    }
+
+                    println!(
+                        "{} {} item(s) from {} file(s)",
+                        "✓".green().bold(),
+                        report.total_loaded(),
+                        by_file.len()
+                    );
+                }
+                Err(e) => {
+                    eprintln!("{}: Failed to load plugins: {}", "error".red().bold(), e);
+                    std::process::exit(1);
+                }
+            }
+        }
+        "status" => {
+            // Initialize Python runtime
+            if let Err(e) = PythonRuntime::init() {
+                eprintln!("{}: {}", "Python runtime".red().bold(), e);
+                std::process::exit(1);
+            }
+            println!("{} Python runtime initialized", "✓".green().bold());
+
+            // Load plugins and show detailed status
+            let mut registry = PluginRegistry::new();
+            match registry.load_default() {
+                Ok(report) => {
+                    println!();
+                    println!("{}", "Plugin Status".bold().underline());
+                    println!();
+
+                    // Show plugin directories
+                    let dirs = discovery::discover_plugin_dirs();
+                    println!("  {} Plugin directories:", "▶".blue());
+                    for dir in &dirs {
+                        let exists = dir.exists();
+                        let marker = if exists { "✓".green() } else { "✗".red() };
+                        println!("    {} {}", marker, dir.display());
+                    }
+                    println!();
+
+                    // Show loaded plugins count
+                    println!(
+                        "  Decoders:    {}",
+                        report.decoders.len().to_string().green()
+                    );
+                    println!(
+                        "  Expr vars:   {}",
+                        report.expr_vars.len().to_string().green()
+                    );
+                    println!(
+                        "  Expr funcs:  {}",
+                        report.expr_funcs.len().to_string().green()
+                    );
+                    println!("  Traits:      {}", report.traits.len().to_string().green());
+                    println!(
+                        "  Visualizers: {}",
+                        report.visualizers.len().to_string().green()
+                    );
+                    println!(
+                        "  Currencies:  {}",
+                        report.currencies.len().to_string().green()
+                    );
+
+                    // Show errors
+                    if !report.errors.is_empty() {
+                        println!();
+                        println!("  {} Errors:", "✗".red().bold());
+                        for (path, err) in &report.errors {
+                            println!("    {}", path.display().to_string().yellow());
+                            println!("      {}", err.to_string().red());
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{}: Failed to load plugins: {}", "error".red().bold(), e);
+                    std::process::exit(1);
+                }
+            }
+        }
+        "path" => match discovery::default_plugin_dir() {
+            Some(path) => println!("{}", path.display()),
+            None => {
+                eprintln!(
+                    "{}: Cannot determine plugin directory",
+                    "error".red().bold()
+                );
+                std::process::exit(1);
+            }
+        },
+        other => {
+            eprintln!(
+                "{}: Unknown plugins command '{}'\n",
+                "error".red().bold(),
+                other
+            );
+            eprintln!("Available commands:");
+            eprintln!("  --plugins          List loaded plugins");
+            eprintln!("  --plugins status   Show detailed status with errors");
+            eprintln!("  --plugins path     Show plugin directory path");
+            std::process::exit(1);
         }
     }
 }
