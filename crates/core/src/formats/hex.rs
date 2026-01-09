@@ -132,12 +132,26 @@ impl HexFormat {
             }
         }
 
-        // 7. Continuous hex (no separators)
+        // 7. Continuous hex (no separators) - even length
         if Self::is_valid_hex(trimmed) && trimmed.len().is_multiple_of(2) {
             let has_letters = trimmed.chars().any(|c| c.is_ascii_alphabetic());
             return Some(NormalizedHex {
                 hex: trimmed.to_uppercase(),
                 format_hint: "hex",
+                high_confidence: has_letters,
+            });
+        }
+
+        // 8. Odd-length hex - zero-pad the first digit (lower confidence)
+        // e.g., "ddddd" (5 chars) -> "0ddddd" (3 bytes)
+        if Self::is_valid_hex(trimmed) && trimmed.len() > 1 && !trimmed.len().is_multiple_of(2) {
+            let has_letters = trimmed.chars().any(|c| c.is_ascii_alphabetic());
+            let mut padded = String::with_capacity(trimmed.len() + 1);
+            padded.push('0');
+            padded.push_str(&trimmed.to_uppercase());
+            return Some(NormalizedHex {
+                hex: padded,
+                format_hint: "hex (odd-length, zero-padded)",
                 high_confidence: has_letters,
             });
         }
@@ -336,10 +350,18 @@ impl Format for HexFormat {
 
         // Determine confidence based on format detection
         // Short digit-only colon-separated inputs (like "15:00") could be times
+        let is_odd_length = normalized.format_hint.contains("odd-length");
         let confidence = if normalized.high_confidence {
             // 0x prefix is unambiguous hex - always high confidence
             if normalized.format_hint == "0x prefix" {
                 0.95
+            } else if is_odd_length {
+                // Odd-length hex is ambiguous - lower confidence
+                if has_hex_letters {
+                    0.50 // Has letters, more likely hex
+                } else {
+                    0.30 // Pure digits, could be anything
+                }
             } else if !has_hex_letters && bytes.len() <= 2 {
                 // Could be time like "15:00" - lower confidence
                 0.50
@@ -350,6 +372,9 @@ impl Format for HexFormat {
                 // Has letters or is long enough to be unambiguous
                 0.92
             }
+        } else if is_odd_length {
+            // Low confidence odd-length without hex letters
+            0.25
         } else if bytes.len() >= 2 {
             0.6
         } else {
@@ -420,14 +445,7 @@ impl Format for HexFormat {
             }
         }
 
-        // Check for odd length
-        let hex_only: String = stripped.chars().filter(|c| c.is_ascii_hexdigit()).collect();
-        if !hex_only.is_empty() && !hex_only.len().is_multiple_of(2) {
-            return Some(format!(
-                "odd number of hex digits ({}), expected even count",
-                hex_only.len()
-            ));
-        }
+        // Note: odd-length hex is now accepted (zero-padded) with lower confidence
 
         Some("not a valid hex format".to_string())
     }
@@ -496,8 +514,26 @@ mod tests {
     #[test]
     fn test_parse_invalid_hex() {
         let format = HexFormat;
-        assert!(format.parse("GHIJ").is_empty());
-        assert!(format.parse("123").is_empty()); // Odd length
+        assert!(format.parse("GHIJ").is_empty()); // Invalid hex chars
+    }
+
+    #[test]
+    fn test_parse_odd_length_hex() {
+        let format = HexFormat;
+        // Odd-length hex is now accepted (zero-padded) with lower confidence
+        let results = format.parse("ddddd");
+        assert_eq!(results.len(), 1);
+        assert!(results[0].confidence <= 0.6); // Lower confidence for odd-length
+        if let CoreValue::Bytes(bytes) = &results[0].value {
+            assert_eq!(bytes, &[0x0d, 0xdd, 0xdd]); // Zero-padded
+        } else {
+            panic!("Expected Bytes");
+        }
+
+        // Pure digits odd-length gets even lower confidence
+        let results = format.parse("123");
+        assert_eq!(results.len(), 1);
+        assert!(results[0].confidence <= 0.4);
     }
 
     #[test]

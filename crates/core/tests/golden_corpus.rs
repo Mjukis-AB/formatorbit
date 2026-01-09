@@ -354,10 +354,8 @@ const DATASIZE_CASES: &[GoldenCase] = &[
 // =============================================================================
 
 const COORDS_CASES: &[GoldenCase] = &[
-    // Geohash (with letters - should be high confidence)
-    GoldenCase::top("u4pruydqqvj", "coords", "Geohash London"),
-    GoldenCase::top("u6sce", "coords", "Geohash Stockholm"),
-    GoldenCase::top("9q8yyk", "coords", "Geohash San Francisco"),
+    // Note: Geohash is no longer parsed as input (too many false positives with words)
+    // It's still available as conversion output from other coord formats
     // Decimal degrees
     GoldenCase::top("40.7128, -74.0060", "coords", "NYC coordinates"),
     GoldenCase::top("51.5074, -0.1278", "coords", "London coordinates"),
@@ -511,11 +509,9 @@ const ADVERSARIAL_CASES: &[GoldenCase] = &[
     ),
     // Short hex that could be color without #
     GoldenCase::top("CAFE", "hex", "4-char hex (not color without #)"),
-    // Word-like strings with geohash-valid chars get low geohash confidence (20%)
-    // but text is only 10%. This is acceptable - 20% signals low confidence.
-    GoldenCase::present("rustfmt", "coords", "Tool name (geohash low conf)", 0.15),
-    // "prettier" has 'i' which is NOT in geohash base32 alphabet, so text wins
-    GoldenCase::present("prettier", "text", "Tool name (not valid geohash)", 0.10),
+    // Word-like strings: geohash no longer parsed as input, so text wins
+    GoldenCase::present("rustfmt", "text", "Tool name (geohash removed)", 0.10),
+    GoldenCase::present("prettier", "text", "Tool name (text)", 0.10),
     // Numbers that could be many things
     GoldenCase::top("65535", "decimal", "Max uint16 (not port primarily)"),
 ];
