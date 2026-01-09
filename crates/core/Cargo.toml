@@ -57,3 +57,4 @@ optional = true
 pretty_assertions = { workspace = true }
 insta = { version = "1", features = ["json", "redactions"] }
 tempfile = "3"
+serial_test = "3"

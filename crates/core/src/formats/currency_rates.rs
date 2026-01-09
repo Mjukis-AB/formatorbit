@@ -276,6 +276,7 @@ pub fn clear_plugin_currencies() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_convert_same_currency() {
@@ -351,5 +352,163 @@ mod tests {
             rates: HashMap::new(),
         };
         assert!(old.is_expired());
+    }
+
+    #[test]
+    #[serial]
+    fn test_plugin_currency_to_builtin() {
+        // Clear any existing plugin currencies
+        clear_plugin_currencies();
+
+        let cache = RateCache {
+            fetched_at: Utc::now(),
+            base: "EUR".to_string(),
+            rates: HashMap::from([
+                ("EUR".to_string(), 1.0),
+                ("USD".to_string(), 1.05),
+                ("SEK".to_string(), 11.5),
+            ]),
+        };
+
+        // Register a plugin currency: 1 XYZ = 100 USD
+        register_plugin_currency(
+            "XYZ",
+            PluginCurrencyInfo {
+                rate: 100.0,
+                base_currency: "USD".to_string(),
+                symbol: "X".to_string(),
+                decimals: 2,
+            },
+        );
+
+        // 1 XYZ = 100 USD = 100/1.05 EUR = ~95.24 EUR
+        let result = cache.convert(1.0, "XYZ", "EUR").unwrap();
+        assert!((result - 95.24).abs() < 0.1);
+
+        // 1 XYZ = 100 USD
+        let result = cache.convert(1.0, "XYZ", "USD").unwrap();
+        assert!((result - 100.0).abs() < 0.01);
+
+        // 1 XYZ = 100 USD = 100/1.05*11.5 EUR = ~1095.24 SEK
+        let result = cache.convert(1.0, "XYZ", "SEK").unwrap();
+        assert!((result - 1095.24).abs() < 1.0);
+
+        clear_plugin_currencies();
+    }
+
+    #[test]
+    #[serial]
+    fn test_cross_plugin_currencies_same_base() {
+        // Test conversion between two plugin currencies with the same base currency
+        clear_plugin_currencies();
+
+        let cache = RateCache {
+            fetched_at: Utc::now(),
+            base: "EUR".to_string(),
+            rates: HashMap::from([("EUR".to_string(), 1.0), ("USD".to_string(), 1.05)]),
+        };
+
+        // 1 AAA = 50 USD
+        register_plugin_currency(
+            "AAA",
+            PluginCurrencyInfo {
+                rate: 50.0,
+                base_currency: "USD".to_string(),
+                symbol: "A".to_string(),
+                decimals: 2,
+            },
+        );
+
+        // 1 BBB = 200 USD
+        register_plugin_currency(
+            "BBB",
+            PluginCurrencyInfo {
+                rate: 200.0,
+                base_currency: "USD".to_string(),
+                symbol: "B".to_string(),
+                decimals: 2,
+            },
+        );
+
+        // 1 AAA = 50 USD, 1 BBB = 200 USD
+        // So 1 AAA = 50/200 BBB = 0.25 BBB
+        let result = cache.convert(1.0, "AAA", "BBB").unwrap();
+        assert!((result - 0.25).abs() < 0.001);
+
+        // And 1 BBB = 200/50 AAA = 4 AAA
+        let result = cache.convert(1.0, "BBB", "AAA").unwrap();
+        assert!((result - 4.0).abs() < 0.001);
+
+        clear_plugin_currencies();
+    }
+
+    #[test]
+    #[serial]
+    fn test_cross_plugin_currencies_different_bases() {
+        // Test conversion between two plugin currencies with DIFFERENT base currencies
+        // This is the key test: plugin X uses USD as base, plugin Y uses SEK as base
+        clear_plugin_currencies();
+
+        let cache = RateCache {
+            fetched_at: Utc::now(),
+            base: "EUR".to_string(),
+            rates: HashMap::from([
+                ("EUR".to_string(), 1.0),
+                ("USD".to_string(), 1.05), // 1 EUR = 1.05 USD
+                ("SEK".to_string(), 11.5), // 1 EUR = 11.5 SEK
+            ]),
+        };
+
+        // Plugin X: 1 XXX = 100 USD
+        register_plugin_currency(
+            "XXX",
+            PluginCurrencyInfo {
+                rate: 100.0,
+                base_currency: "USD".to_string(),
+                symbol: "X".to_string(),
+                decimals: 2,
+            },
+        );
+
+        // Plugin Y: 1 YYY = 500 SEK
+        register_plugin_currency(
+            "YYY",
+            PluginCurrencyInfo {
+                rate: 500.0,
+                base_currency: "SEK".to_string(),
+                symbol: "Y".to_string(),
+                decimals: 2,
+            },
+        );
+
+        // Convert XXX to YYY:
+        // 1 XXX = 100 USD
+        // 100 USD = 100/1.05 EUR = 95.238 EUR
+        // 95.238 EUR = 95.238 * 11.5 SEK = 1095.24 SEK
+        // 1095.24 SEK = 1095.24/500 YYY = 2.19 YYY
+        let result = cache.convert(1.0, "XXX", "YYY").unwrap();
+        let expected = 100.0 / 1.05 * 11.5 / 500.0; // ~2.19
+        assert!(
+            (result - expected).abs() < 0.01,
+            "Expected ~{:.2}, got {:.2}",
+            expected,
+            result
+        );
+
+        // And the reverse: 1 YYY to XXX
+        // 1 YYY = 500 SEK
+        // 500 SEK = 500/11.5 EUR = 43.478 EUR
+        // 43.478 EUR = 43.478 * 1.05 USD = 45.65 USD
+        // 45.65 USD = 45.65/100 XXX = 0.4565 XXX
+        let result = cache.convert(1.0, "YYY", "XXX").unwrap();
+        let expected = 500.0 / 11.5 * 1.05 / 100.0; // ~0.4565
+        assert!(
+            (result - expected).abs() < 0.001,
+            "Expected ~{:.4}, got {:.4}",
+            expected,
+            result
+        );
+
+        clear_plugin_currencies();
     }
 }
