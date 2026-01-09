@@ -1840,6 +1840,34 @@ fn handle_plugins_command(cmd: &str) {
                         report.total_loaded(),
                         by_file.len()
                     );
+
+                    // Show sample plugins (*.py.sample files)
+                    if let Some(plugin_dir) = discovery::default_plugin_dir() {
+                        let samples: Vec<_> = std::fs::read_dir(&plugin_dir)
+                            .into_iter()
+                            .flatten()
+                            .flatten()
+                            .filter_map(|e| {
+                                let name = e.file_name().to_string_lossy().to_string();
+                                if name.ends_with(".py.sample") {
+                                    Some(name.strip_suffix(".py.sample")?.to_string())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+
+                        if !samples.is_empty() {
+                            println!();
+                            println!(
+                                "{}",
+                                "Samples (run --plugins toggle <name> to enable):".dimmed()
+                            );
+                            for name in samples {
+                                println!("  {} {}", "○".dimmed(), name.dimmed());
+                            }
+                        }
+                    }
                 }
                 Err(e) => {
                     eprintln!("{}: Failed to load plugins: {}", "error".red().bold(), e);
@@ -1922,6 +1950,11 @@ fn handle_plugins_command(cmd: &str) {
                 std::process::exit(1);
             }
         },
+        other if other.starts_with("toggle ") || other.starts_with("toggle\t") => {
+            // Handle toggle command
+            let name = other.strip_prefix("toggle").unwrap().trim();
+            handle_plugin_toggle(name);
+        }
         other => {
             eprintln!(
                 "{}: Unknown plugins command '{}'\n",
@@ -1929,10 +1962,80 @@ fn handle_plugins_command(cmd: &str) {
                 other
             );
             eprintln!("Available commands:");
-            eprintln!("  --plugins          List loaded plugins");
-            eprintln!("  --plugins status   Show detailed status with errors");
-            eprintln!("  --plugins path     Show plugin directory path");
+            eprintln!("  --plugins              List loaded plugins");
+            eprintln!("  --plugins status       Show detailed status with errors");
+            eprintln!("  --plugins path         Show plugin directory path");
+            eprintln!("  --plugins toggle NAME  Enable/disable a plugin");
             std::process::exit(1);
         }
+    }
+}
+
+/// Handle --plugins toggle <name> command.
+#[cfg(feature = "plugins")]
+fn handle_plugin_toggle(name: &str) {
+    use colored::Colorize;
+    use formatorbit_core::plugin::discovery;
+
+    // Normalize the name (strip .py, .sample suffixes)
+    let base_name = name
+        .strip_suffix(".py.sample")
+        .or_else(|| name.strip_suffix(".sample"))
+        .or_else(|| name.strip_suffix(".py"))
+        .unwrap_or(name);
+
+    let Some(plugin_dir) = discovery::default_plugin_dir() else {
+        eprintln!(
+            "{}: Cannot determine plugin directory",
+            "error".red().bold()
+        );
+        std::process::exit(1);
+    };
+
+    // Look for the plugin in either state
+    let active_path = plugin_dir.join(format!("{}.py", base_name));
+    let sample_path = plugin_dir.join(format!("{}.py.sample", base_name));
+
+    if active_path.exists() {
+        // Currently active, disable it (add .sample)
+        match std::fs::rename(&active_path, &sample_path) {
+            Ok(()) => {
+                println!(
+                    "{} Disabled {} (renamed to {})",
+                    "✓".green().bold(),
+                    base_name.yellow(),
+                    sample_path.file_name().unwrap().to_string_lossy().dimmed()
+                );
+            }
+            Err(e) => {
+                eprintln!("{}: Failed to rename plugin: {}", "error".red().bold(), e);
+                std::process::exit(1);
+            }
+        }
+    } else if sample_path.exists() {
+        // Currently sample, enable it (remove .sample)
+        match std::fs::rename(&sample_path, &active_path) {
+            Ok(()) => {
+                println!(
+                    "{} Enabled {} (renamed to {})",
+                    "✓".green().bold(),
+                    base_name.yellow(),
+                    active_path.file_name().unwrap().to_string_lossy().dimmed()
+                );
+            }
+            Err(e) => {
+                eprintln!("{}: Failed to rename plugin: {}", "error".red().bold(), e);
+                std::process::exit(1);
+            }
+        }
+    } else {
+        eprintln!("{}: Plugin '{}' not found", "error".red().bold(), base_name);
+        eprintln!();
+        eprintln!("Looked for:");
+        eprintln!("  {}", active_path.display());
+        eprintln!("  {}", sample_path.display());
+        eprintln!();
+        eprintln!("Run {} to see available plugins.", "--plugins".cyan());
+        std::process::exit(1);
     }
 }
