@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.10.2] - 2026-01-10
+## [0.10.3] - 2026-01-10
 
 ### Changed
 - **Runtime Python discovery** - Python is now loaded dynamically at runtime using dlopen instead of linking at compile time. This means:
@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Python dynamic linking crash** - binaries no longer crash with "Library not loaded" errors on systems without the specific Python version used during CI build
+
+## [0.10.2] - 2026-01-10
+
+### Fixed
+- Build fix attempt (superseded by 0.10.3)
 
 ## [0.10.1] - 2026-01-10
 
