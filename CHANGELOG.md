@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.2] - 2026-01-10
 
+### Changed
+- **Plugins disabled in release binaries** - Python plugin support requires building from source with `--features plugins`. This avoids Python dynamic library dependency issues on end-user machines.
+
 ### Fixed
-- **Python dynamic linking crash** - use pyo3 abi3-py39 for stable ABI that works without specific Python version installed
+- **Python dynamic linking crash** - release binaries no longer require Python installed
 
 ## [0.10.1] - 2026-01-10
 
