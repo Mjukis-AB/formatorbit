@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-01-10
+
+### Fixed
+- **CI: pyo3 build on Python 3.14** - set `PYO3_USE_ABI3_FORWARD_COMPATIBILITY` for stable ABI
+- **cargo publish: bundled plugins path** - moved plugins into core crate directory
+
 ## [0.10.0] - 2026-01-10
 
 ### Added
