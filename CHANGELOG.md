@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.5] - 2026-01-10
+
+### Changed
+- **Homebrew now builds from source** - ensures plugins work by compiling against user's Python 3.12
+- **Prebuilt binaries don't include plugins** - to avoid libpython linking issues; use `cargo install --features plugins` or Homebrew for plugin support
+
 ## [0.10.4] - 2026-01-10
 
 ### Fixed

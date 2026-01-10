@@ -77,7 +77,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }} -p formatorbit-cli --features plugins
+        run: cargo build --release --target ${{ matrix.target }} -p formatorbit-cli
 
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
@@ -143,30 +143,30 @@ jobs:
           SHA_MACOS_ARM=$(sha256sum macos-arm.tar.gz | cut -d' ' -f1)
           SHA_LINUX=$(sha256sum linux.tar.gz | cut -d' ' -f1)
 
+          # Get SHA for source tarball
+          SOURCE_SHA=$(curl -sL "https://github.com/mjukis-ab/formatorbit/archive/refs/tags/${{ github.ref_name }}.tar.gz" | sha256sum | cut -d' ' -f1)
+
           cat > forb.rb << EOF
           class Forb < Formula
             desc "CLI tool that shows all possible interpretations of any data input"
             homepage "https://github.com/mjukis-ab/formatorbit"
-            version "${VERSION}"
+            url "https://github.com/mjukis-ab/formatorbit/archive/refs/tags/${{ github.ref_name }}.tar.gz"
+            sha256 "${SOURCE_SHA}"
             license "MIT"
 
-            on_macos do
-              if Hardware::CPU.arm?
-                url "https://github.com/mjukis-ab/formatorbit/releases/download/${{ github.ref_name }}/forb-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz"
-                sha256 "${SHA_MACOS_ARM}"
-              else
-                url "https://github.com/mjukis-ab/formatorbit/releases/download/${{ github.ref_name }}/forb-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz"
-                sha256 "${SHA_MACOS_X86}"
-              end
-            end
-
-            on_linux do
-              url "https://github.com/mjukis-ab/formatorbit/releases/download/${{ github.ref_name }}/forb-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz"
-              sha256 "${SHA_LINUX}"
-            end
+            depends_on "rust" => :build
+            depends_on "python@3.12"
 
             def install
-              bin.install "forb"
+              # Set Python path for pyo3
+              python = Formula["python@3.12"]
+              ENV["PYO3_PYTHON"] = python.opt_bin/"python3.12"
+
+              system "cargo", "install",
+                     "--features", "plugins",
+                     "--path", "crates/cli",
+                     "--root", prefix,
+                     "--locked"
             end
 
             test do
