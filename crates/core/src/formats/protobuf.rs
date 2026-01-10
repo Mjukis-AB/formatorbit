@@ -644,6 +644,7 @@ impl Format for ProtobufFormat {
             description: "Protocol Buffers wire format (schema-less decode)",
             examples: &[],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

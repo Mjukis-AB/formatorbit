@@ -126,6 +126,7 @@ impl Format for BinaryFormat {
             description: "Binary literals (0b prefix, space-separated)",
             examples: &["0b10101010", "1010 1010", "0b1111_0000", "%10101010"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

@@ -199,6 +199,7 @@ impl Format for FontFormat {
             description: "Font file with metadata extraction",
             examples: &["[binary font data]"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

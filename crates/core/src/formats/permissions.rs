@@ -317,6 +317,7 @@ impl Format for PermissionsFormat {
             description: "Unix file permissions (octal ↔ symbolic)",
             examples: &["755", "rwxr-xr-x", "0644", "rw-r--r--"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

@@ -381,6 +381,7 @@ impl Format for DecimalFormat {
             description: "Decimal integer parsing",
             examples: &["1763574200", "-42", "255"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

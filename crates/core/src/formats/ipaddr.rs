@@ -137,6 +137,7 @@ impl Format for IpAddrFormat {
             description: "IPv4 and IPv6 address parsing",
             examples: &["192.168.1.1", "::1", "2001:db8::1"],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

@@ -100,6 +100,7 @@ impl Format for AngleFormat {
             description: "Angles (degrees, radians, gradians)",
             examples: &["90deg", "3.14rad", "45°", "0.25 turns"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

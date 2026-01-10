@@ -133,6 +133,7 @@ impl Format for IsbnFormat {
             description: "International Standard Book Number (ISBN-10/ISBN-13)",
             examples: &["978-0-306-40615-7", "0-19-853453-X", "9780306406157"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

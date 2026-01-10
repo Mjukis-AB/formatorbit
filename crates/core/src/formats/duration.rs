@@ -404,6 +404,7 @@ impl Format for DurationFormat {
             description: "Time durations (1h30m, 5 days, 1.5h, PT2H30M)",
             examples: &["1h30m", "5 days", "1.5h", "PT2H30M", "1:30:00"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

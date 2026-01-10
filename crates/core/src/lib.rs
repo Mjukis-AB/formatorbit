@@ -543,6 +543,19 @@ impl Formatorbit {
         self.formats.iter().map(|f| f.info()).collect()
     }
 
+    /// Get info about formats that have validation support.
+    ///
+    /// These formats provide detailed error messages when `--only` is used
+    /// and parsing fails.
+    #[must_use]
+    pub fn formats_with_validation(&self) -> Vec<FormatInfo> {
+        self.formats
+            .iter()
+            .map(|f| f.info())
+            .filter(|info| info.has_validation)
+            .collect()
+    }
+
     /// Parse input with only the specified formats (by id or alias).
     /// If `format_filter` is empty, all formats are used.
     #[must_use]

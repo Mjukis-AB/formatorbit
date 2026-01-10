@@ -154,6 +154,7 @@ impl Format for AreaFormat {
             description: "Area with SI prefixes (mm², cm², m², km², etc.)",
             examples: &["100m²", "500 sqft", "2 acres", "1 km²"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

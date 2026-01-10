@@ -143,6 +143,7 @@ impl Format for LengthFormat {
             description: "Length/distance with SI prefixes (nm, µm, mm, m, km, etc.)",
             examples: &["5km", "100m", "3.5 miles", "500nm", "2.5µm"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

@@ -114,6 +114,7 @@ impl Format for ExprFormat {
             description: "Mathematical expressions with hex/binary/octal support",
             examples: &["2 + 2", "0xFF + 1", "1 << 8", "0b1010 | 0b0101"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

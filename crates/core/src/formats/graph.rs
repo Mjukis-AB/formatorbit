@@ -151,6 +151,7 @@ impl Format for GraphFormat {
             description: "Graphviz DOT and Mermaid diagram definitions",
             examples: &["digraph G { A -> B }", "graph TD\\n  A --> B"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

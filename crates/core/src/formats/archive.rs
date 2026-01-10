@@ -285,6 +285,7 @@ impl Format for ArchiveFormat {
             description: "Archive file with metadata extraction",
             examples: &["[binary archive data]"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

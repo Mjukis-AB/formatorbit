@@ -86,6 +86,7 @@ impl Format for SpeedFormat {
             description: "Speed (m/s, km/h, mph, knots)",
             examples: &["100km/h", "60mph", "10 m/s", "30 knots"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

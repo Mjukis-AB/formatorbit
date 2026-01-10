@@ -551,6 +551,7 @@ impl Format for ImageFormat {
             description: "Image files with EXIF metadata extraction",
             examples: &["[binary image data]"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

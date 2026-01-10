@@ -125,6 +125,7 @@ impl Format for CharFormat {
             description: "Unicode character/grapheme cluster with codepoint breakdown",
             examples: &["A", "😀", "👨‍👩‍👧‍👦", "🏳️‍🌈"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

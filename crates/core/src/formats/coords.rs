@@ -467,6 +467,7 @@ impl Format for CoordsFormat {
                 "18TWL8550607274",
             ],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

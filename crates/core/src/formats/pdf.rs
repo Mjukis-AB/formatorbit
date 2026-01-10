@@ -295,6 +295,7 @@ impl Format for PdfFormat {
             description: "PDF document with metadata extraction",
             examples: &["[binary PDF data]"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

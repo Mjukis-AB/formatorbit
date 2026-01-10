@@ -300,6 +300,7 @@ impl Format for CidrFormat {
             description: "CIDR network ranges with netmask, broadcast, host count",
             examples: &["192.168.1.0/24", "10.0.0.0/8", "172.16.0.0/12"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

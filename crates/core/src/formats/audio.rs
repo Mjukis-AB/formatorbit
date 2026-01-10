@@ -360,6 +360,7 @@ impl Format for AudioFormat {
             description: "Audio file with metadata extraction",
             examples: &["[binary audio data]"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

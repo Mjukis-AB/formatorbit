@@ -311,6 +311,7 @@ impl Format for OfficeFormat {
             description: "Microsoft Office document with metadata extraction",
             examples: &["[binary Office document data]"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

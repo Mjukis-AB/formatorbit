@@ -139,6 +139,7 @@ impl Format for VolumeFormat {
             description: "Volume with SI prefixes (nL, µL, mL, L, kL, etc.)",
             examples: &["500mL", "2L", "1 gallon", "8 fl oz", "100µL"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

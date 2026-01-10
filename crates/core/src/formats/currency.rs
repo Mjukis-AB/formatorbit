@@ -335,6 +335,7 @@ impl Format for CurrencyFormat {
             description: "Currency amounts with exchange rate conversion",
             examples: &["100 USD", "$50", "5kEUR", "2.5MSEK", "£100"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

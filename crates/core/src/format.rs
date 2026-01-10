@@ -4,22 +4,30 @@ use crate::types::{Conversion, CoreValue, Interpretation};
 use serde::{Serialize, Serializer};
 
 /// Metadata about a format for help/documentation.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct FormatInfo {
     /// Unique identifier (e.g., "hex")
+    #[serde(default)]
     pub id: &'static str,
     /// Human-readable name (e.g., "Hexadecimal")
+    #[serde(default)]
     pub name: &'static str,
     /// Category for grouping in help (e.g., "Encoding", "Timestamps")
+    #[serde(default)]
     pub category: &'static str,
     /// Short description
+    #[serde(default)]
     pub description: &'static str,
     /// Example input strings
-    #[serde(serialize_with = "serialize_static_slice")]
+    #[serde(serialize_with = "serialize_static_slice", default)]
     pub examples: &'static [&'static str],
     /// Short aliases (e.g., ["h", "x"] for "hex")
-    #[serde(serialize_with = "serialize_static_slice")]
+    #[serde(serialize_with = "serialize_static_slice", default)]
     pub aliases: &'static [&'static str],
+    /// Whether this format provides detailed validation error messages.
+    /// When true, `validate()` returns helpful error messages for invalid input.
+    #[serde(default)]
+    pub has_validation: bool,
 }
 
 fn serialize_static_slice<S>(
@@ -52,6 +60,7 @@ pub trait Format: Send + Sync {
             description: "",
             examples: &[],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 
