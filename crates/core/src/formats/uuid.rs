@@ -27,6 +27,7 @@ impl Format for UuidFormat {
                 "550e8400e29b41d4a716446655440000",
             ],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

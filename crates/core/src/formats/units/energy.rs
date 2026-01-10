@@ -140,6 +140,7 @@ impl Format for EnergyFormat {
             description: "Energy with SI prefixes (J, kJ, MJ, GJ, etc.)",
             examples: &["100kJ", "500 calories", "1 kWh", "1 MJ"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

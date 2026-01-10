@@ -727,6 +727,7 @@ impl Format for NaturalDateFormat {
             description: "Natural language dates (15:00, tomorrow, next monday, dec 15, christmas)",
             examples: &["15:00", "tomorrow", "next friday", "dec 15", "christmas"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

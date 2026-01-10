@@ -81,6 +81,7 @@ impl Format for PlistFormat {
             description: "Apple property list (XML and binary formats)",
             examples: &["<?xml...<plist>...</plist>", "bplist00..."],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

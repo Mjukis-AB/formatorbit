@@ -60,6 +60,7 @@ impl Format for CuidFormat {
             description: "Collision-resistant Unique Identifier (CUID2)",
             examples: &["tz4a98xxat96iws9zmbrgj3a", "pfh0haxfpzowht3oi213cqos"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

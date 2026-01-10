@@ -87,6 +87,7 @@ impl Format for OctalFormat {
             description: "Octal literals (0o prefix or leading zero)",
             examples: &["0o755", "0o31002", "0755"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

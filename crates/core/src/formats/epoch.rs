@@ -95,6 +95,7 @@ impl Format for EpochFormat {
                 "Unix epoch timestamp (seconds, milliseconds, microseconds, or nanoseconds)",
             examples: &["1735344000", "1735344000000", "1735344000000000"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

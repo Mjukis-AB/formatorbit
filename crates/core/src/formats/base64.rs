@@ -109,6 +109,7 @@ impl Format for Base64Format {
             description: "Base64 encoded binary data",
             examples: &["SGVsbG8gV29ybGQ=", "aR4BuA=="],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

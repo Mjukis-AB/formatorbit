@@ -100,6 +100,7 @@ impl Format for UlidFormat {
             description: "Universally Unique Lexicographically Sortable Identifier",
             examples: &["01ARZ3NDEKTSV4RRFFQ69G5FAV", "01H5S5JXMEZ7YQ5DBVTZ1Z5Q4T"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

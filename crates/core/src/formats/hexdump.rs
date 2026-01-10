@@ -83,6 +83,7 @@ impl Format for HexdumpFormat {
             description: "xxd-style hex dump with ASCII",
             examples: &[],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

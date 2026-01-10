@@ -107,6 +107,7 @@ impl Format for JwtFormat {
             description: "JSON Web Token (decoded header and payload)",
             examples: &["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.xxx"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

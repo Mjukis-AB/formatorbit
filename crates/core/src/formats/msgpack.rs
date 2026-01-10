@@ -36,6 +36,7 @@ impl Format for MsgPackFormat {
             description: "MessagePack binary serialization (decoded from bytes)",
             examples: &[],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

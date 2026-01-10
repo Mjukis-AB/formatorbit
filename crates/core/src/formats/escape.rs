@@ -162,6 +162,7 @@ impl Format for EscapeFormat {
                 "Hello\\nWorld",
             ],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

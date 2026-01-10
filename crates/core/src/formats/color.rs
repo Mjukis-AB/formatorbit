@@ -368,6 +368,7 @@ impl Format for ColorFormat {
                 "rgba(255, 128, 0, 0.5)",
             ],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

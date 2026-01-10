@@ -147,6 +147,7 @@ impl Format for TemperatureFormat {
             description: "Temperature (Celsius, Fahrenheit, Kelvin)",
             examples: &["72°F", "20°C", "300K", "-40 Fahrenheit"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

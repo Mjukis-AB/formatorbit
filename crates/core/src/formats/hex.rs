@@ -346,6 +346,7 @@ impl Format for HexFormat {
                 "{0x69, 0x1E}",
             ],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

@@ -346,6 +346,7 @@ impl Format for VideoFormat {
             description: "Video file with metadata extraction",
             examples: &["[binary video data]"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

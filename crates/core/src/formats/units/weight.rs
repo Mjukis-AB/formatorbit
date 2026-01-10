@@ -130,6 +130,7 @@ impl Format for WeightFormat {
             description: "Weight/mass with SI prefixes (ng, µg, mg, g, kg, etc.)",
             examples: &["5kg", "150lbs", "100mg", "50µg"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

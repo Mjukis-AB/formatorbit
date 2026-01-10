@@ -636,6 +636,7 @@ impl Format for ConstantsFormat {
             description: "Bidirectional lookup for HTTP status codes, ports, signals, ASCII codes",
             examples: &["ssh", "ESC", "Not Found", "SIGKILL"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

@@ -25,6 +25,7 @@ impl Format for Utf8Format {
             description: "Plain text with ASCII/UTF-8 detection",
             examples: &["Hello", "Héllo 👋"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

@@ -140,6 +140,7 @@ impl Format for DataSizeFormat {
             description: "Data sizes (KB, MB, KiB, MiB) to/from bytes",
             examples: &["1MB", "512 KiB", "1.5GB", "1048576"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

@@ -130,6 +130,7 @@ impl Format for PressureFormat {
             description: "Pressure with SI prefixes (Pa, kPa, MPa, GPa, etc.)",
             examples: &["101.3kPa", "14.7psi", "1 atm", "1 GPa"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

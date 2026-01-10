@@ -131,6 +131,7 @@ impl Format for UrlEncodingFormat {
             description: "URL percent-encoding (%20, +, etc.)",
             examples: &["Hello%20World", "foo+bar", "a%3Db"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 
