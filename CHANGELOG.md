@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-01-10
+
+### Added
+- **Python plugin system** - extend formatorbit with Python plugins:
+  - Define custom formats with `@forb.format()` decorator
+  - Define custom traits with `@forb.trait()` decorator
+  - Add expression variables and functions
+  - Bundled plugins installed to `~/.config/forb/plugins/`
+  - `forb --plugins list` - show installed plugins
+  - `forb --plugins toggle <name>` - enable/disable plugins
+- **Currency expression functions** - use currencies in math expressions:
+  - `USD(100)` - convert 100 USD to your target currency
+  - `EUR(50) + GBP(30)` - combine amounts in different currencies
+  - `toEUR(USD(100))` / `inEUR(USD(100))` - explicit target conversion
+  - `--currency` flag to set target currency for expressions
+  - Target auto-detected from locale, or set via `FORB_TARGET_CURRENCY`
+- **Plugin currency support** - plugins can define custom currencies:
+  - `@forb.currency()` decorator for exchange rate functions
+  - Plugin currencies work in expressions and conversions
+  - Cross-plugin conversions work through EUR as hub
+- **Odd-length hex support** - `fff` and `0xfff` now parse as hex (zero-padded)
+- **Version update check** - notifies when newer version available
+- **Conversion path tracking in analytics** - track which format chains are used
+
+### Changed
+- **Checksums moved to optional plugin** - CRC32, MD5, SHA-1, SHA-256, SHA-512, BLAKE2b, BLAKE3 no longer shown by default. Enable with `forb --plugins toggle checksums`
+- **Geohash input parsing removed** - too many false positives with words like "server", "rustfmt". Geohash still shown as output from coordinates
+- **Primary decimal for small hex** - `0xff` now shows `255` as primary conversion (not duration)
+
+### Fixed
+- **Hex confidence with 0x prefix** - `0x87` now correctly scores 95% (was incorrectly 70%)
+- **Cross-plugin currency tests** - added serial test attributes to prevent race conditions
+
 ## [0.9.2] - 2026-01-07
 
 ### Added
