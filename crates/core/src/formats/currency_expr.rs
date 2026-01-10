@@ -162,6 +162,23 @@ pub fn convert_to_target(amount: f64, source: &str) -> Option<f64> {
     cache.convert(amount, source, &target)
 }
 
+/// Convert amount from target currency to a specific currency.
+///
+/// This is the inverse of convert_to_target - used by toXXX/inXXX functions.
+/// Example: If target is SEK, convert_from_target(100, "EUR") converts 100 SEK to EUR.
+pub fn convert_from_target(amount: f64, dest: &str) -> Option<f64> {
+    let source = get_target_currency();
+
+    // Same currency, no conversion needed
+    if source.eq_ignore_ascii_case(dest) {
+        return Some(amount);
+    }
+
+    // Get the rate cache
+    let cache = RateCache::get()?;
+    cache.convert(amount, &source, dest)
+}
+
 /// Get all currency codes that should have expression functions.
 ///
 /// Returns built-in ECB currencies + plugin-provided currencies.
@@ -179,8 +196,10 @@ pub fn builtin_currency_codes() -> Vec<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_get_target_currency_default() {
         // Clear any explicit setting
         set_target_currency(None);
@@ -193,6 +212,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_set_target_currency() {
         set_target_currency(Some("SEK".to_string()));
 
@@ -213,10 +233,23 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_convert_same_currency() {
         set_target_currency(Some("USD".to_string()));
 
         let result = convert_to_target(100.0, "USD");
+        assert_eq!(result, Some(100.0));
+
+        set_target_currency(None);
+    }
+
+    #[test]
+    #[serial]
+    fn test_convert_from_target_same_currency() {
+        set_target_currency(Some("EUR".to_string()));
+
+        // Converting from EUR to EUR should be identity
+        let result = convert_from_target(100.0, "EUR");
         assert_eq!(result, Some(100.0));
 
         set_target_currency(None);

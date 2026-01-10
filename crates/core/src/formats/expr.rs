@@ -396,4 +396,37 @@ mod tests {
             panic!("Expected Int");
         }
     }
+
+    #[test]
+    fn test_to_currency_function_exists() {
+        // Verify that toEUR/inEUR functions are registered and callable
+        let format = ExprFormat;
+
+        // toEUR(100) should parse as an expression (has function call)
+        let results = format.parse("toEUR(100)");
+        assert_eq!(results.len(), 1);
+
+        // Result should be a float (currency conversions return floats)
+        if let CoreValue::Float(f) = &results[0].value {
+            // Should be some positive value (100 in user's currency converted to EUR)
+            assert!(*f > 0.0);
+        } else {
+            panic!("Expected Float from toEUR");
+        }
+    }
+
+    #[test]
+    fn test_in_currency_function_exists() {
+        // Verify that inEUR is an alias for toEUR
+        let format = ExprFormat;
+
+        let results = format.parse("inEUR(100)");
+        assert_eq!(results.len(), 1);
+
+        if let CoreValue::Float(f) = &results[0].value {
+            assert!(*f > 0.0);
+        } else {
+            panic!("Expected Float from inEUR");
+        }
+    }
 }

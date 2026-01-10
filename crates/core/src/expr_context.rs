@@ -92,12 +92,12 @@ pub fn eval(expr: &str) -> Result<evalexpr::Value, evalexpr::EvalexprError> {
 /// Add currency conversion functions to the context.
 ///
 /// Registers functions like USD(amount), EUR(amount), BTC(amount) that convert
-/// to the target currency.
+/// to the target currency, plus toXXX/inXXX functions for explicit target conversion.
 fn add_currency_functions(context: &mut evalexpr::HashMapContext) {
     use evalexpr::ContextWithMutableFunctions;
 
     for code in currency_expr::all_currency_codes() {
-        // Register uppercase version (USD, EUR, BTC)
+        // Register uppercase version (USD, EUR, BTC) - converts to user's target currency
         let code_upper = code.to_uppercase();
         let code_for_upper = code_upper.clone();
         let _ = context.set_function(
@@ -130,7 +130,60 @@ fn add_currency_functions(context: &mut evalexpr::HashMapContext) {
                 }
             }),
         );
+
+        // Register toXXX and inXXX functions for explicit target conversion
+        // These convert FROM the user's target currency TO the specified currency
+        add_explicit_conversion_function(context, &code, "to");
+        add_explicit_conversion_function(context, &code, "in");
     }
+}
+
+/// Add an explicit conversion function (toXXX or inXXX) for a currency.
+///
+/// These functions convert from the user's target currency to the specified currency.
+/// Example: toEUR(USD(100)) - USD(100) returns amount in user's currency, then toEUR converts to EUR.
+fn add_explicit_conversion_function(
+    context: &mut evalexpr::HashMapContext,
+    currency_code: &str,
+    prefix: &str,
+) {
+    use evalexpr::ContextWithMutableFunctions;
+
+    let target = currency_code.to_uppercase();
+
+    // Uppercase: toEUR, inEUR
+    let func_upper = format!("{}{}", prefix, target);
+    let target_for_upper = target.clone();
+    let _ = context.set_function(
+        func_upper,
+        evalexpr::Function::new(move |args| {
+            let amount = args.as_number()?;
+            match currency_expr::convert_from_target(amount, &target_for_upper) {
+                Some(result) => Ok(evalexpr::Value::Float(result)),
+                None => Err(evalexpr::EvalexprError::CustomMessage(format!(
+                    "Cannot convert to {} (no exchange rates available)",
+                    target_for_upper
+                ))),
+            }
+        }),
+    );
+
+    // Lowercase: toeur, ineur
+    let func_lower = format!("{}{}", prefix, currency_code.to_lowercase());
+    let target_for_lower = target.clone();
+    let _ = context.set_function(
+        func_lower,
+        evalexpr::Function::new(move |args| {
+            let amount = args.as_number()?;
+            match currency_expr::convert_from_target(amount, &target_for_lower) {
+                Some(result) => Ok(evalexpr::Value::Float(result)),
+                None => Err(evalexpr::EvalexprError::CustomMessage(format!(
+                    "Cannot convert to {} (no exchange rates available)",
+                    target_for_lower
+                ))),
+            }
+        }),
+    );
 }
 
 /// Check if the global context has any variables or functions.
