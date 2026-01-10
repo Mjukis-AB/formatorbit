@@ -65,10 +65,10 @@ expression: "&result.conversions"
   {
     "value": {
       "type": "String",
-      "value": "11 months ago"
+      "value": "12 months ago"
     },
     "target_format": "relative-time",
-    "display": "11 months ago",
+    "display": "12 months ago",
     "path": [
       "datetime",
       "relative-time"
@@ -78,9 +78,9 @@ expression: "&result.conversions"
         "format": "relative-time",
         "value": {
           "type": "String",
-          "value": "11 months ago"
+          "value": "12 months ago"
         },
-        "display": "11 months ago"
+        "display": "12 months ago"
       }
     ],
     "is_lossy": false,

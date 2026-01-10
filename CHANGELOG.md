@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.4] - 2026-01-10
+
+### Fixed
+- **Flaky datetime snapshot test** - updated time-dependent "11 months ago" to "12 months ago"
+
 ## [0.10.3] - 2026-01-10
 
 ### Changed
