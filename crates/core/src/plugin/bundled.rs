@@ -28,28 +28,28 @@ const BUNDLED_PLUGINS: &[BundledPlugin] = &[
     // Active plugins (loaded by default)
     BundledPlugin {
         filename: "crypto.py",
-        source: include_str!("../../../../bundled-plugins/crypto.py"),
+        source: include_str!("../../bundled-plugins/crypto.py"),
         active: true,
     },
     BundledPlugin {
         filename: "math_ext.py",
-        source: include_str!("../../../../bundled-plugins/math_ext.py"),
+        source: include_str!("../../bundled-plugins/math_ext.py"),
         active: true,
     },
     // Sample plugins (not loaded, rename to enable)
     BundledPlugin {
         filename: "custom_decoder.py",
-        source: include_str!("../../../../bundled-plugins/custom_decoder.py"),
+        source: include_str!("../../bundled-plugins/custom_decoder.py"),
         active: false,
     },
     BundledPlugin {
         filename: "dev_traits.py",
-        source: include_str!("../../../../bundled-plugins/dev_traits.py"),
+        source: include_str!("../../bundled-plugins/dev_traits.py"),
         active: false,
     },
     BundledPlugin {
         filename: "checksums.py",
-        source: include_str!("../../../../bundled-plugins/checksums.py"),
+        source: include_str!("../../bundled-plugins/checksums.py"),
         active: false,
     },
 ];
