@@ -2,6 +2,11 @@
 //!
 //! This module provides the embedded Python runtime for loading and
 //! executing Python plugins.
+//!
+//! Python is loaded dynamically at runtime using dlopen, which means:
+//! - The binary works without Python installed (plugins just won't be available)
+//! - Any Python 3.9+ installation will work
+//! - No hardcoded paths to specific Python versions
 
 mod currency;
 mod decoder;
@@ -10,6 +15,7 @@ mod trait_plugin;
 mod types;
 mod visualizer;
 
+use super::python_loader::{ensure_python_loaded, PythonLoadResult};
 use super::{Plugin, PluginError, PluginMeta};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyModule};
@@ -47,13 +53,39 @@ impl PythonRuntime {
     ///
     /// This is safe to call multiple times - subsequent calls return
     /// the existing runtime.
+    ///
+    /// Returns an error if Python is not available on the system.
     pub fn init() -> Result<&'static Self, PluginError> {
         // Check if already initialized
         if let Some(runtime) = PYTHON_RUNTIME.get() {
             return Ok(runtime);
         }
 
+        // First, ensure Python library is loaded via dlopen
+        let load_result = ensure_python_loaded();
+        match load_result {
+            PythonLoadResult::Loaded { version, source } => {
+                tracing::info!(
+                    version = ?version,
+                    source = ?source,
+                    "Python library loaded successfully"
+                );
+            }
+            PythonLoadResult::NotFound => {
+                return Err(PluginError::RuntimeInit(
+                    "Python not found. Install Python 3.9+ to enable plugins.".to_string(),
+                ));
+            }
+            PythonLoadResult::LoadError(e) => {
+                return Err(PluginError::RuntimeInit(format!(
+                    "Failed to load Python: {}. Install Python 3.9+ to enable plugins.",
+                    e
+                )));
+            }
+        }
+
         // Initialize pyo3 for multi-threaded use
+        // This now works because we've dlopen'd libpython with RTLD_GLOBAL
         pyo3::prepare_freethreaded_python();
 
         // Inject the `forb` module into Python

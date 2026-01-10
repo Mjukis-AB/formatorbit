@@ -31,6 +31,12 @@ pub mod discovery;
 #[cfg(feature = "python")]
 pub mod python;
 
+#[cfg(feature = "python")]
+pub mod python_discovery;
+
+#[cfg(feature = "python")]
+pub mod python_loader;
+
 use crate::types::{CoreValue, Interpretation, RichDisplay};
 #[cfg(feature = "python")]
 use std::path::Path;

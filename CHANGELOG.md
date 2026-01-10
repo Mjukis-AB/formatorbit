@@ -10,10 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.10.2] - 2026-01-10
 
 ### Changed
-- **Plugins disabled in release binaries** - Python plugin support requires building from source with `--features plugins`. This avoids Python dynamic library dependency issues on end-user machines.
+- **Runtime Python discovery** - Python is now loaded dynamically at runtime using dlopen instead of linking at compile time. This means:
+  - Binaries work without Python installed (plugins just won't be available)
+  - Any Python 3.9+ installation will work (Homebrew, pyenv, system, etc.)
+  - No hardcoded paths to specific Python framework versions
 
 ### Fixed
-- **Python dynamic linking crash** - release binaries no longer require Python installed
+- **Python dynamic linking crash** - binaries no longer crash with "Library not loaded" errors on systems without the specific Python version used during CI build
 
 ## [0.10.1] - 2026-01-10
 
