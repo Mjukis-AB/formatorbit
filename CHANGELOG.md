@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-01-10
+
+### Fixed
+- **Python dynamic linking crash** - use pyo3 abi3-py39 for stable ABI that works without specific Python version installed
+
 ## [0.10.1] - 2026-01-10
 
 ### Fixed

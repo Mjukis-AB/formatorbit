@@ -52,6 +52,7 @@ matroska = "0.30"
 [dependencies.pyo3]
 version = "0.23"
 optional = true
+features = ["abi3-py39"]
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
