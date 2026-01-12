@@ -1,6 +1,9 @@
 //! Base64 format.
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{
+    engine::general_purpose::{STANDARD, STANDARD_NO_PAD},
+    Engine,
+};
 use tracing::{debug, trace};
 
 use crate::format::{Format, FormatInfo};
@@ -135,8 +138,13 @@ impl Format for Base64Format {
             return vec![];
         }
 
-        // Try to decode
-        let Ok(bytes) = STANDARD.decode(input) else {
+        // Try to decode - first with standard (padded), then without padding
+        // Many systems emit base64 without padding (URLs, Firestore, etc.)
+        let (bytes, had_padding) = if let Ok(b) = STANDARD.decode(input) {
+            (b, input.ends_with('='))
+        } else if let Ok(b) = STANDARD_NO_PAD.decode(input) {
+            (b, false)
+        } else {
             trace!("base64: rejected - decode failed");
             return vec![];
         };
@@ -152,8 +160,12 @@ impl Format for Base64Format {
             0.9 // Padding is a strong indicator
         } else if input.ends_with('=') {
             0.85
+        } else if had_padding {
+            0.8 // Had some padding
         } else if input.len() >= 4 && input.len().is_multiple_of(4) {
             0.7 // Valid length, no padding needed
+        } else if input.len() >= 20 {
+            0.65 // Long unpadded string - likely intentional base64
         } else {
             0.5
         };
@@ -339,6 +351,38 @@ mod tests {
                 results[0].confidence < 0.3,
                 "0xDEADBEEF should have low base64 confidence"
             );
+        }
+    }
+
+    #[test]
+    fn test_unpadded_base64() {
+        // Firestore index definition - real base64 without padding (length % 4 = 2)
+        // Many systems emit base64 without padding (URLs, Firestore, etc.)
+        let input = "ClNwcm9qZWN0cy9jYWxlbmRhcmx5LWRldi0xMDdlMC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvZXZlbnRzL2luZGV4ZXMvXxABGgcKA3VjZRABGgcKA3VpZBABGgUKAXQQARoFCgFjEAEaDAoIX19uYW1lX18QAQ";
+        let format = Base64Format;
+
+        // Verify it's unpadded
+        assert_eq!(input.len() % 4, 2, "This test requires unpadded base64");
+        assert!(!input.ends_with('='), "This test requires unpadded base64");
+
+        let results = format.parse(input);
+
+        // Should parse as base64
+        assert_eq!(results.len(), 1, "Should detect as base64");
+        assert_eq!(results[0].source_format, "base64");
+        assert!(
+            results[0].confidence >= 0.6,
+            "Long unpadded string should have reasonable confidence"
+        );
+
+        // Should decode to bytes containing readable text
+        if let CoreValue::Bytes(bytes) = &results[0].value {
+            assert_eq!(bytes.len(), 133);
+            let text = String::from_utf8_lossy(bytes);
+            assert!(text.contains("projects/"));
+            assert!(text.contains("databases"));
+        } else {
+            panic!("Expected Bytes");
         }
     }
 }
