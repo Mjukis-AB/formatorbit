@@ -9,10 +9,11 @@ mod updates;
 use config::Config;
 
 use std::fs;
-use std::io::{self, IsTerminal, Read};
+use std::io::{self, IsTerminal, Read, Write};
 use std::path::Path;
+use std::process::{Command, Stdio};
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use colored::{control::set_override, Colorize};
 use formatorbit_core::{
     truncate_str, Conversion, ConversionKind, CoreValue, Formatorbit, RichDisplay,
@@ -290,6 +291,14 @@ struct Cli {
     /// Check for available updates
     #[arg(long)]
     check_updates: bool,
+
+    /// Output man page to stdout (pipe to less or save to file)
+    #[arg(long, hide = true)]
+    man: bool,
+
+    /// Install man page to ~/.local/share/man/man1/forb.1
+    #[arg(long, hide = true)]
+    install_man: bool,
 
     /// List or manage plugins (requires --features plugins)
     ///
@@ -582,7 +591,90 @@ fn read_input(input: &str, url_timeout: u64, url_max_size: u64) -> Result<InputD
     })
 }
 
+/// Generate man page content from the CLI definition.
+fn generate_man_page() -> String {
+    use clap_mangen::Man;
+    let cmd = Cli::command();
+    let man = Man::new(cmd);
+    let mut buffer = Vec::new();
+    man.render(&mut buffer).expect("Failed to render man page");
+    String::from_utf8(buffer).expect("Man page is not valid UTF-8")
+}
+
+/// Get the man page installation path.
+fn man_page_path() -> Option<std::path::PathBuf> {
+    // Use ~/.local/share/man on all platforms (standard XDG location)
+    dirs::home_dir().map(|p| {
+        p.join(".local")
+            .join("share")
+            .join("man")
+            .join("man1")
+            .join("forb.1")
+    })
+}
+
+/// Install the man page to the local man directory.
+fn install_man_page() -> Result<std::path::PathBuf, String> {
+    let path = man_page_path().ok_or("Cannot determine data directory")?;
+
+    // Create directory if needed
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Cannot create directory: {}", e))?;
+    }
+
+    // Write man page
+    let content = generate_man_page();
+    fs::write(&path, content).map_err(|e| format!("Cannot write man page: {}", e))?;
+
+    Ok(path)
+}
+
+/// Display text through a pager (less/more) if stdout is a TTY.
+fn show_with_pager(text: &str) {
+    // Only use pager if stdout is a terminal
+    if !std::io::stdout().is_terminal() {
+        // Not a TTY, just print (ignore broken pipe errors when piped to head/etc)
+        let _ = io::stdout().write_all(text.as_bytes());
+        return;
+    }
+
+    // Try to find a pager: $PAGER, then less, then more
+    let pager = std::env::var("PAGER").ok();
+    let pager_cmd = pager.as_deref().unwrap_or("less");
+
+    // Try to spawn the pager
+    let result = Command::new(pager_cmd)
+        .arg("-R") // Enable ANSI colors in less
+        .stdin(Stdio::piped())
+        .spawn();
+
+    match result {
+        Ok(mut child) => {
+            if let Some(mut stdin) = child.stdin.take() {
+                let _ = stdin.write_all(text.as_bytes());
+            }
+            let _ = child.wait();
+        }
+        Err(_) => {
+            // Pager not available, just print
+            let _ = io::stdout().write_all(text.as_bytes());
+        }
+    }
+}
+
 fn main() {
+    // Handle --help and --version manually to support pager
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        let help = Cli::command().render_long_help().to_string();
+        show_with_pager(&help);
+        return;
+    }
+    if args.iter().any(|a| a == "--version" || a == "-V") {
+        println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
     let cli = Cli::parse();
 
     // Handle --config-path
@@ -621,6 +713,32 @@ fn main() {
     // Handle --check-updates (explicit update check)
     if cli.check_updates {
         handle_check_updates();
+        return;
+    }
+
+    // Handle --man (output man page)
+    if cli.man {
+        let man_page = generate_man_page();
+        show_with_pager(&man_page);
+        return;
+    }
+
+    // Handle --install-man (install man page)
+    if cli.install_man {
+        match install_man_page() {
+            Ok(path) => {
+                println!("Installed man page to: {}", path.display());
+                println!();
+                println!("To use it, add to your shell config:");
+                println!("  export MANPATH=\"$HOME/.local/share/man:$MANPATH\"");
+                println!();
+                println!("Then run: man forb");
+            }
+            Err(e) => {
+                eprintln!("{}: {}", "error".red().bold(), e);
+                std::process::exit(1);
+            }
+        }
         return;
     }
 
