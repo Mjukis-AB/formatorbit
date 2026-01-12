@@ -436,6 +436,9 @@ impl ProtobufFormat {
                 let (len_val, len_bytes_count) =
                     Self::decode_varint(&value_bytes).unwrap_or((data.len() as u64, 1));
 
+                // Clamp len_bytes_count to available bytes
+                let len_bytes_count = len_bytes_count.min(value_bytes.len());
+
                 let decoded = if let Ok(s) = std::str::from_utf8(data) {
                     if s.chars().all(|c| !c.is_control() || c == '\n' || c == '\t') {
                         format!("\"{}\"", s)
@@ -455,7 +458,7 @@ impl ProtobufFormat {
                 PacketSegment {
                     offset: field.value_offset,
                     length: len_bytes_count,
-                    bytes: value_bytes[..len_bytes_count].to_vec(),
+                    bytes: value_bytes.get(..len_bytes_count).unwrap_or(&[]).to_vec(),
                     segment_type: "len".to_string(),
                     label: format!("len={}", len_val),
                     decoded: decoded.clone(),
@@ -474,7 +477,10 @@ impl ProtobufFormat {
                 // For nested messages, recursively build child segments
                 let (len_val, len_bytes_count) =
                     Self::decode_varint(&value_bytes).unwrap_or((0, 1));
-                let data_len = field.value_length - len_bytes_count;
+
+                // Clamp len_bytes_count to available bytes
+                let len_bytes_count = len_bytes_count.min(value_bytes.len());
+                let data_len = field.value_length.saturating_sub(len_bytes_count);
 
                 // Get the nested message bytes
                 let nested_bytes = bytes
@@ -489,7 +495,7 @@ impl ProtobufFormat {
                 PacketSegment {
                     offset: field.value_offset,
                     length: len_bytes_count,
-                    bytes: value_bytes[..len_bytes_count].to_vec(),
+                    bytes: value_bytes.get(..len_bytes_count).unwrap_or(&[]).to_vec(),
                     segment_type: "len".to_string(),
                     label: format!("len={}", len_val),
                     decoded: format!("message[{}]", data_len),
