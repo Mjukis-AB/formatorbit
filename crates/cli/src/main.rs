@@ -75,12 +75,17 @@ OUTPUT:
     ≈  Representation Same value, different notation (e.g., 256 → 0x100)
     ✓  Trait          Property of the value (e.g., power-of-2, prime)
 
-PIPE MODE:
-  Pipe logs through forb to annotate interesting values:
-    cat server.log | forb              Annotate log lines
-    cat server.log | forb -t 0.5       Lower confidence threshold
-    cat server.log | forb -H           Highlight matches inline
-    cat server.log | forb -o uuid,hex  Only look for specific formats
+PIPED INPUT:
+  Piped data is automatically detected and processed:
+    echo "hello" | forb                Same as: forb "hello"
+    cat data.bin | forb                Binary data (like forb @-)
+
+TEE MODE:
+  Pass through input while annotating interesting values (like tee):
+    tail -f server.log | forb --tee    Annotate log lines live
+    cat server.log | forb -T -t 0.5    Lower confidence threshold
+    cat server.log | forb -T -H        Highlight matches inline
+    cat server.log | forb -T -o uuid   Only look for specific formats
 
 CONFIGURATION:
   Settings can be configured via CLI flags, environment variables, or config file.
@@ -135,16 +140,23 @@ struct Cli {
     #[arg(long)]
     formats: bool,
 
-    // === Pipe mode options ===
+    // === Tee mode options ===
+    /// Tee mode: pass through stdin while annotating interesting values
+    ///
+    /// Like Unix `tee`, but annotates timestamps, UUIDs, hex, etc. inline.
+    /// Useful for live log monitoring: tail -f app.log | forb --tee
+    #[arg(long, short = 'T')]
+    tee: bool,
+
     /// Minimum confidence threshold for showing annotations (0.0-1.0)
     ///
-    /// In pipe mode, only values with confidence >= threshold are annotated.
+    /// In tee mode, only values with confidence >= threshold are annotated.
     #[arg(long, short = 't')]
     threshold: Option<f32>,
 
     /// Highlight interesting values inline with color
     ///
-    /// In pipe mode, highlights matched tokens with background color.
+    /// In tee mode, highlights matched tokens with background color.
     #[arg(long, short = 'H')]
     highlight: bool,
 
@@ -161,11 +173,11 @@ struct Cli {
     #[arg(long, short = 'l')]
     limit: Option<usize>,
 
-    /// Force pipe mode even when stdin is a TTY (for testing)
+    /// Force tee mode even when stdin is a TTY (for testing)
     #[arg(long, hide = true)]
-    force_pipe: bool,
+    force_tee: bool,
 
-    /// Maximum tokens to analyze per line in pipe mode
+    /// Maximum tokens to analyze per line in tee mode
     #[arg(long, hide = true)]
     max_tokens: Option<usize>,
 
@@ -901,13 +913,20 @@ fn main() {
         None => PacketMode::None,
     };
 
-    // Check if we should run in pipe mode
-    // Only use pipe mode if stdin is not a terminal AND no direct input was given
+    // Check if we should run in tee mode
+    // Tee mode passes through stdin while annotating interesting values
     let stdin_is_pipe = !std::io::stdin().is_terminal();
-    if (stdin_is_pipe && cli.input.is_none()) || cli.force_pipe {
-        tracker.record_pipe_mode();
+    if cli.tee || cli.force_tee {
+        if !stdin_is_pipe && !cli.force_tee {
+            eprintln!(
+                "{}: --tee requires piped input (e.g., cat file | forb --tee)",
+                "error".red().bold()
+            );
+            std::process::exit(1);
+        }
+        tracker.record_pipe_mode(); // Keep analytics name for compatibility
 
-        let pipe_config = pipe::PipeModeConfig {
+        let tee_config = pipe::PipeModeConfig {
             threshold,
             highlight: cli.highlight,
             max_tokens,
@@ -916,15 +935,42 @@ fn main() {
             packet_mode,
         };
 
-        if let Err(e) = pipe::run_pipe_mode(&forb, &pipe_config) {
+        if let Err(e) = pipe::run_pipe_mode(&forb, &tee_config) {
             eprintln!("{}: Failed to read stdin: {}", "error".red().bold(), e);
             std::process::exit(1);
         }
         return;
     }
 
-    // Direct input mode
-    let Some(raw_input) = cli.input else {
+    // Handle piped input (not tee mode) - read and process as single input
+    // We'll set raw_input based on what we read, then let the normal flow handle it
+    let (raw_input, piped_binary_data) = if stdin_is_pipe && cli.input.is_none() {
+        let mut buffer = Vec::new();
+        if let Err(e) = io::stdin().read_to_end(&mut buffer) {
+            eprintln!("{}: Failed to read stdin: {}", "error".red().bold(), e);
+            std::process::exit(1);
+        }
+
+        // Detect if binary or text
+        let is_binary = buffer.contains(&0) || std::str::from_utf8(&buffer).is_err();
+
+        if is_binary {
+            // Binary data - will be processed via convert_bytes
+            ("(stdin)".to_string(), Some(buffer))
+        } else {
+            // Text - trim and use as input string
+            let text = String::from_utf8_lossy(&buffer);
+            let trimmed = text.trim().to_string();
+            if trimmed.is_empty() {
+                eprintln!("{}: Empty input", "error".red().bold());
+                std::process::exit(1);
+            }
+            (trimmed, None)
+        }
+    } else if let Some(input) = cli.input {
+        (input, None)
+    } else {
+        // No input provided
         eprintln!("{}: No input provided", "error".red().bold());
         eprintln!();
         eprintln!("Usage: {} <INPUT>", "forb".bold());
@@ -935,13 +981,14 @@ fn main() {
         eprintln!("  forb 1703456789            Unix timestamp");
         eprintln!("  forb \"#FF5733\"             Color");
         eprintln!();
-        eprintln!("File input:");
+        eprintln!("File/pipe input:");
         eprintln!("  forb @image.jpg            Read and analyze file");
-        eprintln!("  forb @-                    Read from stdin");
+        eprintln!("  echo hello | forb          Pipe text input");
+        eprintln!("  cat data.bin | forb        Pipe binary data");
         eprintln!();
-        eprintln!("Pipe mode:");
-        eprintln!("  cat logs.txt | forb        Annotate log lines");
-        eprintln!("  cat logs.txt | forb -H     With highlighting");
+        eprintln!("Tee mode (pass-through with annotations):");
+        eprintln!("  tail -f app.log | forb -T  Annotate log lines live");
+        eprintln!("  cat logs.txt | forb -T -H  With highlighting");
         eprintln!();
         eprintln!("Run {} for more information.", "forb --help".bold());
         std::process::exit(1);
@@ -956,7 +1003,7 @@ fn main() {
         }
     };
 
-    // Process input (handle @path syntax for file reading)
+    // Process input (handle @path syntax for file reading, or use piped binary)
     // Track file/URL input for analytics
     if raw_input.starts_with("@http://") || raw_input.starts_with("@https://") {
         tracker.record_url_fetch();
@@ -964,13 +1011,25 @@ fn main() {
         tracker.record_file_input();
     }
 
-    let (input, binary_data, file_path) = match read_input(&raw_input, url_timeout, url_max_size) {
-        Ok(InputData::Text(text)) => (text, None, None),
-        Ok(InputData::Binary { data, path }) => (String::new(), Some(data), Some(path)),
-        Err(e) => {
-            eprintln!("{}: {}", "error".red().bold(), e);
-            std::process::exit(1);
+    let (input, binary_data, file_path) = if let Some(data) = piped_binary_data {
+        // Piped binary data - already read
+        (String::new(), Some(data), Some("(stdin)".to_string()))
+    } else if raw_input.starts_with('@')
+        || raw_input.starts_with("http://")
+        || raw_input.starts_with("https://")
+    {
+        // File or URL input - use read_input
+        match read_input(&raw_input, url_timeout, url_max_size) {
+            Ok(InputData::Text(text)) => (text, None, None),
+            Ok(InputData::Binary { data, path }) => (String::new(), Some(data), Some(path)),
+            Err(e) => {
+                eprintln!("{}: {}", "error".red().bold(), e);
+                std::process::exit(1);
+            }
         }
+    } else {
+        // Direct text input (including piped text)
+        (raw_input.clone(), None, None)
     };
 
     // Handle --no-color flag
