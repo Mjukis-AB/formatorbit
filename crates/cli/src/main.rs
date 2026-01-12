@@ -117,7 +117,7 @@ ANALYTICS:
 #[command(version)]
 #[command(about = "Automatically detect and convert data between formats")]
 #[command(long_about = LONG_ABOUT)]
-#[command(after_help = "For more information, visit: https://github.com/formatorbit/formatorbit")]
+#[command(after_help = "For more information, visit: https://github.com/mjukis-ab/formatorbit")]
 struct Cli {
     /// The input data to interpret and convert
     ///
