@@ -193,6 +193,67 @@ pub fn convert_file_from(
     Ok(results.into_iter().map(Into::into).collect())
 }
 
+// =============================================================================
+// Currency Functions
+// =============================================================================
+
+/// Result of getting the current target currency.
+#[derive(uniffi::Record)]
+pub struct TargetCurrency {
+    /// The ISO 4217 currency code (e.g., "USD", "EUR", "SEK").
+    pub code: String,
+    /// How the currency was determined: "config", "environment (FORB_TARGET_CURRENCY)",
+    /// "locale (...)", or "default".
+    pub source: String,
+}
+
+/// Get the currency code for a given ISO 3166-1 alpha-2 country code.
+///
+/// For macOS apps, you can get the country code from:
+/// `Locale.current.region?.identifier` (Swift)
+///
+/// Returns nil if the country code is not recognized.
+#[uniffi::export]
+pub fn currency_for_country(country_code: String) -> Option<String> {
+    formatorbit_core::formats::currency_expr::currency_for_country(&country_code)
+        .map(|s| s.to_string())
+}
+
+/// Get the currency code from a locale string (e.g., "en_US", "sv_SE.UTF-8").
+///
+/// Parses the country code from the locale and returns the corresponding currency.
+/// Returns nil if the locale doesn't contain a recognizable country code.
+#[uniffi::export]
+pub fn currency_for_locale(locale: String) -> Option<String> {
+    formatorbit_core::formats::currency_expr::currency_for_locale(&locale).map(|s| s.to_string())
+}
+
+/// Set the target currency for currency conversions.
+///
+/// Pass nil to clear and use locale/default detection.
+#[uniffi::export]
+pub fn set_target_currency(code: Option<String>) {
+    formatorbit_core::formats::currency_expr::set_target_currency(code);
+}
+
+/// Get the current target currency and its source.
+///
+/// Source is one of: "config", "environment (FORB_TARGET_CURRENCY)", "locale (...)", "default".
+#[uniffi::export]
+pub fn get_target_currency() -> TargetCurrency {
+    let (code, source) =
+        formatorbit_core::formats::currency_expr::get_target_currency_with_source();
+    TargetCurrency { code, source }
+}
+
+/// Get all available currency codes.
+///
+/// Returns both built-in ECB currencies and any plugin-provided currencies.
+#[uniffi::export]
+pub fn all_currency_codes() -> Vec<String> {
+    formatorbit_core::formats::currency_expr::all_currency_codes()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
