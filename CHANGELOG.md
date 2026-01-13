@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Currency APIs for GUI apps** - new FFI functions for macOS/GUI apps:
+  - `currency_for_country()` - get currency from ISO 3166-1 country code (e.g., "SE" → "SEK")
+  - `currency_for_locale()` - get currency from locale string (e.g., "sv_SE.UTF-8" → "SEK")
+  - `set_target_currency()` / `get_target_currency()` - manage target currency
+  - `all_currency_codes()` - list available currencies
+- **Currency display in expression results** - expressions using currency functions now show the result currency:
+  - `USD(100)` → `915.22 SEK` (when target is SEK)
+  - `USD(100) + EUR(50)` → `1450.26 SEK` (consistent target)
+  - Mixed currencies (e.g., `USD(100) + toEUR(50)`) don't show currency to avoid misleading results
+
 ## [0.10.5] - 2026-01-10
 
 ### Changed
