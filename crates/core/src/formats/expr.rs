@@ -130,26 +130,39 @@ impl Format for ExprFormat {
         let processed = Self::preprocess(trimmed);
 
         // Try to evaluate using the global context (which may have plugin vars/funcs)
-        let result = match crate::expr_context::eval(&processed) {
-            Ok(value) => value,
+        let eval_result = match crate::expr_context::eval(&processed) {
+            Ok(r) => r,
             Err(_) => return vec![],
         };
 
         // Convert evalexpr Value to our CoreValue
-        let (core_value, description) = match result {
-            evalexpr::Value::Int(i) => (
-                CoreValue::Int {
-                    value: i as i128,
-                    original_bytes: None,
-                },
-                format!("{} = {}", trimmed, i),
-            ),
+        let (core_value, description) = match eval_result.value {
+            evalexpr::Value::Int(i) => {
+                let desc = if let Some(ref currency) = eval_result.result_currency {
+                    format!("{} = {} {}", trimmed, i, currency)
+                } else {
+                    format!("{} = {}", trimmed, i)
+                };
+                (
+                    CoreValue::Int {
+                        value: i as i128,
+                        original_bytes: None,
+                    },
+                    desc,
+                )
+            }
             evalexpr::Value::Float(f) => {
                 // Only accept if it's a "clean" result (not NaN/Inf)
                 if !f.is_finite() {
                     return vec![];
                 }
-                (CoreValue::Float(f), format!("{} = {}", trimmed, f))
+                let desc = if let Some(ref currency) = eval_result.result_currency {
+                    // Format currency amounts nicely (2 decimal places)
+                    format!("{} = {:.2} {}", trimmed, f, currency)
+                } else {
+                    format!("{} = {}", trimmed, f)
+                };
+                (CoreValue::Float(f), desc)
             }
             // evalexpr can return other types (bool, string, tuple) but we don't care about those
             _ => return vec![],
