@@ -193,6 +193,54 @@ pub fn builtin_currency_codes() -> Vec<&'static str> {
     CURRENCY_CODES.to_vec()
 }
 
+/// Get the currency code for a given country code (ISO 3166-1 alpha-2).
+///
+/// This is useful for GUI apps that can get the country code from the system
+/// locale (e.g., Swift's `Locale.current.region?.identifier`).
+///
+/// # Examples
+///
+/// ```
+/// use formatorbit_core::formats::currency_expr::currency_for_country;
+///
+/// assert_eq!(currency_for_country("US"), Some("USD"));
+/// assert_eq!(currency_for_country("SE"), Some("SEK"));
+/// assert_eq!(currency_for_country("DE"), Some("EUR"));
+/// assert_eq!(currency_for_country("XX"), None);
+/// ```
+pub fn currency_for_country(country_code: &str) -> Option<&'static str> {
+    let country_upper = country_code.to_uppercase();
+    COUNTRY_TO_CURRENCY
+        .iter()
+        .find(|(c, _)| *c == country_upper)
+        .map(|(_, currency)| *currency)
+}
+
+/// Get the currency code from a locale string (e.g., "en_US.UTF-8" or "en_US").
+///
+/// Parses the country code from the locale and returns the corresponding currency.
+///
+/// # Examples
+///
+/// ```
+/// use formatorbit_core::formats::currency_expr::currency_for_locale;
+///
+/// assert_eq!(currency_for_locale("en_US.UTF-8"), Some("USD"));
+/// assert_eq!(currency_for_locale("sv_SE"), Some("SEK"));
+/// assert_eq!(currency_for_locale("de_DE.UTF-8"), Some("EUR"));
+/// assert_eq!(currency_for_locale("en"), None); // No country code
+/// ```
+pub fn currency_for_locale(locale: &str) -> Option<&'static str> {
+    // Parse country code from locale (e.g., "en_US.UTF-8" -> "US")
+    let country = if locale.contains('_') {
+        locale.split('_').nth(1)?.split('.').next()?
+    } else {
+        return None;
+    };
+
+    currency_for_country(country)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
