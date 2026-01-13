@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.6] - 2026-01-13
+
 ### Added
 - **Currency APIs for GUI apps** - new FFI functions for macOS/GUI apps:
   - `currency_for_country()` - get currency from ISO 3166-1 country code (e.g., "SE" → "SEK")
@@ -17,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `USD(100)` → `915.22 SEK` (when target is SEK)
   - `USD(100) + EUR(50)` → `1450.26 SEK` (consistent target)
   - Mixed currencies (e.g., `USD(100) + toEUR(50)`) don't show currency to avoid misleading results
+- **Pager for `--help`** - help text now opens in a pager (less/more) for easier navigation
+- **Man page generation** - `--man` outputs man page, `--install-man` installs it
+- **Auto-detect piped input** - piped data is automatically processed (no flags needed)
+- **Tee mode (`--tee`)** - renamed from pipe mode, pass-through annotation for log files
+
+### Fixed
+- **Unpadded base64 support** - base64 strings without padding (e.g., from Firestore) now decode correctly
+- **Protobuf panic** - fixed crash when parsing empty protobuf value bytes
 
 ## [0.10.5] - 2026-01-10
 
