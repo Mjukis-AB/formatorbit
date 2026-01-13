@@ -136,6 +136,7 @@ impl Format for ExprFormat {
         };
 
         // Convert evalexpr Value to our CoreValue
+        // If currency was used, wrap in CoreValue::Currency for proper formatting
         let (core_value, description) = match eval_result.value {
             evalexpr::Value::Int(i) => {
                 let desc = if let Some(ref currency) = eval_result.result_currency {
@@ -143,13 +144,18 @@ impl Format for ExprFormat {
                 } else {
                     format!("{} = {}", trimmed, i)
                 };
-                (
+                let value = if let Some(ref currency) = eval_result.result_currency {
+                    CoreValue::Currency {
+                        amount: i as f64,
+                        code: currency.clone(),
+                    }
+                } else {
                     CoreValue::Int {
                         value: i as i128,
                         original_bytes: None,
-                    },
-                    desc,
-                )
+                    }
+                };
+                (value, desc)
             }
             evalexpr::Value::Float(f) => {
                 // Only accept if it's a "clean" result (not NaN/Inf)
@@ -162,7 +168,15 @@ impl Format for ExprFormat {
                 } else {
                     format!("{} = {}", trimmed, f)
                 };
-                (CoreValue::Float(f), desc)
+                let value = if let Some(ref currency) = eval_result.result_currency {
+                    CoreValue::Currency {
+                        amount: f,
+                        code: currency.clone(),
+                    }
+                } else {
+                    CoreValue::Float(f)
+                };
+                (value, desc)
             }
             // evalexpr can return other types (bool, string, tuple) but we don't care about those
             _ => return vec![],
@@ -240,6 +254,22 @@ impl Format for ExprFormat {
                 value: CoreValue::Float(*f),
                 target_format: "result".to_string(),
                 display: f.to_string(),
+                path: vec![], // Will be set by BFS
+                is_lossy: false,
+                steps: vec![], // Will be set by BFS
+                priority: ConversionPriority::Primary,
+                kind: ConversionKind::Conversion,
+                display_only: true, // Don't explore further from result
+                hidden: false,
+                rich_display: vec![],
+            }],
+            CoreValue::Currency { amount, code } => vec![Conversion {
+                value: CoreValue::Currency {
+                    amount: *amount,
+                    code: code.clone(),
+                },
+                target_format: "result".to_string(),
+                display: format!("{:.2} {}", amount, code),
                 path: vec![], // Will be set by BFS
                 is_lossy: false,
                 steps: vec![], // Will be set by BFS
