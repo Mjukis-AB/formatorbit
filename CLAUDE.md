@@ -604,3 +604,7 @@ When implementing a feature:
 6. **Does this add noise?** Test with `forb "input" -l 0` to see full output
 7. **Should this be blocked?** Would this conversion make sense to an end user?
 8. **Are snapshots affected?** Review changes from end-user perspective
+
+## Changelog
+
+This project uses [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. When adding features or fixing bugs, update `CHANGELOG.md` under the `[Unreleased]` section with the appropriate category (Added, Changed, Fixed, etc.).
