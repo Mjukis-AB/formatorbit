@@ -11,6 +11,78 @@ use super::currency_rates::{self, RateCache};
 /// Explicitly set target currency (from CLI or config).
 static TARGET_CURRENCY: RwLock<Option<String>> = RwLock::new(None);
 
+// Thread-local tracking for currency function usage during expression evaluation.
+thread_local! {
+    /// Currency tracking state:
+    /// - None: no currency function was called
+    /// - Some((code, true)): all functions output the same currency, safe to display
+    /// - Some((_, false)): mixed currencies or toXXX/inXXX used, don't display currency
+    static RESULT_CURRENCY: std::cell::RefCell<Option<(String, bool)>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Clear the currency tracking before evaluating an expression.
+pub fn clear_currency_flag() {
+    RESULT_CURRENCY.with(|c| *c.borrow_mut() = None);
+}
+
+/// Get the result currency if all currency functions output the same currency.
+///
+/// Returns the currency code only if:
+/// - Currency functions were used
+/// - All functions output the same currency (all XXX() to target)
+/// - No toXXX/inXXX functions were used (those make the result ambiguous in combinations)
+pub fn get_result_currency() -> Option<String> {
+    RESULT_CURRENCY.with(|c| {
+        let state = c.borrow();
+        match &*state {
+            Some((code, true)) => Some(code.clone()), // Consistent, safe to display
+            Some((_, false)) => None,                 // Mixed or explicit conversion
+            None => None,                             // No currency used
+        }
+    })
+}
+
+/// Check if any currency function was called since the last clear.
+pub fn was_currency_used() -> bool {
+    RESULT_CURRENCY.with(|c| c.borrow().is_some())
+}
+
+/// Mark that a XXX(amount) function was called, converting to target currency.
+/// Only shows currency if all calls are to the same target.
+fn set_result_currency(code: &str) {
+    let code_upper = code.to_uppercase();
+    RESULT_CURRENCY.with(|c| {
+        let mut state = c.borrow_mut();
+        match &*state {
+            None => {
+                // First call - mark as consistent
+                *state = Some((code_upper, true));
+            }
+            Some((existing, true)) => {
+                // Previous was consistent - check if still consistent
+                if !existing.eq_ignore_ascii_case(&code_upper) {
+                    // Different currency - mark as inconsistent
+                    *state = Some((code_upper, false));
+                }
+            }
+            Some((_, false)) => {
+                // Already inconsistent, stay that way
+            }
+        }
+    });
+}
+
+/// Mark that a toXXX/inXXX function was called.
+/// This always marks the result as inconsistent since mixing explicit conversions
+/// with other operations doesn't produce a meaningful single-currency result.
+fn set_result_currency_explicit() {
+    RESULT_CURRENCY.with(|c| {
+        let mut state = c.borrow_mut();
+        // Mark as used but inconsistent - toXXX/inXXX makes display ambiguous
+        *state = Some((String::new(), false));
+    });
+}
+
 /// ISO 4217 currency codes we recognize (duplicated from currency.rs to avoid cross-module deps).
 pub const CURRENCY_CODES: &[&str] = &[
     "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "NZD", "CNY", "HKD", "SGD", "SEK", "NOK",
@@ -149,8 +221,11 @@ fn get_locale_currency_with_source() -> Option<(String, String)> {
 /// Convert amount from source currency to target currency.
 ///
 /// Returns the converted amount, or None if conversion fails.
+/// Also tracks that the result is in the target currency (for expression result display).
 pub fn convert_to_target(amount: f64, source: &str) -> Option<f64> {
     let target = get_target_currency();
+    // Result is in the target currency
+    set_result_currency(&target);
 
     // Same currency, no conversion needed
     if source.eq_ignore_ascii_case(&target) {
@@ -166,7 +241,11 @@ pub fn convert_to_target(amount: f64, source: &str) -> Option<f64> {
 ///
 /// This is the inverse of convert_to_target - used by toXXX/inXXX functions.
 /// Example: If target is SEK, convert_from_target(100, "EUR") converts 100 SEK to EUR.
+/// Note: Using toXXX/inXXX marks the result as having mixed currencies, so no currency
+/// will be displayed (since `toEUR(USD(100))` mixes SEK intermediate with EUR output).
 pub fn convert_from_target(amount: f64, dest: &str) -> Option<f64> {
+    // Mark that explicit conversion was used - don't display currency
+    set_result_currency_explicit();
     let source = get_target_currency();
 
     // Same currency, no conversion needed

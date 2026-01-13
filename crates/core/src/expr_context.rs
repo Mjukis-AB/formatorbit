@@ -57,13 +57,27 @@ pub fn clear() {
     }
 }
 
+/// Result of expression evaluation.
+pub struct EvalResult {
+    /// The evaluated value.
+    pub value: evalexpr::Value,
+    /// The currency code of the result if any currency functions were used, or None.
+    /// For expressions like `USD(100)`, this is the target currency (e.g., "SEK").
+    /// For expressions like `toEUR(100)`, this is "EUR".
+    pub result_currency: Option<String>,
+}
+
 /// Evaluate an expression using the global context (if available).
 ///
 /// Falls back to evalexpr::eval() if no context is set.
-pub fn eval(expr: &str) -> Result<evalexpr::Value, evalexpr::EvalexprError> {
+/// Returns both the result and the result currency if currency functions were used.
+pub fn eval(expr: &str) -> Result<EvalResult, evalexpr::EvalexprError> {
     #[cfg(feature = "python")]
     use evalexpr::ContextWithMutableFunctions;
     use evalexpr::ContextWithMutableVariables;
+
+    // Clear the currency tracking before evaluation
+    currency_expr::clear_currency_flag();
 
     let mut context = evalexpr::HashMapContext::new();
 
@@ -86,7 +100,13 @@ pub fn eval(expr: &str) -> Result<evalexpr::Value, evalexpr::EvalexprError> {
         }
     }
 
-    evalexpr::eval_with_context(expr, &context)
+    let value = evalexpr::eval_with_context(expr, &context)?;
+    let result_currency = currency_expr::get_result_currency();
+
+    Ok(EvalResult {
+        value,
+        result_currency,
+    })
 }
 
 /// Add currency conversion functions to the context.
