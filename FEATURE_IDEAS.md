@@ -45,6 +45,9 @@ This document tracks potential features and improvements identified during codeb
 | **ASN.1/DER parsing** | Basic structure parsing | Foundation for cert/key parsing |
 | **SSH key fingerprints** | Parse and display key info | Common security task |
 | **DNS record parsing** | A, AAAA, MX, CNAME, TXT | Network debugging |
+| **TLD/Domain parsing** | Extract TLD, domain parts, public suffix | `foo.co.uk` → TLD: `co.uk`, domain: `foo` |
+| **DNS lookup** | Resolve domain to IP, MX, TXT records | `example.com` → A: `93.184.216.34` |
+| **WHOIS lookup** | Domain registration info | Registrar, expiration, nameservers |
 
 ---
 

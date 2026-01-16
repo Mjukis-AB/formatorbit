@@ -809,6 +809,7 @@ dependencies = [
  "ttf-parser",
  "unicode-segmentation",
  "ureq",
+ "url",
  "uuid",
  "zip",
 ]

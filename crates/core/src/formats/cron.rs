@@ -254,7 +254,15 @@ impl CronExpr {
             return "every day".to_string();
         }
 
-        let day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        let day_names = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+        ];
 
         let days: Vec<String> = dow
             .split(',')
@@ -263,9 +271,14 @@ impl CronExpr {
                 if d.contains('-') {
                     let parts: Vec<&str> = d.split('-').collect();
                     if parts.len() == 2 {
-                        if let (Ok(start), Ok(end)) = (parts[0].parse::<usize>(), parts[1].parse::<usize>()) {
+                        if let (Ok(start), Ok(end)) =
+                            (parts[0].parse::<usize>(), parts[1].parse::<usize>())
+                        {
                             if start <= 6 && end <= 6 {
-                                return Some(format!("{} through {}", day_names[start], day_names[end]));
+                                return Some(format!(
+                                    "{} through {}",
+                                    day_names[start], day_names[end]
+                                ));
                             }
                         }
                     }
@@ -311,15 +324,36 @@ impl CronExpr {
 
         // Day of month
         if self.day_of_month.values.len() < 31 {
-            let days: Vec<String> = self.day_of_month.values.iter().map(|d| d.to_string()).collect();
+            let days: Vec<String> = self
+                .day_of_month
+                .values
+                .iter()
+                .map(|d| d.to_string())
+                .collect();
             parts.push(format!("on day {} of the month", days.join(", ")));
         }
 
         // Month
         if self.month.values.len() < 12 {
-            let month_names = ["", "January", "February", "March", "April", "May", "June",
-                             "July", "August", "September", "October", "November", "December"];
-            let months: Vec<&str> = self.month.values.iter()
+            let month_names = [
+                "",
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+            ];
+            let months: Vec<&str> = self
+                .month
+                .values
+                .iter()
                 .filter_map(|&m| month_names.get(m as usize).copied())
                 .collect();
             parts.push(format!("in {}", months.join(", ")));
@@ -327,8 +361,19 @@ impl CronExpr {
 
         // Day of week
         if self.day_of_week.values.len() < 7 {
-            let day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            let days: Vec<&str> = self.day_of_week.values.iter()
+            let day_names = [
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+            ];
+            let days: Vec<&str> = self
+                .day_of_week
+                .values
+                .iter()
                 .filter_map(|&d| day_names.get(d as usize).copied())
                 .collect();
             parts.push(format!("on {}", days.join(", ")));
@@ -416,8 +461,15 @@ impl CronExpr {
             // First, check month
             if !self.month.matches(month) {
                 let (next_month, wrapped) = self.month.next_value(month);
-                let year = if wrapped { current.year() + 1 } else { current.year() };
-                if let Some(new_time) = Local.with_ymd_and_hms(year, next_month, 1, 0, 0, 0).single() {
+                let year = if wrapped {
+                    current.year() + 1
+                } else {
+                    current.year()
+                };
+                if let Some(new_time) = Local
+                    .with_ymd_and_hms(year, next_month, 1, 0, 0, 0)
+                    .single()
+                {
                     current = new_time;
                     continue;
                 }
@@ -478,10 +530,16 @@ impl CronExpr {
                 let (next_minute, wrapped) = self.minute.next_value(minute);
                 if wrapped {
                     current += chrono::Duration::hours(1);
-                    if let Some(new_time) = current.with_minute(next_minute).and_then(|t| t.with_second(0)) {
+                    if let Some(new_time) = current
+                        .with_minute(next_minute)
+                        .and_then(|t| t.with_second(0))
+                    {
                         current = new_time;
                     }
-                } else if let Some(new_time) = current.with_minute(next_minute).and_then(|t| t.with_second(0)) {
+                } else if let Some(new_time) = current
+                    .with_minute(next_minute)
+                    .and_then(|t| t.with_second(0))
+                {
                     current = new_time;
                 } else {
                     current += chrono::Duration::minutes(1);
@@ -507,7 +565,13 @@ impl CronFormat {
             let lower = trimmed.to_lowercase();
             return matches!(
                 lower.as_str(),
-                "@yearly" | "@annually" | "@monthly" | "@weekly" | "@daily" | "@midnight" | "@hourly"
+                "@yearly"
+                    | "@annually"
+                    | "@monthly"
+                    | "@weekly"
+                    | "@daily"
+                    | "@midnight"
+                    | "@hourly"
             );
         }
 
@@ -519,7 +583,10 @@ impl CronFormat {
 
         // Each part must contain only valid cron characters
         for part in parts {
-            if !part.chars().all(|c| c.is_ascii_digit() || c == '*' || c == '/' || c == '-' || c == ',') {
+            if !part
+                .chars()
+                .all(|c| c.is_ascii_digit() || c == '*' || c == '/' || c == '-' || c == ',')
+            {
                 return false;
             }
         }
@@ -576,11 +643,17 @@ impl Format for CronFormat {
         let mut pairs = vec![("Schedule".to_string(), description.clone())];
 
         if let Some(first) = next_times.first() {
-            pairs.push(("Next".to_string(), first.format("%Y-%m-%d %H:%M:%S").to_string()));
+            pairs.push((
+                "Next".to_string(),
+                first.format("%Y-%m-%d %H:%M:%S").to_string(),
+            ));
         }
 
         for (i, time) in next_times.iter().skip(1).take(4).enumerate() {
-            pairs.push((format!("Then #{}", i + 2), time.format("%Y-%m-%d %H:%M:%S").to_string()));
+            pairs.push((
+                format!("Then #{}", i + 2),
+                time.format("%Y-%m-%d %H:%M:%S").to_string(),
+            ));
         }
 
         vec![Interpretation {
