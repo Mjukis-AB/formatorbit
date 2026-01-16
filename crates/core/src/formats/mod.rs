@@ -7,9 +7,9 @@ mod binary;
 mod char;
 mod cidr;
 mod color;
-mod cron;
 mod constants;
 mod coords;
+mod cron;
 mod cuid;
 mod currency;
 pub mod currency_expr;
@@ -44,6 +44,7 @@ mod temperature;
 mod ulid;
 mod units;
 mod url;
+mod url_parser;
 mod utf8;
 mod uuid;
 mod video;
@@ -93,6 +94,7 @@ pub use units::{
     WeightFormat,
 };
 pub use url::UrlEncodingFormat;
+pub use url_parser::UrlParserFormat;
 pub use utf8::Utf8Format;
 pub use uuid::UuidFormat;
 pub use video::VideoFormat;

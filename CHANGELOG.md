@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **URL format with tracking removal** - parse URLs with component breakdown:
+  - Structured display of scheme, host, path, query parameters, fragment
+  - Cleaned URL conversion removing tracking parameters (utm_*, fbclid, gclid, etc.)
+  - Detects URLs with or without scheme (adds https:// if missing)
+  - Confidence scoring based on presence of scheme, path, query, or tracking params
 - **Cron expression format** - parse cron schedules like `*/5 * * * *` or `0 2 * * *`:
   - Human-readable descriptions ("Every 5 minutes", "At 02:00")
   - Next 5 execution times

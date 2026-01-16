@@ -29,6 +29,7 @@ geohash = "0.13"
 pluscodes = "0.5"
 geoconvert = "1"
 percent-encoding = "2"
+url = "2"
 plist = "1"
 evalexpr = "13"
 ureq = { version = "2", features = ["json"] }
