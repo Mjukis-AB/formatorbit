@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **MAC address format with OUI vendor lookup** - parse MAC addresses and identify vendors:
+  - Supports multiple notations: colon (00:1A:2B:3C:4D:5E), hyphen (00-1A-2B-3C-4D-5E), Cisco (001A.2B3C.4D5E), space-separated, and raw hex
+  - Embedded IEEE OUI database with 38,000+ vendor entries for instant lookup
+  - Detects address types: unicast, multicast, broadcast, locally administered
+  - Rich display with vendor name, OUI, NIC identifier, and format notation
 - **URL format with tracking removal** - parse URLs with component breakdown:
   - Structured display of scheme, host, path, query parameters, fragment
   - Cleaned URL conversion removing tracking parameters (utm_*, fbclid, gclid, etc.)

@@ -68,10 +68,10 @@ use formats::{
     CronFormat, CuidFormat, CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat,
     DurationFormat, EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, FontFormat, GraphFormat,
     HashFormat, HexFormat, HexdumpFormat, ImageFormat, IpAddrFormat, IsbnFormat, JsonFormat,
-    JwtFormat, LengthFormat, MsgPackFormat, NanoIdFormat, NaturalDateFormat, OctalFormat,
-    OfficeFormat, PdfFormat, PermissionsFormat, PlistFormat, PressureFormat, ProtobufFormat,
-    SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, UrlParserFormat, Utf8Format,
-    UuidFormat, VideoFormat, VolumeFormat, WeightFormat,
+    JwtFormat, LengthFormat, MacAddressFormat, MsgPackFormat, NanoIdFormat, NaturalDateFormat,
+    OctalFormat, OfficeFormat, PdfFormat, PermissionsFormat, PlistFormat, PressureFormat,
+    ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, UrlParserFormat,
+    Utf8Format, UuidFormat, VideoFormat, VolumeFormat, WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -196,6 +196,7 @@ impl Formatorbit {
             Box::new(JwtFormat),
             Box::new(UlidFormat),
             Box::new(UuidFormat),
+            Box::new(MacAddressFormat),
             Box::new(IpAddrFormat),
             Box::new(CidrFormat),
             Box::new(CoordsFormat),

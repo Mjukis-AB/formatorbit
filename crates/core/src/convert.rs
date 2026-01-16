@@ -123,6 +123,12 @@ const ROOT_BLOCKED_TARGETS: &[(&str, &str)] = &[
     // (use #DEADBEEF explicitly for color interpretation)
     ("hex", "color-rgb"),
     ("hex", "color-hsl"),
+    // MAC address bytes shouldn't be interpreted as IPs or colors
+    // (6 bytes of MAC aren't an IPv4/IPv6 address or color)
+    ("mac-address", "ipv4"),
+    ("mac-address", "ipv6"),
+    ("mac-address", "color-rgb"),
+    ("mac-address", "color-hsl"),
 ];
 
 /// Nonsensical source→target combinations to filter out.
