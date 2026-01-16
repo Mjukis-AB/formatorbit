@@ -184,6 +184,7 @@ impl Format for MacAddressFormat {
             description: "MAC address with OUI vendor lookup",
             examples: &["00:1A:2B:3C:4D:5E", "00-1A-2B-3C-4D-5E", "001A.2B3C.4D5E"],
             aliases: self.aliases(),
+            has_validation: true,
         }
     }
 

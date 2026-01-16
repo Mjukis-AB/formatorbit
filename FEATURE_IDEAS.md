@@ -1,38 +1,41 @@
 # Feature Ideas for Formatorbit
 
-This document tracks potential features and improvements identified during codebase review.
+Ideas for future development, organized by effort and value.
 
-## Current State (as of 2025-12-30)
-
-- **48 formats** implemented
-- **15 RichDisplay variants** for UI rendering
-- Well-architected with clear separation of concerns
+**Current state (2026-01):** 45 formats, rich display system, plugin architecture, OUI database
 
 ---
 
-## Quick Wins (< 1 hour each)
+## Quick Wins (< 1 hour)
 
 | Feature | Description | Example | Value |
 |---------|-------------|---------|-------|
-| **Port numbers** | Well-known port lookup | `443` → "HTTPS", `22` → "SSH", `3306` → "MySQL" | Very common lookup |
-| **HTTP status codes** | Status code descriptions | `404` → "Not Found", `502` → "Bad Gateway" | Developers use constantly |
-| **Unix permissions** | Octal ↔ symbolic | `755` ↔ `rwxr-xr-x`, `644` ↔ `rw-r--r--` | Common sysadmin task |
-| **CIDR notation** | Network range parsing | `192.168.1.0/24` → range, netmask, broadcast, host count | Network debugging |
-| **Base32** | RFC 4648 encoding | `JBSWY3DPEHPK3PXP` ↔ bytes | Common encoding gap |
-| **HTML entities** | Entity decoding | `&amp;` → `&`, `&#x2F;` → `/`, `&nbsp;` → ` ` | Web development |
+| **Base32** | RFC 4648 encoding | `JBSWY3DPEHPK3PXP` → "Hello..." | TOTP secrets, onion addresses |
+| **Base32hex** | RFC 4648 extended hex | `91IMOR3F41BMUSJC` → bytes | DNS, DNSSEC |
+| **z-base-32** | Human-friendly variant | Used in Mnet, some P2P | Avoids confusing chars |
+| **HTML entities** | Entity decoding | `&amp;` → `&`, `&#x2F;` → `/` | Web development |
+| **Punycode/IDN** | Domain encoding | `münchen.de` ↔ `xn--mnchen-3ya.de` | Internationalized domains |
+| **Quoted-Printable** | Email encoding | `=20` → space, soft line breaks | MIME messages |
+| **Roman numerals** | Bidirectional | `MCMXCIV` ↔ `1994` | Fun, occasionally useful |
+| **Base85/Ascii85** | Higher density encoding | `<~87cURD]j~>` → bytes | PDF, Git binary patches |
+| **Z85** | ZeroMQ variant | `HelloWorld` → bytes | Binary in JSON/XML |
+
+*Note: Base16 is equivalent to hex (already supported). Base64 is already supported.*
 
 ---
 
-## Medium Effort (2-4 hours each)
+## Medium Effort (2-4 hours)
 
 | Feature | Description | Example | Value |
 |---------|-------------|---------|-------|
-| **IEEE 754 visualization** | Float bit breakdown | `3.14` → sign(0) exp(10000000) mantissa(1001...) | Educational/debugging |
-| **MAC address OUI** | Vendor lookup | `00:1A:2B:...` → "Apple, Inc." | Network troubleshooting |
-| **Cron expressions** | Human-readable cron | `*/5 * * * *` → "every 5 minutes" | Devops utility |
-| **Semver parsing** | Version analysis | `1.2.3-beta.1` → major, minor, patch, prerelease | Dev tooling |
-| **Regex explanation** | Pattern breakdown | `\d{3}-\d{4}` → "3 digits, hyphen, 4 digits" | Learning/debugging |
-| **KSUID** | K-Sortable IDs | Similar to ULID, used by Segment | Identifier detection |
+| **Semver parsing** | Version analysis | `1.2.3-beta.1+build.456` → components, comparisons | Dev tooling |
+| **IEEE 754 float bits** | Bit-level breakdown | `3.14` → sign, exponent, mantissa visualization | Educational |
+| **Regex explanation** | Pattern breakdown | `\d{3}-\d{4}` → human description | Learning tool |
+| **KSUID** | K-Sortable IDs | `1srOrx2ZWZBpBUvZwXKQmoEYga2` → timestamp + payload | Segment-style IDs |
+| **Snowflake IDs** | Twitter/Discord IDs | Extract timestamp, worker, sequence | Social platform debugging |
+| **Phone numbers** | E.164 parsing | `+1-555-123-4567` → country, region, type | International formatting |
+| **IBAN validation** | Bank account numbers | `DE89 3704 0044 0532 0130 00` → country, checksum, bank | Financial |
+| **Credit card BIN** | Issuer detection | `4111...` → Visa, `5500...` → Mastercard | Payment debugging |
 
 ---
 
@@ -40,38 +43,41 @@ This document tracks potential features and improvements identified during codeb
 
 | Feature | Description | Notes |
 |---------|-------------|-------|
-| **X.509 certificate parsing** | Extract subject, issuer, validity, SANs | Useful for TLS debugging |
-| **Regex visualization** | Test patterns, highlight matches, show capture groups | Complex but very useful |
-| **ASN.1/DER parsing** | Basic structure parsing | Foundation for cert/key parsing |
-| **SSH key fingerprints** | Parse and display key info | Common security task |
-| **DNS record parsing** | A, AAAA, MX, CNAME, TXT | Network debugging |
-| **TLD/Domain parsing** | Extract TLD, domain parts, public suffix | `foo.co.uk` → TLD: `co.uk`, domain: `foo` |
-| **DNS lookup** | Resolve domain to IP, MX, TXT records | `example.com` → A: `93.184.216.34` |
-| **WHOIS lookup** | Domain registration info | Registrar, expiration, nameservers |
+| **X.509 certificates** | Parse PEM/DER certs | Subject, issuer, validity, SANs, fingerprint |
+| **SSH public keys** | Parse authorized_keys | Algorithm, fingerprint, comment |
+| **PGP/GPG keys** | Key info extraction | Key ID, user IDs, creation date |
+| **ASN.1/DER viewer** | Generic structure | Foundation for crypto formats |
+| **QR code decoding** | From image bytes | Decode embedded data |
+| **DNS lookup** | Live resolution | `example.com` → A, AAAA, MX, TXT records |
+| **WHOIS lookup** | Domain info | Registrar, expiration, nameservers |
+| **GeoIP lookup** | IP → location | Country, city, ASN (needs database) |
 
 ---
 
-## Additional Timestamp Formats
+## Additional Timestamp Epochs
 
 | Format | Epoch | Notes |
 |--------|-------|-------|
-| **NTP timestamp** | 1900-01-01 | 64-bit, used in network protocols |
-| **GPS time** | 1980-01-06 | No leap seconds, used in GPS |
-| **HFS+ timestamp** | 1904-01-01 | Classic Mac, still in some files |
-| **WebKit/Chrome** | 1601-01-01 | Microseconds, used in Chrome/SQLite |
-| **LDAP/AD timestamp** | 1601-01-01 | 100-nanosecond intervals |
+| **NTP timestamp** | 1900-01-01 | 64-bit, network protocols |
+| **GPS time** | 1980-01-06 | No leap seconds |
+| **WebKit/Chrome** | 1601-01-01 | Microseconds, Chrome/SQLite |
+| **LDAP/AD** | 1601-01-01 | 100-nanosecond intervals |
+| **.NET DateTime** | 0001-01-01 | Ticks (100ns), very large numbers |
 
 ---
 
-## Additional Encodings
+## Binary Format Metadata
 
-| Encoding | Description | Use Case |
-|----------|-------------|----------|
-| **Base32** | RFC 4648 | TOTP secrets, some APIs |
-| **Base85/Ascii85** | Higher density | PDF, Git binary patches |
-| **Quoted-Printable** | Email encoding | MIME messages |
-| **Punycode** | IDN domains | `münchen.de` → `xn--mnchen-3ya.de` |
-| **Z85** | ZeroMQ variant | Binary in JSON |
+| Format | What to Extract |
+|--------|-----------------|
+| **SQLite** | Tables, row counts, page size |
+| **Parquet** | Schema, row groups, compression |
+| **WASM** | Imports, exports, memory, sections |
+| **ELF** | Architecture, sections, entry point |
+| **Mach-O** | Architecture, load commands, dylibs |
+| **PE/COFF** | Architecture, sections, imports |
+| **Java class** | Version, class name, methods |
+| **APK/IPA** | Package name, version, permissions |
 
 ---
 
@@ -80,61 +86,67 @@ This document tracks potential features and improvements identified during codeb
 | Feature | Description | Example |
 |---------|-------------|---------|
 | **`--to <format>`** | Force output format | `forb --to base64 "hello"` |
-| **Batch processing** | Multiple files | `forb *.bin` or `forb -b file1 file2` |
-| **Watch mode** | Monitor changes | `forb --watch data.json` |
-| **Fuzzy matching** | Partial format names | `forb -f time` matches `datetime` |
-| **Clipboard integration** | Read/write clipboard | `forb --clipboard` or `forb -C` |
-| **Interactive mode** | REPL for exploration | `forb -i` with history |
+| **`--watch`** | Monitor file changes | `forb --watch config.json` |
+| **`--clipboard`** | Read from clipboard | `forb -C` (macOS/Linux/Windows) |
+| **Interactive REPL** | Live exploration | `forb -i` with history, tab completion |
+| **Batch mode** | Multiple inputs | `forb -b file1.bin file2.bin` |
+| **Diff mode** | Compare interpretations | `forb --diff old.bin new.bin` |
 
 ---
 
-## Binary Format Extensions
+## Plugin Ideas
 
-| Format | Metadata to Extract |
-|--------|---------------------|
-| **SQLite** | Tables, row counts, schema version |
-| **Parquet** | Schema, row groups, compression |
-| **Avro** | Schema, record count |
-| **WASM** | Imports, exports, memory size |
-| **ELF/Mach-O/PE** | Architecture, sections, symbols |
-| **DWARF debug** | Source file references |
+| Plugin | Description |
+|--------|-------------|
+| **AWS ARN parser** | Extract service, region, account, resource |
+| **Kubernetes resource** | Parse k8s object references |
+| **Terraform state** | Extract resource info |
+| **Docker image refs** | Registry, repo, tag, digest |
+| **Git object IDs** | Commit, tree, blob detection |
+| **npm/PyPI packages** | Parse package specifiers |
 
 ---
 
-## Conversion Improvements
+## Architecture Improvements
 
 | Improvement | Description |
 |-------------|-------------|
-| **Confidence explanation** | Show why confidence is X% |
-| **Conversion cost** | Show "lossy" warnings more prominently |
-| **Alternative paths** | Show multiple ways to reach same result |
-| **Inverse conversion** | "To convert back: `forb -f X`" hints |
+| **Streaming input** | Handle large files without loading entirely |
+| **Async conversions** | Non-blocking network lookups (DNS, GeoIP) |
+| **Format dependencies** | Lazy-load heavy formats (image, audio) |
+| **WASM plugins** | Cross-platform plugin support |
+| **Conversion hints** | "To convert back: `forb -f hex`" |
+
+---
+
+## Rich Display Extensions
+
+The RichDisplay system could support:
+
+| Display Type | Use Case |
+|--------------|----------|
+| **Diff view** | Side-by-side comparison |
+| **Hex editor view** | Byte-level with highlighting |
+| **Timeline** | Multiple timestamps on axis |
+| **Network diagram** | IP relationships, CIDR overlaps |
+| **QR code render** | Generate from data |
 
 ---
 
 ## Priority Recommendation
 
-### Phase 1: Quick Wins
-1. Port numbers
-2. HTTP status codes
-3. Unix permissions
-4. CIDR notation
-5. Base32
+### Next Up (Encodings)
+1. **Base32** - TOTP secrets, Tor onion addresses
+2. **Base85/Ascii85** - PDF streams, Git patches
+3. **Punycode** - International domain names
 
-### Phase 2: Developer Tools
-1. Cron expressions
-2. Semver parsing
-3. Regex explanation
-4. IEEE 754 visualization
+### Soon (Developer Tools)
+1. Semver parsing
+2. Snowflake IDs (Discord/Twitter)
+3. `--to` output format
 
-### Phase 3: Network/Security
-1. MAC address OUI lookup
-2. X.509 certificates
-3. SSH key fingerprints
-4. Additional timestamp formats
-
-### Phase 4: CLI Polish
-1. `--to` output format
-2. Batch processing
-3. Clipboard integration
-4. Interactive mode
+### Later
+1. X.509 certificates
+2. DNS/WHOIS lookups
+3. Binary format metadata (ELF, Mach-O)
+4. Interactive REPL mode

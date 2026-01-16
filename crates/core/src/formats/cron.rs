@@ -612,6 +612,7 @@ impl Format for CronFormat {
             description: "Cron schedule expressions (5-field format and @aliases)",
             examples: &["*/5 * * * *", "0 2 * * *", "0 0 1 * *", "@daily", "@hourly"],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 

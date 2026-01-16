@@ -262,6 +262,7 @@ impl Format for UrlParserFormat {
                 "shop.com/item?fbclid=ABC&utm_source=google",
             ],
             aliases: self.aliases(),
+            has_validation: false,
         }
     }
 
