@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Cron expression format** - parse cron schedules like `*/5 * * * *` or `0 2 * * *`:
+  - Human-readable descriptions ("Every 5 minutes", "At 02:00")
+  - Next 5 execution times
+  - Supports standard 5-field format and special characters (*, /, -, ,)
+
 ## [0.10.6] - 2026-01-13
 
 ### Added
