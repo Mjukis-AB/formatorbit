@@ -59,3 +59,70 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
+
+  binary-size:
+    name: Binary Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: cargo build --release -p formatorbit-cli
+
+      - name: Check binary size
+        id: size
+        run: |
+          SIZE=$(stat --printf="%s" target/release/forb)
+          SIZE_MB=$(echo "scale=2; $SIZE / 1048576" | bc)
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "size_mb=$SIZE_MB" >> $GITHUB_OUTPUT
+          echo "Binary size: ${SIZE_MB} MB ($SIZE bytes)"
+
+      - name: Binary size limit check
+        run: |
+          SIZE=${{ steps.size.outputs.size }}
+          # Fail if binary exceeds 20MB (current size ~12MB with OUI database)
+          MAX_SIZE=20971520
+          if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+            echo "::error::Binary size ($SIZE bytes) exceeds limit ($MAX_SIZE bytes)"
+            exit 1
+          fi
+          echo "Binary size OK: $SIZE bytes (limit: $MAX_SIZE bytes)"
+
+      - name: Upload binary size artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-size
+          path: |
+            target/release/forb
+          retention-days: 5
+
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    # Only run on main branch pushes to avoid slowing down PRs
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run benchmarks
+        run: cargo bench -p formatorbit-core --bench benchmarks -- --noplot
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: target/criterion/
+          retention-days: 30

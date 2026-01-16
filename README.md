@@ -119,6 +119,17 @@ forb 9FFW83PH+X9
 # Colors
 forb '#FF5733'
 forb 0x80FF5733
+
+# MAC addresses
+forb "00:1A:2B:3C:4D:5E"
+forb "001A.2B3C.4D5E"
+
+# Cron expressions
+forb "*/5 * * * *"
+forb "0 2 * * MON-FRI"
+
+# URLs (with tracking removal)
+forb "https://example.com/page?utm_source=ads&id=123"
 ```
 
 ### Pipe Mode
@@ -211,9 +222,10 @@ forb --mermaid 691E01B8
 | **Math** | Expression evaluation (`2 + 2`, `0xFF + 1`, `1 << 8`, `0b1010 \| 0b0101`, `USD(100)`) |
 | **Units** | length, weight, volume, speed, pressure, energy, angle, area (with SI prefixes) |
 | **Currency** | `100 USD`, `$50`, `5kEUR`, `2.5MSEK` (with live exchange rates) |
-| **Time** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601, durations (`1h30m`) |
+| **Time** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601, durations (`1h30m`), cron (`*/5 * * * *`) |
 | **Identifiers** | UUID (v1-v8 detection), ULID (with timestamp), NanoID, CUID2, JWT |
-| **Network** | IPv4, IPv6 |
+| **Network** | IPv4, IPv6, MAC address (with OUI vendor lookup) |
+| **Web** | URL parsing (with tracking parameter removal) |
 | **Coordinates** | Decimal degrees, DMS, DDM, Geohash, Plus Code, UTM, MGRS, SWEREF 99 |
 | **Colors** | #RGB, #RRGGBB, rgb(), rgba(), hsl(), hsla(), 0xAARRGGBB (Android) |
 | **Data** | JSON, MessagePack, Protobuf (schema-less), plist (XML/binary), UTF-8 |
@@ -281,6 +293,9 @@ For quick filtering with `--only`, formats have short aliases:
 | area | sqft, sqm |
 | temperature | temp, celsius, fahrenheit |
 | coords | coordinates, gps, latlon, geo, location, dd, dms, ddm, utm, mgrs, geohash, pluscode |
+| mac-address | mac, ethernet, hw-address |
+| cron | crontab |
+| url-parser | url-parse, link |
 
 ## Examples
 
@@ -596,6 +611,54 @@ $ forb "u6sce"
   → utm: 34V 333418 6582476
 ```
 
+### MAC Addresses
+
+```bash
+$ forb "00:1A:2B:3C:4D:5E"
+
+▶ mac-address (95% confidence)
+  00:1A:2B:3C:4D:5E (Ayecom Technology Co., Ltd.)
+  → base64: ABorPE1e
+```
+
+Multiple notations are supported:
+
+```bash
+forb "00-1A-2B-3C-4D-5E"     # Hyphen-separated
+forb "001A.2B3C.4D5E"        # Cisco notation
+forb "00 1A 2B 3C 4D 5E"     # Space-separated
+```
+
+### Cron Expressions
+
+```bash
+$ forb "*/5 * * * *"
+
+▶ cron (90% confidence)
+  Every 5 minutes
+  Next: 2024-01-15 10:35:00, 2024-01-15 10:40:00, ...
+```
+
+```bash
+$ forb "0 2 * * *"
+
+▶ cron (90% confidence)
+  At 02:00
+  Next: 2024-01-16 02:00:00, 2024-01-17 02:00:00, ...
+```
+
+### URL Parsing
+
+```bash
+$ forb "https://example.com/page?utm_source=google&id=123"
+
+▶ url-parser (85% confidence)
+  URL with tracking parameters
+  → url-cleaned: https://example.com/page?id=123
+```
+
+Tracking parameters (utm_*, fbclid, gclid, etc.) are automatically identified and can be removed.
+
 ### Processing Logs
 
 ```bash
@@ -897,4 +960,4 @@ MIT
 
 ## Contributing
 
-Contributions welcome! See [CLAUDE.md](CLAUDE.md) for architecture details and coding conventions.
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and benchmarking. See [CLAUDE.md](CLAUDE.md) for architecture details and coding conventions.

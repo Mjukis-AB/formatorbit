@@ -35,10 +35,11 @@ SUPPORTED FORMATS:
   Math:         expressions (2 + 2, 0xFF + 1, 1 << 8)
   Units:        length, weight, volume, speed, pressure, energy, angle, area
   Currency:     100 USD, $50, 5kEUR, 2.5MSEK (with live exchange rates)
-  Time:         Unix epoch (sec/ms), durations (1h30m), ISO 8601
+  Time:         Unix epoch (sec/ms), durations (1h30m), ISO 8601, cron (*/5 * * * *)
   Hashing:      MD5, SHA-1, SHA-256, SHA-512, Blake2b, Blake3, CRC32
   Identifiers:  UUID (v1-v8), ULID, NanoID, CUID2, JWT
-  Network:      IPv4, IPv6
+  Network:      IPv4, IPv6, MAC address (with OUI vendor lookup)
+  Web:          URL parsing (with tracking parameter removal)
   Coordinates:  DD, DMS, DDM, Geohash, Plus Code, UTM, MGRS
   Colors:       #RGB, rgb(), hsl(), 0xAARRGGBB (Android)
   Text:         plain text, ASCII codes, UTF-8 detection
@@ -57,6 +58,9 @@ EXAMPLES:
   forb 30C                      Convert temperature
   forb 'rgb(35, 50, 35)'        Parse CSS color
   forb '59.3293, 18.0686'       Convert coordinates
+  forb '00:1A:2B:3C:4D:5E'      MAC address with vendor lookup
+  forb '*/5 * * * *'            Cron expression schedule
+  forb 'https://x.com?utm_source=ads'  URL with tracking removal
 
 FILE/URL INPUT:
   Use @path to read file contents or fetch URLs (like curl):
@@ -377,9 +381,11 @@ fn print_formats() {
         "Units",
         "Timestamps",
         "Time",
+        "Scheduling",
         "Hashing",
         "Identifiers",
         "Network",
+        "Web",
         "Colors",
         "Data",
         "Reference",

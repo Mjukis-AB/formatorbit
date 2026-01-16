@@ -60,3 +60,8 @@ pretty_assertions = { workspace = true }
 insta = { version = "1", features = ["json", "redactions"] }
 tempfile = "3"
 serial_test = "3"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "benchmarks"
+harness = false
