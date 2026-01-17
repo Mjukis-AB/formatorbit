@@ -495,17 +495,12 @@ mod tests {
         assert!(convs[0].display.contains("Cisco"));
     }
 
-    #[test]
-    fn test_oui_database_size() {
+    // Compile-time verification that OUI database has expected size
+    const _: () = {
         use crate::formats::mac_oui_data::OUI_COUNT;
-
-        // Verify database has expected number of entries
-        assert!(OUI_COUNT > 30000, "OUI database should have 30K+ entries");
-        assert!(
-            OUI_COUNT < 100000,
-            "OUI database shouldn't exceed 100K entries"
-        );
-    }
+        assert!(OUI_COUNT > 30000); // Should have 30K+ entries
+        assert!(OUI_COUNT < 100000); // Shouldn't exceed 100K entries
+    };
 
     #[test]
     fn test_lookup_performance() {

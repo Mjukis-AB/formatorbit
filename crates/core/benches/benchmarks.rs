@@ -104,7 +104,7 @@ fn bench_interpret(c: &mut Criterion) {
 /// Benchmark Formatorbit instance creation.
 fn bench_initialization(c: &mut Criterion) {
     c.bench_function("Formatorbit::new", |b| {
-        b.iter(|| Formatorbit::new());
+        b.iter(Formatorbit::new);
     });
 }
 
