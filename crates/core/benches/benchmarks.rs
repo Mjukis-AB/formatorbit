@@ -147,9 +147,13 @@ fn bench_convert_filtered(c: &mut Criterion) {
     ];
 
     for (name, input, filter) in cases {
-        group.bench_with_input(BenchmarkId::new("filter", name), &(input, filter), |b, (input, filter)| {
-            b.iter(|| forb.convert_all_filtered(black_box(input), black_box(filter)));
-        });
+        group.bench_with_input(
+            BenchmarkId::new("filter", name),
+            &(input, filter),
+            |b, (input, filter)| {
+                b.iter(|| forb.convert_all_filtered(black_box(input), black_box(filter)));
+            },
+        );
     }
 
     group.finish();

@@ -501,7 +501,10 @@ mod tests {
 
         // Verify database has expected number of entries
         assert!(OUI_COUNT > 30000, "OUI database should have 30K+ entries");
-        assert!(OUI_COUNT < 100000, "OUI database shouldn't exceed 100K entries");
+        assert!(
+            OUI_COUNT < 100000,
+            "OUI database shouldn't exceed 100K entries"
+        );
     }
 
     #[test]
