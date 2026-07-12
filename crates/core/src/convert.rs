@@ -664,7 +664,48 @@ pub fn find_all_conversions(
     // Sort by priority, respecting user configuration
     sort_conversions(&mut results, priority);
 
+    // Collapse conversions that a viewer would see as byte-identical duplicates
+    // of one already kept (same target family, same value, same rendered output).
+    dedup_identical_display(&mut results);
+
     results
+}
+
+/// Set of format ids that render the *same* value into the *same* text and are
+/// therefore interchangeable renderings of one another. Only conversions whose
+/// target is in the same group here are eligible to be deduped against each
+/// other, so we never merge conceptually distinct conversions (like `utf8` vs
+/// `text`, or `int-be` vs `decimal`) that merely coincide in text for one input.
+fn render_group(format_id: &str) -> Option<u8> {
+    match format_id {
+        // Two ways to pretty-print the same JSON value.
+        "json" | "json-formatted" => Some(0),
+        _ => None,
+    }
+}
+
+/// Remove conversions that are byte-identical redundant renderings of one
+/// already kept, keeping the first (highest-priority) occurrence.
+///
+/// The target case is a value that two formats in the same [`render_group`]
+/// render identically - the classic example is `json` (the `format()`
+/// rendering) and `json-formatted` (the conversion), which pretty-print the same
+/// value byte-for-byte. Showing both is pure redundancy. Restricting to a render
+/// group keeps genuinely distinct interpretations that merely coincide in text
+/// (e.g. `utf8` vs `text`, `int-be` vs `decimal`) fully visible.
+fn dedup_identical_display(results: &mut Vec<Conversion>) {
+    let mut seen: std::collections::HashSet<(u8, String)> = std::collections::HashSet::new();
+    results.retain(|conv| {
+        let Some(group) = render_group(&conv.target_format) else {
+            return true;
+        };
+        let rich_sig = conv
+            .rich_display
+            .first()
+            .map(|opt| format!("{:?}", opt.preferred))
+            .unwrap_or_default();
+        seen.insert((group, format!("{}\u{0}{}", conv.display, rich_sig)))
+    });
 }
 
 /// Tiebreaker rank for a conversion kind within the same priority category.
@@ -851,5 +892,32 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_json_formatted_dedup() {
+        use crate::formats::JsonFormat;
+
+        // A JSON value reached from a non-json source (as JWT does) is rendered
+        // by both `json` (format()) and `json-formatted` (conversions()) with
+        // identical pretty output. Only one should survive.
+        let formats: Vec<Box<dyn Format>> = vec![Box::new(JsonFormat)];
+        let value = CoreValue::Json(serde_json::json!({"a": 1, "b": [2, 3]}));
+        let conversions = find_all_conversions(&formats, &value, None, None, None);
+
+        let json_renderings: Vec<_> = conversions
+            .iter()
+            .filter(|c| c.target_format == "json" || c.target_format == "json-formatted")
+            .collect();
+
+        assert_eq!(
+            json_renderings.len(),
+            1,
+            "expected a single JSON rendering, got: {:?}",
+            json_renderings
+                .iter()
+                .map(|c| &c.target_format)
+                .collect::<Vec<_>>()
+        );
     }
 }

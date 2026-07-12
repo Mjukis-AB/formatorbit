@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Deduped identical JSON renderings** - JWTs (and other structured inputs)
+  no longer print a `json` and a `json-formatted` conversion with byte-identical
+  pretty-printed content back to back; only the single canonical rendering is
+  shown. The dedup is scoped to interchangeable render groups, so conversions
+  that merely coincide in text for one input (e.g. `utf8` vs `text`, `int-be`
+  vs `decimal`) stay fully visible.
 - **Removed self-conversions and round-trip noise** - two generic rules in the
   conversion graph replace ad-hoc filtering: (a) a conversion may never target
   the same format that produced its value, so adjacent duplicates like
