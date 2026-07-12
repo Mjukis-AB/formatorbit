@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   format files. All ~130 call sites were migrated; behavior is unchanged (no
   snapshot or test diffs). The struct fields, `Default` impl, and FFI/serde
   surface are untouched.
+- **Internal: the CLI's 2,357-line `main.rs` was split into focused modules.**
+  `main.rs` is now a 33-line entry point that declares the modules and calls
+  `run::run()`. New modules: `cli` (clap arg definitions + `parse_size`),
+  `run` (top-level orchestration), `input` (`@path`/`@-`/URL acquisition),
+  `commands` (`--formats`, `--analytics`, `--check-updates`, `--graph`,
+  `--plugins`, `--currency` handlers + background update check), `render`
+  (conversion-value display and per-input DOT/Mermaid graphs), and `man`
+  (man-page generation/installation, pager). Zero behavior change: full test
+  suite (incl. README example tests) green, binary output byte-identical
+  before/after aside from wall-clock-relative timestamps.
 - **Tee-mode annotations now surface the most useful reading.** In `--tee`
   (pipe) mode, each line's annotation now leads with the interpretation's
   semantic summary when it has one (e.g. a UUID annotates as `UUID v4 (random)`
