@@ -41,59 +41,160 @@ impl ExprFormat {
     }
 
     /// Preprocess input to convert common operator syntax to evalexpr functions.
-    /// evalexpr uses function syntax for bitwise: bitor(a, b) instead of a | b
+    ///
+    /// evalexpr has no infix bitwise/shift operators, so `a | b` must become
+    /// `bitor(a, b)`, etc. The rewrite is precedence-aware and handles chained
+    /// expressions correctly:
+    ///
+    /// - `1 | 2 | 4` → `bitor(bitor(1, 2), 4)` = 7
+    /// - `8 >> 1 >> 1` → `shr(shr(8, 1), 1)` = 2
+    /// - `1 | 2 & 3` → `bitor(1, bitand(2, 3))` = 3 (C precedence: `&` binds
+    ///   tighter than `|`; shifts bind tighter than both)
+    ///
+    /// Operators are split at the lowest precedence level first, scanning for the
+    /// *rightmost* top-level occurrence so chains stay left-associative. Content
+    /// inside parentheses is preserved and recursed into. `||` / `&&` (logical
+    /// operators, which evalexpr handles natively) are left untouched.
     fn preprocess(input: &str) -> String {
-        let mut result = input.to_string();
+        Self::rewrite_bitwise(input.trim())
+    }
 
-        // Convert bitwise operators to function calls
-        // This is a simple approach - won't handle complex nested expressions perfectly
-        // but covers common cases like "0b1010 | 0b0101"
+    /// Recursively rewrite bitwise/shift operators in one expression fragment.
+    ///
+    /// Precedence, lowest to highest: `|` < `&` < (`<<` | `>>`). Each level splits
+    /// at its rightmost top-level operator (left-associative), rewrites the right
+    /// operand at the same level and the left operand at the next-lower level.
+    fn rewrite_bitwise(expr: &str) -> String {
+        let expr = expr.trim();
+        if expr.is_empty() {
+            return String::new();
+        }
 
-        // Handle | (bitwise or) - but not ||
-        if result.contains('|') && !result.contains("||") {
-            if let Some((left, right)) = result.split_once('|') {
-                let left = left.trim();
-                let right = right.trim();
-                if !left.is_empty() && !right.is_empty() {
-                    result = format!("bitor({}, {})", left, right);
-                }
+        // Precedence ladder, lowest first. Each entry maps an operator token to
+        // the evalexpr function that replaces it.
+        const LEVELS: &[&[(&str, &str)]] = &[
+            &[("|", "bitor")],
+            &[("&", "bitand")],
+            &[("<<", "shl"), (">>", "shr")],
+        ];
+
+        Self::rewrite_level(expr, LEVELS)
+    }
+
+    fn rewrite_level(expr: &str, levels: &[&[(&str, &str)]]) -> String {
+        let expr = expr.trim();
+        let Some((ops, rest)) = levels.split_first() else {
+            // Below the lowest-precedence level: only parenthesised groups may
+            // still contain bitwise operators to rewrite.
+            return Self::rewrite_parens(expr);
+        };
+
+        // Find the rightmost top-level (paren-depth 0) occurrence of any operator
+        // at this precedence level. Rightmost split keeps left-associativity:
+        // `a | b | c` → bitor(`a | b`, `c`).
+        if let Some((idx, op_tok, func)) = Self::find_rightmost_op(expr, ops) {
+            let left = expr[..idx].trim();
+            let right = expr[idx + op_tok.len()..].trim();
+            if !left.is_empty() && !right.is_empty() {
+                // Left operand: same precedence level (absorbs the rest of the chain).
+                // Right operand: strictly higher precedence (already fully reduced here).
+                let left_r = Self::rewrite_level(left, levels);
+                let right_r = Self::rewrite_level(right, rest);
+                return format!("{}({}, {})", func, left_r, right_r);
             }
         }
 
-        // Handle & (bitwise and) - but not &&
-        if result.contains('&') && !result.contains("&&") {
-            if let Some((left, right)) = result.split_once('&') {
-                let left = left.trim();
-                let right = right.trim();
-                if !left.is_empty() && !right.is_empty() {
-                    result = format!("bitand({}, {})", left, right);
+        // No operator at this level; descend to the next higher-precedence level.
+        Self::rewrite_level(expr, rest)
+    }
+
+    /// Rewrite bitwise operators that only appear inside parenthesised groups.
+    fn rewrite_parens(expr: &str) -> String {
+        if !expr.contains('(') {
+            return expr.to_string();
+        }
+        let mut out = String::with_capacity(expr.len());
+        let bytes = expr.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'(' {
+                // Find the matching close paren.
+                let mut depth = 1;
+                let mut j = i + 1;
+                while j < bytes.len() && depth > 0 {
+                    match bytes[j] {
+                        b'(' => depth += 1,
+                        b')' => depth -= 1,
+                        _ => {}
+                    }
+                    j += 1;
+                }
+                if depth == 0 {
+                    let inner = &expr[i + 1..j - 1];
+                    out.push('(');
+                    out.push_str(&Self::rewrite_bitwise(inner));
+                    out.push(')');
+                    i = j;
+                    continue;
                 }
             }
+            out.push(bytes[i] as char);
+            i += 1;
         }
+        out
+    }
 
-        // Handle << (left shift)
-        if result.contains("<<") {
-            if let Some((left, right)) = result.split_once("<<") {
-                let left = left.trim();
-                let right = right.trim();
-                if !left.is_empty() && !right.is_empty() {
-                    result = format!("shl({}, {})", left, right);
+    /// Find the rightmost top-level occurrence of any operator in `ops`.
+    ///
+    /// Skips positions inside parentheses and the doubled logical forms `||`/`&&`.
+    /// Returns (byte index, matched operator token, replacement function name).
+    fn find_rightmost_op<'a>(
+        expr: &str,
+        ops: &'a [(&str, &str)],
+    ) -> Option<(usize, &'a str, &'a str)> {
+        let bytes = expr.as_bytes();
+        let mut depth = 0i32;
+        let mut found: Option<(usize, &'a str, &'a str)> = None;
+        let mut i = 0;
+        while i < bytes.len() {
+            match bytes[i] {
+                b'(' => {
+                    depth += 1;
+                    i += 1;
                 }
+                b')' => {
+                    depth -= 1;
+                    i += 1;
+                }
+                _ if depth == 0 => {
+                    let mut matched = None;
+                    for (tok, func) in ops {
+                        let tb = tok.as_bytes();
+                        if bytes[i..].starts_with(tb) {
+                            // Skip the doubled logical operators || and &&.
+                            let is_logical_double = tb.len() == 1
+                                && (*tok == "|" || *tok == "&")
+                                && (bytes.get(i + 1) == Some(&tb[0])
+                                    || (i > 0 && bytes[i - 1] == tb[0]));
+                            if !is_logical_double {
+                                matched = Some((*tok, *func, tb.len()));
+                                break;
+                            }
+                        }
+                    }
+                    if let Some((tok, func, len)) = matched {
+                        // Record this occurrence and keep scanning for one
+                        // further right (left-associative split point).
+                        found = Some((i, tok, func));
+                        i += len;
+                    } else {
+                        i += 1;
+                    }
+                }
+                _ => i += 1,
             }
         }
-
-        // Handle >> (right shift)
-        if result.contains(">>") {
-            if let Some((left, right)) = result.split_once(">>") {
-                let left = left.trim();
-                let right = right.trim();
-                if !left.is_empty() && !right.is_empty() {
-                    result = format!("shr({}, {})", left, right);
-                }
-            }
-        }
-
-        result
+        found
     }
 }
 
@@ -383,6 +484,71 @@ mod tests {
         } else {
             panic!("Expected Int");
         }
+    }
+
+    /// Helper: parse an expression and assert it evaluates to the given integer.
+    fn assert_int(expr: &str, expected: i128) {
+        let format = ExprFormat;
+        let results = format.parse(expr);
+        assert_eq!(results.len(), 1, "expected one interpretation for {expr:?}");
+        match &results[0].value {
+            CoreValue::Int { value, .. } => {
+                assert_eq!(*value, expected, "wrong value for {expr:?}");
+            }
+            other => panic!("expected Int for {expr:?}, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_chained_bitwise_or() {
+        // 1 | 2 | 4 == 7 (was mishandled: bitor(1, 2 | 4) left a raw `|`)
+        assert_int("1 | 2 | 4", 7);
+    }
+
+    #[test]
+    fn test_chained_right_shift() {
+        // 8 >> 1 >> 1 == 2 (left-associative: (8 >> 1) >> 1)
+        assert_int("8 >> 1 >> 1", 2);
+    }
+
+    #[test]
+    fn test_chained_left_shift() {
+        // 1 << 2 << 3 == 32 (left-associative: (1 << 2) << 3 = 4 << 3)
+        assert_int("1 << 2 << 3", 32);
+    }
+
+    #[test]
+    fn test_chained_bitwise_and() {
+        // 15 & 6 & 3 == 2
+        assert_int("15 & 6 & 3", 2);
+    }
+
+    #[test]
+    fn test_bitwise_precedence_and_binds_tighter_than_or() {
+        // C precedence: & binds tighter than |, so 1 | 2 & 3 == 1 | (2 & 3) == 1 | 2 == 3
+        assert_int("1 | 2 & 3", 3);
+    }
+
+    #[test]
+    fn test_bitwise_precedence_shift_binds_tighter() {
+        // Shifts bind tighter than & and |: 1 | 1 << 4 == 1 | (1 << 4) == 1 | 16 == 17
+        assert_int("1 | 1 << 4", 17);
+        // & vs <<: 3 & 1 << 2 == 3 & (1 << 2) == 3 & 4 == 0
+        assert_int("3 & 1 << 2", 0);
+    }
+
+    #[test]
+    fn test_bitwise_mixed_chain() {
+        // 8 >> 1 | 1 == (8 >> 1) | 1 == 4 | 1 == 5
+        assert_int("8 >> 1 | 1", 5);
+    }
+
+    #[test]
+    fn test_bitwise_with_parens() {
+        // Parens override precedence: (1 | 2) & 4 == 3 & 4 == 0
+        assert_int("(1 | 2) & 4", 0);
+        // Nested chain inside parens still reduces: (1 | 2 | 4) == 7
+        assert_int("(1 | 2 | 4)", 7);
     }
 
     #[test]

@@ -81,6 +81,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   traits), with timestamps ranked ahead of speculative size/duration readings of
   the same integer. `forb 691E01B8` now shows the epoch timestamp
   (`2025-11-19T17:43:20`) within the default output instead of burying it.
+- **Chained bitwise/shift expressions now evaluate correctly.** The expression
+  parser rewrites infix bitwise/shift operators into evalexpr functions
+  (`a | b` → `bitor(a, b)`), but previously split each operator only once, so
+  chains like `1 | 2 | 4` and `8 >> 1 >> 1` silently failed to parse. The
+  rewrite is now precedence-aware and left-associative: `1 | 2 | 4` = 7,
+  `8 >> 1 >> 1` = 2, and mixed operators follow C precedence
+  (`<<`/`>>` bind tighter than `&`, which binds tighter than `|`), so
+  `1 | 2 & 3` = 3. Parentheses still override precedence.
 
 ### Removed
 - **Deleted stale, misleading artifacts.** `crates/ffi/include/formatorbit.h`
