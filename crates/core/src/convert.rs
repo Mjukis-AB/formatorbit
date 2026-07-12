@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 use crate::format::Format;
 use crate::types::{
     BlockingConfig, Conversion, ConversionConfig, ConversionKind, ConversionPriority,
-    ConversionStep, CoreValue, PriorityConfig,
+    ConversionStep, CoreValue, PriorityConfig, RichDisplay,
 };
 
 /// Maximum BFS depth to prevent infinite loops in conversion graph traversal.
@@ -620,32 +620,70 @@ pub fn find_all_conversions(
     results
 }
 
+/// Tiebreaker rank for a conversion kind within the same priority category.
+///
+/// Actual transformations (e.g. int → datetime) are the most valuable and rank
+/// ahead of mere notation representations (e.g. 0x691E01B8) and observational
+/// traits. Without this, low-value notation variants can bury a genuine semantic
+/// result (like an epoch timestamp) below the default output limit.
+fn kind_rank(kind: ConversionKind) -> u8 {
+    match kind {
+        ConversionKind::Conversion => 0,
+        ConversionKind::Representation => 1,
+        ConversionKind::Trait => 2,
+    }
+}
+
+/// Sub-rank within the Semantic category, driven by the structured rich display.
+///
+/// A concrete calendar timestamp (`DateTime`) is the interpretation that an
+/// integer's magnitude most strongly implies, so it ranks ahead of the more
+/// speculative "reinterpret this number as a size / a duration" readings that
+/// fire for essentially any integer. This is generic — it keys off the rich
+/// display variant, not hardcoded format names — so any timestamp-producing
+/// conversion benefits and any size/duration one is deprioritized.
+fn semantic_subrank(conv: &Conversion) -> u8 {
+    match conv.rich_display.first().map(|opt| &opt.preferred) {
+        Some(RichDisplay::DateTime { .. }) => 0,
+        // Size and duration are plausible for almost any integer, so they are
+        // the weakest semantic signal and rank last within the category.
+        Some(RichDisplay::DataSize { .. } | RichDisplay::Duration { .. }) => 2,
+        _ => 1,
+    }
+}
+
 /// Sort conversions by priority, respecting user configuration.
+///
+/// Ordering is: category (priority) → kind (Conversion > Representation > Trait)
+/// → semantic sub-rank (timestamps > other > size/duration) → path depth
+/// (shallower first) → user format offset. Priority always dominates so semantic
+/// results (datetime, uuid, ip) rank above encodings, and within a category real
+/// transformations beat notation variants and speculative numeric readings.
 fn sort_conversions(results: &mut [Conversion], priority_config: Option<&PriorityConfig>) {
     results.sort_by(|a, b| {
-        if let Some(config) = priority_config {
-            // User-configured category order
-            let cat_a = config.category_sort_key(a.priority);
-            let cat_b = config.category_sort_key(b.priority);
+        // Category key: user-configured order if present, else the enum order.
+        let (cat_a, cat_b) = match priority_config {
+            Some(config) => (
+                config.category_sort_key(a.priority),
+                config.category_sort_key(b.priority),
+            ),
+            None => (a.priority as usize, b.priority as usize),
+        };
 
-            // Within same category, apply format offsets
-            if cat_a == cat_b {
-                // Higher offset = shown earlier (so negate for comparison)
-                let off_a = config.format_offset(&a.target_format);
-                let off_b = config.format_offset(&b.target_format);
-                // Higher offset comes first
-                off_b
-                    .cmp(&off_a)
-                    .then_with(|| a.path.len().cmp(&b.path.len()))
-            } else {
-                cat_a.cmp(&cat_b)
-            }
-        } else {
-            // Default: priority enum order, then path length
-            a.priority
-                .cmp(&b.priority)
-                .then_with(|| a.path.len().cmp(&b.path.len()))
+        if cat_a != cat_b {
+            return cat_a.cmp(&cat_b);
         }
+
+        // Within the same category: prefer real conversions over notation/traits,
+        // then the semantic sub-rank, then shallower paths, then user offset.
+        let off_a = priority_config.map_or(0, |c| c.format_offset(&a.target_format));
+        let off_b = priority_config.map_or(0, |c| c.format_offset(&b.target_format));
+
+        kind_rank(a.kind)
+            .cmp(&kind_rank(b.kind))
+            .then_with(|| semantic_subrank(a).cmp(&semantic_subrank(b)))
+            .then_with(|| a.path.len().cmp(&b.path.len()))
+            .then_with(|| off_b.cmp(&off_a))
     });
 }
 

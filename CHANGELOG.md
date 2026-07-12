@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Semantic results now rank above encodings at the default limit** - the CLI
+  no longer reserves output slots for hashes that don't exist, so genuinely
+  useful conversions fill the visible list. Conversions are ranked by priority,
+  then by kind (real transformations before notation representations and
+  traits), with timestamps ranked ahead of speculative size/duration readings of
+  the same integer. `forb 691E01B8` now shows the epoch timestamp
+  (`2025-11-19T17:43:20`) within the default output instead of burying it.
+
 ### Added
 - **MAC address format with OUI vendor lookup** - parse MAC addresses and identify vendors:
   - Supports multiple notations: colon (00:1A:2B:3C:4D:5E), hyphen (00-1A-2B-3C-4D-5E), Cisco (001A.2B3C.4D5E), space-separated, and raw hex

@@ -1,9 +1,76 @@
 ---
 source: crates/core/tests/snapshots.rs
-assertion_line: 193
 expression: "&result.conversions"
 ---
 [
+  {
+    "value": {
+      "type": "String",
+      "value": "1 KiB"
+    },
+    "target_format": "datasize-iec",
+    "display": "1 KiB",
+    "path": [
+      "datasize",
+      "datasize-iec"
+    ],
+    "steps": [
+      {
+        "format": "datasize-iec",
+        "value": {
+          "type": "String",
+          "value": "1 KiB"
+        },
+        "display": "1 KiB"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "DataSize",
+          "bytes": 1024,
+          "human": "1 KiB"
+        }
+      }
+    ]
+  },
+  {
+    "value": {
+      "type": "String",
+      "value": "1.02 KB"
+    },
+    "target_format": "datasize-si",
+    "display": "1.02 KB",
+    "path": [
+      "datasize",
+      "datasize-si"
+    ],
+    "steps": [
+      {
+        "format": "datasize-si",
+        "value": {
+          "type": "String",
+          "value": "1.02 KB"
+        },
+        "display": "1.02 KB"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion",
+    "rich_display": [
+      {
+        "preferred": {
+          "type": "DataSize",
+          "bytes": 1024,
+          "human": "1.02 KB"
+        }
+      }
+    ]
+  },
   {
     "value": {
       "type": "String",
@@ -178,74 +245,6 @@ expression: "&result.conversions"
     "is_lossy": false,
     "priority": "Semantic",
     "kind": "Trait"
-  },
-  {
-    "value": {
-      "type": "String",
-      "value": "1 KiB"
-    },
-    "target_format": "datasize-iec",
-    "display": "1 KiB",
-    "path": [
-      "datasize",
-      "datasize-iec"
-    ],
-    "steps": [
-      {
-        "format": "datasize-iec",
-        "value": {
-          "type": "String",
-          "value": "1 KiB"
-        },
-        "display": "1 KiB"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Semantic",
-    "kind": "Conversion",
-    "rich_display": [
-      {
-        "preferred": {
-          "type": "DataSize",
-          "bytes": 1024,
-          "human": "1 KiB"
-        }
-      }
-    ]
-  },
-  {
-    "value": {
-      "type": "String",
-      "value": "1.02 KB"
-    },
-    "target_format": "datasize-si",
-    "display": "1.02 KB",
-    "path": [
-      "datasize",
-      "datasize-si"
-    ],
-    "steps": [
-      {
-        "format": "datasize-si",
-        "value": {
-          "type": "String",
-          "value": "1.02 KB"
-        },
-        "display": "1.02 KB"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Semantic",
-    "kind": "Conversion",
-    "rich_display": [
-      {
-        "preferred": {
-          "type": "DataSize",
-          "bytes": 1024,
-          "human": "1.02 KB"
-        }
-      }
-    ]
   },
   {
     "value": {

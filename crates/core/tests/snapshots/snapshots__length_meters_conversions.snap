@@ -1,6 +1,5 @@
 ---
 source: crates/core/tests/snapshots.rs
-assertion_line: 173
 expression: "&result.conversions"
 ---
 [
@@ -28,6 +27,81 @@ expression: "&result.conversions"
     "is_lossy": false,
     "priority": "Primary",
     "kind": "Representation"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "feet",
+    "display": "16.40 ft",
+    "path": [
+      "length",
+      "feet"
+    ],
+    "steps": [
+      {
+        "format": "feet",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "16.40 ft"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "miles",
+    "display": "3.11e-3 mi",
+    "path": [
+      "length",
+      "miles"
+    ],
+    "steps": [
+      {
+        "format": "miles",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "3.11e-3 mi"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
+  },
+  {
+    "value": {
+      "type": "Length",
+      "value": 5.0
+    },
+    "target_format": "inches",
+    "display": "196.85 in",
+    "path": [
+      "length",
+      "inches"
+    ],
+    "steps": [
+      {
+        "format": "inches",
+        "value": {
+          "type": "Length",
+          "value": 5.0
+        },
+        "display": "196.85 in"
+      }
+    ],
+    "is_lossy": false,
+    "priority": "Semantic",
+    "kind": "Conversion"
   },
   {
     "value": {
@@ -134,56 +208,6 @@ expression: "&result.conversions"
       "type": "Length",
       "value": 5.0
     },
-    "target_format": "feet",
-    "display": "16.40 ft",
-    "path": [
-      "length",
-      "feet"
-    ],
-    "steps": [
-      {
-        "format": "feet",
-        "value": {
-          "type": "Length",
-          "value": 5.0
-        },
-        "display": "16.40 ft"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Semantic",
-    "kind": "Conversion"
-  },
-  {
-    "value": {
-      "type": "Length",
-      "value": 5.0
-    },
-    "target_format": "miles",
-    "display": "3.11e-3 mi",
-    "path": [
-      "length",
-      "miles"
-    ],
-    "steps": [
-      {
-        "format": "miles",
-        "value": {
-          "type": "Length",
-          "value": 5.0
-        },
-        "display": "3.11e-3 mi"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Semantic",
-    "kind": "Conversion"
-  },
-  {
-    "value": {
-      "type": "Length",
-      "value": 5.0
-    },
     "target_format": "nautical miles",
     "display": "2.70e-3 nmi",
     "path": [
@@ -203,31 +227,6 @@ expression: "&result.conversions"
     "is_lossy": false,
     "priority": "Semantic",
     "kind": "Representation"
-  },
-  {
-    "value": {
-      "type": "Length",
-      "value": 5.0
-    },
-    "target_format": "inches",
-    "display": "196.85 in",
-    "path": [
-      "length",
-      "inches"
-    ],
-    "steps": [
-      {
-        "format": "inches",
-        "value": {
-          "type": "Length",
-          "value": 5.0
-        },
-        "display": "196.85 in"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Semantic",
-    "kind": "Conversion"
   },
   {
     "value": {

@@ -1463,8 +1463,12 @@ fn main() {
             let primary_to_show: Vec<_> = if limit == 0 {
                 primary
             } else {
-                // Reserve some slots for hashes if limit is applied
-                let primary_limit = if limit > 3 { limit - 3 } else { limit };
+                // Reserve slots for hashes only if any actually exist, and never
+                // reserve more than there are hashes (up to 3). This keeps the
+                // high-value primary conversions visible instead of wasting slots
+                // on hashes that don't exist (e.g. `forb 691E01B8`).
+                let reserved = hashes.len().min(3);
+                let primary_limit = limit.saturating_sub(reserved).max(1);
                 primary.into_iter().take(primary_limit).collect()
             };
 
