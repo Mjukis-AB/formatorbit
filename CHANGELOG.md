@@ -114,6 +114,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mistyped as `2024-12-*` (a year too early — the project started 2025-12-22).
 
 ### Added
+- **Python plugin decoders can now emit rich displays.** An
+  `Interpretation.rich_display` list from a Python decoder is now parsed and
+  bridged into the core `RichDisplayOption`/`RichDisplay` types, so plugins can
+  return structured views (`RichDisplay.KeyValue`, `.Table`, `.Color`, `.Code`,
+  and every other variant the visualizer API supports) instead of only a
+  plain-text `description`. Previously the bridge hardcoded an empty list (a
+  `// TODO`), silently dropping any rich display a plugin attached. Unknown
+  variants are skipped gracefully rather than failing the interpretation, so
+  plugins stay forward-compatible. PLUGINS.md documents the decoder-side usage.
 - **Natural conversion queries** - ask for a specific target unit or currency
   in plain words: `forb "5 km in miles"`, `forb "100 USD to EUR"`,
   `forb "5km to mi"`, `forb "72F to C"`. The phrase `<value><unit> (to|in)

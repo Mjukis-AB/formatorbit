@@ -1,6 +1,6 @@
 //! Type conversions between Rust CoreValue and Python objects.
 
-use crate::types::{CoreValue, Interpretation};
+use crate::types::{CoreValue, Interpretation, RichDisplayOption};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyList, PyModule, PyString};
 
@@ -395,8 +395,7 @@ pub fn py_to_interpretation(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<
     let confidence: f32 = obj.getattr("confidence")?.extract()?;
     let description: String = obj.getattr("description")?.extract()?;
 
-    // TODO: Parse rich_display if present
-    let rich_display = Vec::new();
+    let rich_display = py_to_rich_display_options(py, obj)?;
 
     Ok(Interpretation {
         value,
@@ -405,6 +404,44 @@ pub fn py_to_interpretation(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<
         description,
         rich_display,
     })
+}
+
+/// Parse the optional `rich_display` attribute of a Python Interpretation into
+/// a `Vec<RichDisplayOption>`.
+///
+/// The Python side exposes `Interpretation.rich_display` as a list of
+/// `RichDisplay` objects (from `forb.RichDisplay.KeyValue(...)`, `.Table(...)`,
+/// etc.). Each is wrapped in a `RichDisplayOption` with no alternatives — the
+/// same one-preferred shape the built-in Rust formats use.
+///
+/// A `RichDisplay` variant this build does not recognise is skipped rather than
+/// raising, so a newer plugin using an unknown variant degrades gracefully to
+/// its plain-text `description` instead of failing to load.
+pub fn py_to_rich_display_options(
+    py: Python<'_>,
+    interpretation: &Bound<'_, PyAny>,
+) -> PyResult<Vec<RichDisplayOption>> {
+    // Missing attribute or None -> no rich display (older plugins / defaults).
+    let Ok(rd_attr) = interpretation.getattr("rich_display") else {
+        return Ok(Vec::new());
+    };
+    if rd_attr.is_none() {
+        return Ok(Vec::new());
+    }
+
+    let list = rd_attr.downcast::<PyList>()?;
+    let mut options = Vec::with_capacity(list.len());
+    for item in list.iter() {
+        // Reuse the visualizer's converter. Unknown variants (or anything that
+        // isn't a well-formed RichDisplay) are skipped, not fatal.
+        match super::visualizer::py_to_rich_display(py, &item) {
+            Ok(rd) => options.push(RichDisplayOption::new(rd)),
+            Err(e) => {
+                tracing::warn!(error = %e, "skipping unrecognized plugin rich_display entry");
+            }
+        }
+    }
+    Ok(options)
 }
 
 /// Convert a list of Python Interpretation objects to Rust.
@@ -420,4 +457,198 @@ pub fn py_to_interpretations(
     }
 
     Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::plugin::{Plugin, PluginError, PythonRuntime};
+    use crate::types::RichDisplay;
+    use std::io::Write;
+
+    /// Write `source` to a temp `.py` file and load it, returning its plugins.
+    ///
+    /// Returns `None` (test skipped) if Python is not available in this
+    /// environment — plugins are an optional runtime capability, so CI without
+    /// a discoverable libpython should not fail the suite.
+    fn load_inline_plugin(source: &str) -> Option<Vec<Plugin>> {
+        let runtime = match PythonRuntime::init() {
+            Ok(rt) => rt,
+            Err(PluginError::RuntimeInit(msg)) => {
+                eprintln!("skipping: Python runtime unavailable ({msg})");
+                return None;
+            }
+            Err(e) => panic!("unexpected plugin init error: {e:?}"),
+        };
+
+        let mut file = tempfile::Builder::new()
+            .suffix(".py")
+            .tempfile()
+            .expect("create temp plugin file");
+        file.write_all(source.as_bytes()).expect("write plugin");
+        file.flush().expect("flush plugin");
+
+        let plugins = runtime
+            .load_plugin(file.path())
+            .expect("plugin should load");
+        Some(plugins)
+    }
+
+    /// A decoder plugin that attaches a KeyValue rich display should round-trip
+    /// that rich display through the Rust bridge (previously dropped by a TODO).
+    #[test]
+    #[serial_test::serial]
+    fn key_value_rich_display_round_trips() {
+        let source = r#"
+import forb
+
+__forb_plugin__ = {
+    "name": "rd-test",
+    "version": "0.0.1",
+}
+
+@forb.decoder(id="rd-kv", name="RD KeyValue")
+def decode(text):
+    return [forb.Interpretation(
+        value=forb.CoreValue.String(text),
+        confidence=1.0,
+        description="fallback text",
+        rich_display=[forb.RichDisplay.KeyValue([("k1", "v1"), ("k2", "v2")])],
+    )]
+"#;
+
+        let Some(plugins) = load_inline_plugin(source) else {
+            return; // Python unavailable; skip.
+        };
+
+        let decoder = plugins
+            .iter()
+            .find_map(|p| match p {
+                Plugin::Decoder(d) => Some(d),
+                _ => None,
+            })
+            .expect("plugin defines a decoder");
+
+        let interps = decoder.parse("anything");
+        assert_eq!(interps.len(), 1, "decoder should yield one interpretation");
+        let interp = &interps[0];
+
+        // Plain-text fallback is preserved.
+        assert_eq!(interp.description, "fallback text");
+
+        // Rich display was parsed (not the old hardcoded empty vec).
+        assert_eq!(
+            interp.rich_display.len(),
+            1,
+            "rich_display should be bridged from Python"
+        );
+        match &interp.rich_display[0].preferred {
+            RichDisplay::KeyValue { pairs } => {
+                assert_eq!(
+                    pairs,
+                    &vec![
+                        ("k1".to_string(), "v1".to_string()),
+                        ("k2".to_string(), "v2".to_string()),
+                    ]
+                );
+            }
+            other => panic!("expected KeyValue rich display, got {other:?}"),
+        }
+    }
+
+    /// Multiple rich displays (KeyValue + Color + Code) all survive the bridge.
+    #[test]
+    #[serial_test::serial]
+    fn multiple_rich_displays_round_trip() {
+        let source = r#"
+import forb
+
+__forb_plugin__ = {"name": "rd-multi", "version": "0.0.1"}
+
+@forb.decoder(id="rd-multi", name="RD Multi")
+def decode(text):
+    return [forb.Interpretation(
+        value=forb.CoreValue.String(text),
+        confidence=1.0,
+        description="multi",
+        rich_display=[
+            forb.RichDisplay.KeyValue([("a", "1")]),
+            forb.RichDisplay.Color(255, 128, 0, 255),
+            forb.RichDisplay.Code("json", "{\"x\": 1}"),
+        ],
+    )]
+"#;
+
+        let Some(plugins) = load_inline_plugin(source) else {
+            return;
+        };
+        let decoder = plugins
+            .iter()
+            .find_map(|p| match p {
+                Plugin::Decoder(d) => Some(d),
+                _ => None,
+            })
+            .expect("plugin defines a decoder");
+
+        let interps = decoder.parse("x");
+        let rd = &interps[0].rich_display;
+        assert_eq!(rd.len(), 3, "all three rich displays should survive");
+        assert!(matches!(rd[0].preferred, RichDisplay::KeyValue { .. }));
+        assert!(matches!(
+            rd[1].preferred,
+            RichDisplay::Color {
+                r: 255,
+                g: 128,
+                b: 0,
+                a: 255
+            }
+        ));
+        assert!(matches!(rd[2].preferred, RichDisplay::Code { .. }));
+    }
+
+    /// A rich_display entry with an unknown variant type is skipped gracefully
+    /// (the interpretation still loads, keeping only the recognised entries)
+    /// rather than dropping the whole interpretation.
+    #[test]
+    #[serial_test::serial]
+    fn unknown_rich_display_variant_is_skipped() {
+        let source = r#"
+import forb
+
+__forb_plugin__ = {"name": "rd-unknown", "version": "0.0.1"}
+
+@forb.decoder(id="rd-unknown", name="RD Unknown")
+def decode(text):
+    interp = forb.Interpretation(
+        value=forb.CoreValue.String(text),
+        confidence=1.0,
+        description="unknown-variant",
+    )
+    # A well-formed KeyValue plus a bogus variant the Rust side doesn't know.
+    interp.rich_display = [
+        forb.RichDisplay.KeyValue([("ok", "yes")]),
+        forb.RichDisplay("totally_made_up", {"foo": "bar"}),
+    ]
+    return [interp]
+"#;
+
+        let Some(plugins) = load_inline_plugin(source) else {
+            return;
+        };
+        let decoder = plugins
+            .iter()
+            .find_map(|p| match p {
+                Plugin::Decoder(d) => Some(d),
+                _ => None,
+            })
+            .expect("plugin defines a decoder");
+
+        let interps = decoder.parse("x");
+        assert_eq!(interps.len(), 1, "interpretation must still load");
+        // Only the recognised KeyValue survives; the unknown variant is dropped.
+        assert_eq!(interps[0].rich_display.len(), 1);
+        assert!(matches!(
+            interps[0].rich_display[0].preferred,
+            RichDisplay::KeyValue { .. }
+        ));
+    }
 }

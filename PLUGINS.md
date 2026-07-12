@@ -136,6 +136,38 @@ def decode_myformat(input_str):
 - Use appropriate confidence scores (higher = more certain)
 - Multiple interpretations can be returned
 
+#### Attaching rich displays to an interpretation
+
+A decoder interpretation can carry a `rich_display` list so GUIs can render a
+structured view (a key-value table, colour swatch, code block, ...) instead of
+the plain-text `description`. Pass any number of `RichDisplay` objects — the
+same ones the visualizer API uses (see [Visualizers](#visualizers) for the full
+list):
+
+```python
+import forb
+from forb import CoreValue, Interpretation, RichDisplay
+
+@forb.decoder(id="mykv", name="My Key-Value Format")
+def decode_mykv(input_str):
+    if not input_str.startswith("KV:"):
+        return []
+    pairs = [tuple(p.split("=", 1)) for p in input_str[3:].split(",")]
+    return [Interpretation(
+        value=CoreValue.String(input_str),
+        confidence=0.95,
+        description=", ".join(f"{k}={v}" for k, v in pairs),  # CLI fallback
+        rich_display=[RichDisplay.KeyValue(pairs)],            # GUI rendering
+    )]
+```
+
+The `description` is always shown by the CLI and used as an accessible
+fallback; `rich_display` is preferred by GUI front-ends when present. Supported
+`RichDisplay` variants are listed under [Visualizers](#visualizers); commonly
+useful ones for decoders are `KeyValue`, `Table`, `Color`, and `Code`. A
+`RichDisplay` variant that a given build does not recognise is skipped rather
+than failing the whole interpretation, so plugins stay forward-compatible.
+
 ### Expression Variables
 
 Add constants to the expression evaluator.
@@ -294,7 +326,8 @@ def visualize_json(value):
     return RichDisplay.Tree(build_tree(value))
 ```
 
-**Available RichDisplay types:**
+**Available RichDisplay types** (usable from both `@forb.visualizer` returns
+and a decoder interpretation's `rich_display` list):
 - `RichDisplay.KeyValue(pairs)` - Key-value table
 - `RichDisplay.Table(headers, rows)` - Data table
 - `RichDisplay.Tree(root)` - Tree structure
@@ -306,6 +339,9 @@ def visualize_json(value):
 - `RichDisplay.DataSize(bytes, human)` - File/data size
 - `RichDisplay.Markdown(content)` - Rendered markdown
 - `RichDisplay.Progress(value, label)` - Progress indicator
+
+Any other (e.g. future) variant name is ignored by older builds rather than
+causing an error, so a plugin can emit a newer display type and still load.
 
 ### Currencies
 
@@ -492,9 +528,14 @@ Interpretation(
     value=CoreValue.String("hello"),  # The parsed value
     confidence=0.95,                   # 0.0 to 1.0
     description="Human-readable text", # Shown in CLI output
-    rich_display=[]                    # Optional RichDisplay list
+    rich_display=[]                    # Optional list of RichDisplay objects;
+                                       # preferred by GUIs over `description`.
 )
 ```
+
+`rich_display` accepts a list of `RichDisplay` objects (see
+[Visualizers](#visualizers) for the variants). CLIs render `description`; GUI
+front-ends render the rich displays when present.
 
 ### Decorators
 

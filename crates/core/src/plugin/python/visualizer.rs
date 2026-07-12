@@ -119,7 +119,11 @@ impl VisualizerPlugin for PyVisualizerPlugin {
 }
 
 /// Convert a Python RichDisplay object to Rust.
-fn py_to_rich_display(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<RichDisplay> {
+///
+/// Shared by the visualizer plugin path and by decoder/trait interpretations
+/// (via `Interpretation.rich_display`), so it is `pub(super)` for the whole
+/// `python` module rather than private to this file.
+pub(super) fn py_to_rich_display(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<RichDisplay> {
     // Check if it's our RichDisplay class
     let type_name: String = obj.getattr("_type")?.extract()?;
     let data = obj.getattr("_data")?;
