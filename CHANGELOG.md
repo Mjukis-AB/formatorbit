@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Removed self-conversions and round-trip noise** - two generic rules in the
+  conversion graph replace ad-hoc filtering: (a) a conversion may never target
+  the same format that produced its value, so adjacent duplicates like
+  `epoch-seconds → epoch-seconds` and `decimal → decimal` are gone; (b) once a
+  value is a timestamp, another epoch integer is never re-derived from it and
+  re-shown as a timestamp, killing cross-base cycles like
+  `apple-cocoa → epoch-seconds` (which produced a bogus date) and
+  `epoch-seconds → epoch-millis`. The useful directions (integer → timestamp,
+  timestamp → ISO `datetime`) are untouched. Conversion counts dropped across
+  the board (e.g. `deadbeef` 30 → 25, `#FF5733` also sheds a spurious
+  `color-hex → #FF5500` round-trip and its garbage descendants).
 - **Semantic results now rank above encodings at the default limit** - the CLI
   no longer reserves output slots for hashes that don't exist, so genuinely
   useful conversions fill the visible list. Conversions are ranked by priority,

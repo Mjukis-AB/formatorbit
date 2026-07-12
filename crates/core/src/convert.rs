@@ -294,6 +294,48 @@ fn is_root_blocked_builtin(root_format: &str, target_format: &str) -> bool {
         .any(|(root, target)| root_format == *root && target_format == *target)
 }
 
+/// Epoch/timestamp formats that produce a `DateTime` from an integer offset
+/// against some reference epoch (Unix, Apple/Cocoa, Windows FILETIME, ...).
+///
+/// These are the formats involved in datetime→epoch→datetime cycles: once a
+/// value is already a `DateTime`, re-deriving another epoch integer from it
+/// against a *different* reference and re-showing that as a timestamp produces
+/// nonsense (e.g. an Apple timestamp re-read as a Unix epoch). The `datetime`
+/// format is deliberately excluded - it is the human-readable ISO rendering of
+/// a `DateTime`, not a new epoch integer, so `epoch-seconds → datetime` stays.
+const EPOCH_FORMATS: &[&str] = &[
+    "epoch-seconds",
+    "epoch-millis",
+    "epoch-micros",
+    "epoch-nanos",
+    "apple-cocoa",
+    "filetime",
+];
+
+/// Whether a conversion is a redundant round-trip that should never be emitted.
+///
+/// Two generic rules, independent of any hardcoded (source, target) pair list:
+///
+/// (a) A conversion may not target the same format that produced the value it
+///     converts. Re-emitting a value in the format it already has (an adjacent
+///     duplicate like `epoch-seconds → epoch-seconds` or `decimal → decimal`)
+///     carries no information.
+///
+/// (b) Once a value is a timestamp/`DateTime`, don't re-derive a *different*
+///     epoch integer from it and present that as another timestamp. This kills
+///     datetime→epoch→datetime cycles across epoch bases (e.g.
+///     `apple-cocoa → epoch-seconds`, `epoch-seconds → epoch-millis`) while
+///     leaving the useful `epoch → datetime` rendering intact.
+fn is_redundant_roundtrip(source_format: &str, target_format: &str) -> bool {
+    // (a) no adjacent duplicate / self-conversion
+    if source_format == target_format {
+        return true;
+    }
+
+    // (b) no epoch → other-epoch re-derivation
+    EPOCH_FORMATS.contains(&source_format) && EPOCH_FORMATS.contains(&target_format)
+}
+
 /// Check if a conversion should be blocked (builtin rules + user config).
 fn is_blocked(
     source_format: &str,
@@ -302,6 +344,11 @@ fn is_blocked(
     path: &[String],
     blocking: Option<&BlockingConfig>,
 ) -> bool {
+    // Generic round-trip rules (adjacent duplicates + epoch cycles)
+    if is_redundant_roundtrip(source_format, target_format) {
+        return true;
+    }
+
     // Check builtin blocked paths (immediate source→target)
     if is_blocked_path_builtin(source_format, target_format) {
         return true;
@@ -757,5 +804,52 @@ mod tests {
         let dt = datetime_conv.unwrap();
         assert!(dt.display.contains("2025"));
         assert!(!dt.path.is_empty()); // Has a path
+    }
+
+    #[test]
+    fn test_redundant_roundtrip_rules() {
+        // (a) self / adjacent-duplicate conversions are always redundant
+        assert!(is_redundant_roundtrip("decimal", "decimal"));
+        assert!(is_redundant_roundtrip("epoch-seconds", "epoch-seconds"));
+        assert!(is_redundant_roundtrip("color-hex", "color-hex"));
+
+        // (b) one epoch base must not be re-derived as another epoch base
+        assert!(is_redundant_roundtrip("epoch-seconds", "epoch-millis"));
+        assert!(is_redundant_roundtrip("apple-cocoa", "epoch-seconds"));
+        assert!(is_redundant_roundtrip("filetime", "epoch-seconds"));
+
+        // The useful directions stay open:
+        //  - an integer/decimal can become a timestamp
+        //  - a timestamp can be rendered as an ISO `datetime` (not an epoch int)
+        assert!(!is_redundant_roundtrip("decimal", "epoch-seconds"));
+        assert!(!is_redundant_roundtrip("datetime", "epoch-seconds"));
+        assert!(!is_redundant_roundtrip("epoch-seconds", "datetime"));
+        assert!(!is_redundant_roundtrip("hex", "base64"));
+    }
+
+    #[test]
+    fn test_epoch_roundtrip_absent_from_graph() {
+        let formats: Vec<Box<dyn Format>> = vec![
+            Box::new(HexFormat),
+            Box::new(BytesToIntFormat),
+            Box::new(DateTimeFormat),
+        ];
+
+        // bytes for epoch 1763574200
+        let bytes = CoreValue::Bytes(vec![0x69, 0x1E, 0x01, 0xB8]);
+        let conversions = find_all_conversions(&formats, &bytes, None, None, None);
+
+        // No conversion may re-derive an epoch integer from an already-derived
+        // timestamp (e.g. ...epoch-seconds → epoch-seconds/epoch-millis) or hop
+        // between epoch bases (apple-cocoa → epoch-seconds).
+        for conv in &conversions {
+            for window in conv.path.windows(2) {
+                assert!(
+                    !is_redundant_roundtrip(&window[0], &window[1]),
+                    "redundant round-trip leaked into path: {:?}",
+                    conv.path
+                );
+            }
+        }
     }
 }

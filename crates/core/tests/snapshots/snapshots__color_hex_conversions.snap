@@ -1,45 +1,8 @@
 ---
 source: crates/core/tests/snapshots.rs
-assertion_line: 82
 expression: "&result.conversions"
 ---
 [
-  {
-    "value": {
-      "type": "String",
-      "value": "#FF5500"
-    },
-    "target_format": "color-hex",
-    "display": "#FF5500",
-    "path": [
-      "color-hex",
-      "color-hex"
-    ],
-    "steps": [
-      {
-        "format": "color-hex",
-        "value": {
-          "type": "String",
-          "value": "#FF5500"
-        },
-        "display": "#FF5500"
-      }
-    ],
-    "is_lossy": false,
-    "priority": "Semantic",
-    "kind": "Conversion",
-    "rich_display": [
-      {
-        "preferred": {
-          "type": "Color",
-          "r": 255,
-          "g": 85,
-          "b": 0,
-          "a": 255
-        }
-      }
-    ]
-  },
   {
     "value": {
       "type": "String",
