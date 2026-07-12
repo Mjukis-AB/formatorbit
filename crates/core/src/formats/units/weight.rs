@@ -76,7 +76,7 @@ fn get_units() -> &'static Vec<(String, f64)> {
         }
 
         // Sort by length descending to match longest first
-        units.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        units.sort_by_key(|b| std::cmp::Reverse(b.0.len()));
 
         units
     })

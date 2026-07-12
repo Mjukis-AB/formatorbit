@@ -302,7 +302,7 @@ impl ImageFormat {
 
         // Get top 5 dominant colors
         let mut colors: Vec<_> = color_counts.into_iter().collect();
-        colors.sort_by(|a, b| b.1.cmp(&a.1));
+        colors.sort_by_key(|c| std::cmp::Reverse(c.1));
         let dominant: Vec<(u8, u8, u8)> = colors.into_iter().take(5).map(|(c, _)| c).collect();
 
         let avg_brightness = if pixel_count > 0 {

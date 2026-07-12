@@ -168,8 +168,7 @@ impl AudioFormat {
             }
 
             // Estimate bitrate for compressed formats
-            if meta.codec.is_some() && meta.duration_secs.is_some() {
-                let duration = meta.duration_secs.unwrap();
+            if let (Some(_), Some(duration)) = (meta.codec.as_ref(), meta.duration_secs) {
                 if duration > 0.0 {
                     let bitrate = (data.len() as f64 * 8.0 / duration) as u32;
                     meta.bitrate = Some(bitrate / 1000); // kbps

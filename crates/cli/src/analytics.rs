@@ -279,7 +279,7 @@ impl AnalyticsTracker {
         // If still over 100, keep only top 100 by count
         if self.data.conversion_paths.len() > 100 {
             let mut entries: Vec<_> = self.data.conversion_paths.drain().collect();
-            entries.sort_by(|a, b| b.1.cmp(&a.1));
+            entries.sort_by_key(|e| std::cmp::Reverse(e.1));
             entries.truncate(100);
             self.data.conversion_paths = entries.into_iter().collect();
         }
