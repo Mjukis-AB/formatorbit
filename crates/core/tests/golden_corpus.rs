@@ -384,6 +384,53 @@ const UNIT_CASES: &[GoldenCase] = &[
 ];
 
 // =============================================================================
+// Golden Corpus: Natural Conversion Queries ("<value><unit> to|in <unit>")
+// =============================================================================
+
+const NATURAL_CONVERT_CASES: &[GoldenCase] = &[
+    // Unit queries — unambiguous phrase, must win decisively.
+    GoldenCase::top("5 km in miles", "convert-query", "length query with 'in'"),
+    GoldenCase::top(
+        "5km to mi",
+        "convert-query",
+        "length query, no space, abbrevs",
+    ),
+    GoldenCase::top("10 kg in pounds", "convert-query", "weight query"),
+    GoldenCase::top("100 kph to mph", "convert-query", "speed query"),
+    GoldenCase::top("72F to C", "convert-query", "temperature query (affine)"),
+    // The connector word "in" can also be the inches unit.
+    GoldenCase::top("5 in to cm", "convert-query", "inches source with 'to'"),
+    // Currency query. Works with cached rates; degrades to an offline notice
+    // without them — either way the query interpretation must win.
+    GoldenCase::top("100 USD to EUR", "convert-query", "currency query"),
+    // Prose containing " in "/" to " must NOT be hijacked (no value+unit
+    // shape). Plain text parses at low confidence, so only require that it
+    // stays THE top interpretation (i.e. convert-query didn't fire at 95%).
+    GoldenCase {
+        input: "log in now",
+        expected_format: "text",
+        description: "prose with ' in ' stays text",
+        min_confidence: 0.05,
+        must_be_top: true,
+    },
+    GoldenCase {
+        input: "I went to the store",
+        expected_format: "text",
+        description: "prose with ' to ' stays text",
+        min_confidence: 0.05,
+        must_be_top: true,
+    },
+    // Unknown target unit falls through gracefully.
+    GoldenCase {
+        input: "5 km in bananas",
+        expected_format: "text",
+        description: "unknown target unit stays text",
+        min_confidence: 0.05,
+        must_be_top: true,
+    },
+];
+
+// =============================================================================
 // Golden Corpus: Hashes (by length)
 // =============================================================================
 
@@ -688,6 +735,11 @@ fn test_golden_units() {
 }
 
 #[test]
+fn test_golden_natural_convert() {
+    run_golden_tests(NATURAL_CONVERT_CASES, "NaturalConvert");
+}
+
+#[test]
 fn test_golden_hashes() {
     run_golden_tests(HASH_CASES, "Hashes");
 }
@@ -749,6 +801,7 @@ fn test_golden_corpus_summary() {
         ("DataSize", DATASIZE_CASES),
         ("Coords", COORDS_CASES),
         ("Units", UNIT_CASES),
+        ("NaturalConvert", NATURAL_CONVERT_CASES),
         ("Hashes", HASH_CASES),
         ("CIDR", CIDR_CASES),
         ("Expressions", EXPR_CASES),

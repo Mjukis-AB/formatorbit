@@ -68,10 +68,10 @@ use formats::{
     CronFormat, CuidFormat, CurrencyFormat, DataSizeFormat, DateTimeFormat, DecimalFormat,
     DurationFormat, EnergyFormat, EpochFormat, EscapeFormat, ExprFormat, FontFormat, GraphFormat,
     HashFormat, HexFormat, HexdumpFormat, ImageFormat, IpAddrFormat, IsbnFormat, JsonFormat,
-    JwtFormat, LengthFormat, MacAddressFormat, MsgPackFormat, NanoIdFormat, NaturalDateFormat,
-    OctalFormat, OfficeFormat, PdfFormat, PermissionsFormat, PlistFormat, PressureFormat,
-    ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat, UrlParserFormat,
-    Utf8Format, UuidFormat, VideoFormat, VolumeFormat, WeightFormat,
+    JwtFormat, LengthFormat, MacAddressFormat, MsgPackFormat, NanoIdFormat, NaturalConvertFormat,
+    NaturalDateFormat, OctalFormat, OfficeFormat, PdfFormat, PermissionsFormat, PlistFormat,
+    PressureFormat, ProtobufFormat, SpeedFormat, TemperatureFormat, UlidFormat, UrlEncodingFormat,
+    UrlParserFormat, Utf8Format, UuidFormat, VideoFormat, VolumeFormat, WeightFormat,
 };
 
 /// Main entry point - a configured converter instance.
@@ -222,6 +222,10 @@ impl Formatorbit {
             Box::new(DecimalFormat),
             Box::new(DataSizeFormat),
             Box::new(TemperatureFormat),
+            // Natural conversion queries ("5 km in miles", "100 USD to EUR").
+            // Before the plain unit formats so the query interpretation wins
+            // when the phrase shape matches.
+            Box::new(NaturalConvertFormat::default()),
             // Unit conversions
             Box::new(LengthFormat),
             Box::new(WeightFormat),

@@ -98,6 +98,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mistyped as `2024-12-*` (a year too early — the project started 2025-12-22).
 
 ### Added
+- **Natural conversion queries** - ask for a specific target unit or currency
+  in plain words: `forb "5 km in miles"`, `forb "100 USD to EUR"`,
+  `forb "5km to mi"`, `forb "72F to C"`. The phrase `<value><unit> (to|in)
+  <unit>` is recognized at high confidence (95%), shows the requested target as
+  the Primary `result`, and then lists the family's usual representations. All
+  existing unit aliases work (`miles`/`mi`, `kilometers`/`km`, ...), every unit
+  family is covered (length, weight, volume, speed, pressure, energy, angle,
+  area, temperature) plus currency via the shared rate cache (offline it says
+  "no exchange rates available" instead of erroring). Unknown target units fall
+  through gracefully, and ordinary text containing " in "/" to " ("log in now")
+  is never hijacked — the left side must parse as a value with a known unit.
 - **MAC address format with OUI vendor lookup** - parse MAC addresses and identify vendors:
   - Supports multiple notations: colon (00:1A:2B:3C:4D:5E), hyphen (00-1A-2B-3C-4D-5E), Cisco (001A.2B3C.4D5E), space-separated, and raw hex
   - Embedded IEEE OUI database with 38,000+ vendor entries for instant lookup

@@ -227,8 +227,8 @@ forb --mermaid 691E01B8
 | **Hashing** | MD5, SHA-1, SHA-256, SHA-512 (detection by length) |
 | **Numbers** | decimal, binary, octal, data sizes (`1MB`, `1MiB`), temperature (`30°C`, `86°F`) |
 | **Math** | Expression evaluation (`2 + 2`, `0xFF + 1`, `1 << 8`, `0b1010 \| 0b0101`, `USD(100)`) |
-| **Units** | length, weight, volume, speed, pressure, energy, angle, area (with SI prefixes) |
-| **Currency** | `100 USD`, `$50`, `5kEUR`, `2.5MSEK` (with live exchange rates) |
+| **Units** | length, weight, volume, speed, pressure, energy, angle, area (with SI prefixes), queries like `5 km in miles` |
+| **Currency** | `100 USD`, `$50`, `5kEUR`, `2.5MSEK`, `100 USD to EUR` (with live exchange rates) |
 | **Time** | Unix epoch (sec/ms), Apple/Cocoa, Windows FILETIME, ISO 8601, durations (`1h30m`), cron (`*/5 * * * *`) |
 | **Identifiers** | UUID (v1-v8 detection), ULID (with timestamp), NanoID, CUID2, JWT |
 | **Network** | IPv4, IPv6, MAC address (with OUI vendor lookup) |
@@ -495,6 +495,20 @@ Ambiguous symbols show multiple interpretations:
 $ forb '$100'           # Shows USD, CAD, AUD, etc.
 ```
 
+Ask for a specific target currency in plain words with `to` or `in`:
+
+```bash
+$ forb '100 USD to EUR'
+
+▶ convert-query (95% confidence)
+  100.00 USD = €87.49
+  → result: €87.49
+  ≈ gbp: £74.50
+  ≈ jpy: 16,187.23 JPY
+```
+
+If no exchange rates are cached and you're offline, forb says so instead of erroring.
+
 ### Currency Expression Functions
 
 Use currency codes as functions in expressions to convert amounts to your target currency:
@@ -576,6 +590,28 @@ $ forb '60mph'
   → knots: 52.14 knots
   ≈ km/h: 96.56 km/h
 ```
+
+#### Natural conversion queries
+
+Ask for a specific target unit in plain words — `<value><unit> to <unit>` or `<value><unit> in <unit>`. The same aliases work as everywhere else (`miles`, `mi`, `km`, `kilometers`, ...):
+
+```bash
+$ forb '5 km in miles'
+
+▶ convert-query (95% confidence)
+  5 km = 3.11 miles
+  → result: 3.11 miles
+  → feet: 16404.20 ft
+  → miles: 3.11 mi
+  … (more, use -l 0 to show all)
+
+$ forb '5km to mi'       # abbreviations work too
+$ forb '10 kg in pounds'
+$ forb '72F to C'        # temperature (affine) works as well
+$ forb '100 USD to EUR'  # currency — see Currency Conversion
+```
+
+Unknown target units fall through gracefully (the input is treated as text), and ordinary sentences containing " in " or " to " are never hijacked — the left side must be a value with a known unit.
 
 ### Temperature
 

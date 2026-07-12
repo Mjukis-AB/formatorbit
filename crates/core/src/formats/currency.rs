@@ -73,7 +73,7 @@ const CURRENCY_CODES: &[&str] = &[
 ];
 
 /// Check if a currency code is known (built-in or plugin).
-fn is_known_currency(code: &str) -> bool {
+pub(crate) fn is_known_currency(code: &str) -> bool {
     let code_upper = code.to_uppercase();
     CURRENCY_CODES.iter().any(|c| *c == code_upper)
         || currency_rates::plugin_currency_codes()
@@ -270,7 +270,7 @@ impl CurrencyFormat {
     }
 
     /// Format currency amount with symbol if available.
-    fn format_amount(amount: f64, code: &str) -> String {
+    pub(crate) fn format_amount(amount: f64, code: &str) -> String {
         // Find symbol for this code
         let symbol = SYMBOLS
             .iter()
