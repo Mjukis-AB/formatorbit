@@ -842,6 +842,26 @@ forb --config-path
 forb --config-init
 ```
 
+### Update checks (opt-in)
+
+By default forb **never touches the network** — automatic update checks are off. You can check for a new version on demand:
+
+```bash
+forb --check-updates
+```
+
+To have forb check GitHub for updates in the background (at most once per day, cached locally), opt in via config or environment:
+
+```toml
+[updates]
+check = true
+```
+
+```bash
+# Or via environment
+FORB_CHECK_UPDATES=1 forb 691E01B8
+```
+
 ### Priority & Blocking
 
 Customize which conversions are shown and in what order:
@@ -882,10 +902,14 @@ $ forb --show-paths 691E01B8
 
 Extend forb with Python plugins for custom decoders, expression functions, traits, currencies, and more. Requires Python 3.8+ installed on your system.
 
-**Bundled Plugin:** A cryptocurrency plugin (BTC, ETH, SOL rates from CoinGecko) is installed automatically on first run.
+> **Trust model:** Plugins run in-process with the full privileges of your user account — there is no sandbox. Only install plugins you trust, and read the code first. See [PLUGINS.md](PLUGINS.md#security-considerations).
+
+**Bundled crypto plugin (opt-in):** A cryptocurrency plugin (BTC, ETH, SOL rates from CoinGecko) ships with forb but is **disabled by default** because it makes live network calls. Ordinary runs stay offline. Enable it explicitly:
 
 ```bash
-# Try the bundled crypto plugin
+# Enable the bundled crypto plugin (installed as crypto.py.sample)
+cd "$(forb --plugins path)" && mv crypto.py.sample crypto.py
+
 forb "1 BTC"            # Shows BTC in USD, EUR, SEK, etc.
 forb "100 USD"          # Includes BTC conversion
 

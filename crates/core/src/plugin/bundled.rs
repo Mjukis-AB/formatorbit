@@ -25,18 +25,21 @@ struct BundledPlugin {
 
 /// List of bundled plugins.
 const BUNDLED_PLUGINS: &[BundledPlugin] = &[
-    // Active plugins (loaded by default)
-    BundledPlugin {
-        filename: "crypto.py",
-        source: include_str!("../../bundled-plugins/crypto.py"),
-        active: true,
-    },
+    // Active plugins (loaded by default). Keep these to purely local,
+    // offline behavior — nothing here should touch the network by default.
     BundledPlugin {
         filename: "math_ext.py",
         source: include_str!("../../bundled-plugins/math_ext.py"),
         active: true,
     },
-    // Sample plugins (not loaded, rename to enable)
+    // Sample plugins (not loaded, rename to enable).
+    // crypto.py is opt-in because it makes live calls to api.coingecko.com;
+    // shipping it as `.py.sample` keeps default runs offline.
+    BundledPlugin {
+        filename: "crypto.py",
+        source: include_str!("../../bundled-plugins/crypto.py"),
+        active: false,
+    },
     BundledPlugin {
         filename: "custom_decoder.py",
         source: include_str!("../../bundled-plugins/custom_decoder.py"),
@@ -140,6 +143,33 @@ mod tests {
             assert!(
                 plugin.source.contains("__forb_plugin__"),
                 "Plugin {} missing metadata",
+                plugin.filename
+            );
+        }
+    }
+
+    #[test]
+    fn test_crypto_is_opt_in() {
+        // crypto.py makes live calls to api.coingecko.com, so it must ship
+        // as a `.py.sample` (opt-in), never active by default.
+        let crypto = BUNDLED_PLUGINS
+            .iter()
+            .find(|p| p.filename == "crypto.py")
+            .expect("crypto.py bundled plugin should exist");
+        assert!(
+            !crypto.active,
+            "crypto.py must be opt-in (active=false) because it hits the network"
+        );
+    }
+
+    #[test]
+    fn test_active_plugins_are_offline() {
+        // Default-active plugins must not reference network APIs, so that
+        // ordinary runs never touch the network.
+        for plugin in BUNDLED_PLUGINS.iter().filter(|p| p.active) {
+            assert!(
+                !plugin.source.contains("urlopen") && !plugin.source.contains("http"),
+                "Active plugin {} appears to make network calls; it must be opt-in",
                 plugin.filename
             );
         }

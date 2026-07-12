@@ -1,7 +1,10 @@
-# Default Cryptocurrency Rates Plugin for Formatorbit
+# Cryptocurrency Rates Plugin for Formatorbit
 #
 # This plugin provides live cryptocurrency exchange rates from CoinGecko.
-# It's a bundled plugin that ships with forb and is enabled by default.
+# It ships bundled with forb but is OPT-IN (installed as crypto.py.sample)
+# because it makes live network calls to api.coingecko.com. To enable it,
+# rename crypto.py.sample -> crypto.py in your bundled-plugins directory
+# (see: forb --plugins list).
 
 __forb_plugin__ = {
     "name": "Crypto Rates",

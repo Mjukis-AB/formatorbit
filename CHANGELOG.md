@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Network access is now strictly opt-in.** Two behaviors that previously ran
+  by default no longer touch the network unless you ask them to:
+  - **Update checks are off by default.** Ordinary runs no longer make a
+    background request to the GitHub releases API. Run `forb --check-updates`
+    for a one-off check, or opt in to daily background checks via
+    `[updates] check = true` in the config or `FORB_CHECK_UPDATES=1`.
+  - **The bundled crypto plugin is now opt-in.** `crypto.py` (live BTC/ETH/SOL
+    rates from `api.coingecko.com`) now ships as `crypto.py.sample` like the
+    other sample plugins; the only default-active bundled plugin is `math_ext.py`,
+    which is fully offline. Enable crypto with
+    `mv "$(forb --plugins path)"/crypto.py.sample .../crypto.py`.
+- **Documented the plugin trust model.** PLUGINS.md and the README now state
+  plainly that plugins run in-process with the full privileges of your user
+  account (no sandbox), so you should only install plugins you trust.
+
 ### Changed
 - **Blocking rules are now category-based** - the conversion graph classifies
   every format and conversion target into a category (Encoding, Text,

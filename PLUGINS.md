@@ -20,6 +20,7 @@ Formatorbit supports Python plugins that extend its functionality with custom de
 - [Sample Plugins](#sample-plugins)
 - [API Reference](#api-reference)
 - [Troubleshooting](#troubleshooting)
+- [Security Considerations](#security-considerations)
 
 ## Quick Start
 
@@ -310,7 +311,12 @@ def visualize_json(value):
 
 Add custom currency exchange rates. Currency plugins return a `(rate, base_currency)` tuple, where `rate` is how much 1 unit of the currency is worth in the base currency.
 
-**Default Plugin:** Formatorbit ships with a bundled cryptocurrency plugin that provides BTC, ETH, and SOL rates from CoinGecko. This plugin is automatically installed on first run.
+**Bundled crypto plugin (opt-in):** Formatorbit ships with a cryptocurrency plugin that provides BTC, ETH, and SOL rates from CoinGecko. Because it makes live network calls to `api.coingecko.com`, it is **not** enabled by default — it is installed as `crypto.py.sample` alongside the other samples. To enable it, rename it to `crypto.py`:
+
+```bash
+cd "$(forb --plugins path)"
+mv crypto.py.sample crypto.py
+```
 
 ```python
 import forb
@@ -444,7 +450,7 @@ The `sample-plugins/` directory contains example plugins:
 |------|-------------|
 | `math_ext.py.sample` | Mathematical constants (PI, E, PHI, TAU) and functions (factorial, fib, gcd, lcm, sqrt, sin, cos, etc.) |
 | `custom_decoder.py.sample` | Example custom decoder + ROT13 decoder |
-| `crypto_rates.py.sample` | Cryptocurrency rates (BTC, ETH, SOL) from CoinGecko |
+| `crypto.py.sample` | Cryptocurrency rates (BTC, ETH, SOL) from CoinGecko — makes live network calls, so opt-in |
 | `dev_traits.py.sample` | Developer traits: AWS regions, semver, ports, HTTP status codes |
 
 **Enable all sample plugins:**
@@ -556,8 +562,18 @@ PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 cargo build -p formatorbit-cli --features 
 
 ## Security Considerations
 
-- Plugins run with the same permissions as forb
+### Trust model
+
+Plugins are ordinary Python that forb executes **in-process, with the full
+privileges of your user account**. There is no sandbox: a plugin can read and
+write your files, make arbitrary network requests, and run any command your
+user can. Treat installing a plugin exactly like running any other program you
+downloaded — **only install plugins you trust, and read the code first.** This
+is why the bundled crypto plugin, which calls out to `api.coingecko.com`, ships
+disabled (`crypto.py.sample`) and must be explicitly enabled.
+
+- Plugins run with the same permissions as forb (no sandbox)
 - Only install plugins from trusted sources
 - Review plugin code before enabling
-- Currency plugins may make network requests
+- Currency and decoder plugins may make network requests
 - Plugin errors are isolated and won't crash forb

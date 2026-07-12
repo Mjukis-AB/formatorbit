@@ -82,14 +82,16 @@ url_max_size = "10M"
 # ============================================================================
 # Updates Configuration (optional)
 # ============================================================================
-# Check for new versions automatically.
+# Check for new versions automatically. Off by default so ordinary runs
+# never touch the network. When enabled, forb checks GitHub releases at most
+# once per day (cached locally). For a one-off check, run: forb --check-updates
 
 # [updates]
-# # Enable update checking (default: true)
-# # Checks GitHub releases once per day
+# # Enable background update checking (default: false)
 # check = true
 #
-# # Can also be disabled via: FORB_CHECK_UPDATES=0
+# # Can also be enabled via: FORB_CHECK_UPDATES=1
+# # (or disabled while enabled in config via: FORB_CHECK_UPDATES=0)
 
 # ============================================================================
 # Plugins Configuration (optional, requires --features plugins)
@@ -163,17 +165,15 @@ impl Default for CliAnalyticsConfig {
 }
 
 /// Updates configuration.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct CliUpdatesConfig {
-    /// Enable update checking (default: true).
+    /// Enable update checking (default: false, i.e. `bool::default()`).
+    ///
+    /// Off by default so that ordinary runs never touch the network.
+    /// Opt in via config (`[updates] check = true`) or `FORB_CHECK_UPDATES=1`,
+    /// or run `forb --check-updates` for a one-off check.
     pub check: bool,
-}
-
-impl Default for CliUpdatesConfig {
-    fn default() -> Self {
-        Self { check: true }
-    }
 }
 
 /// Plugins configuration.
@@ -331,7 +331,7 @@ impl Config {
         self.analytics.contribute
     }
 
-    /// Get update checking enabled with precedence: env > config > default (true).
+    /// Get update checking enabled with precedence: env > config > default (false).
     pub fn updates_enabled(&self) -> bool {
         // FORB_CHECK_UPDATES=0 or FORB_CHECK_UPDATES=false disables checking
         if let Ok(val) = std::env::var("FORB_CHECK_UPDATES") {
@@ -471,5 +471,16 @@ limit = 10
         assert_eq!(config.limit(), 5);
         assert_eq!(config.threshold(), 0.8);
         assert!(!config.no_color());
+    }
+
+    #[test]
+    fn test_updates_disabled_by_default() {
+        // Update checking must be OFF by default so ordinary runs never
+        // touch the network. Opt in via config or FORB_CHECK_UPDATES.
+        let config: Config = toml::from_str("").unwrap();
+        assert!(!config.updates.check);
+
+        let opted_in: Config = toml::from_str("[updates]\ncheck = true\n").unwrap();
+        assert!(opted_in.updates.check);
     }
 }
