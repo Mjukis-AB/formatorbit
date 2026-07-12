@@ -14,282 +14,250 @@ use crate::types::{
 /// Maximum BFS depth to prevent infinite loops in conversion graph traversal.
 const MAX_BFS_DEPTH: usize = 5;
 
-/// Unit format IDs that shouldn't cross-convert to each other.
-const UNIT_FORMATS: &[&str] = &[
-    "length",
-    "weight",
-    "volume",
-    "speed",
-    "pressure",
-    "angle",
-    "area",
-    "energy",
-    "temperature",
-];
+/// Broad category of a format or conversion-target id, used to express blocking
+/// policy as a handful of category-level rules instead of ~90 hardcoded pairs.
+///
+/// A category is assigned to any id via [`category_of`] - both source format ids
+/// (e.g. `hex`, `text`) and fine-grained conversion-target ids (e.g.
+/// `epoch-seconds`, `datasize-iec`). Unclassified ids fall into `Other` and are
+/// never blocked by category rules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Category {
+    /// Raw-byte / notation renderings: hex, base64, binary, octal, url-encoded,
+    /// escape sequences, hexdump, msgpack/protobuf/plist, char, *-int notations.
+    Encoding,
+    /// Human text: text, utf8.
+    Text,
+    /// Meaningful identifiers derived from structure, not raw bytes: IP
+    /// addresses (+ CIDR sub-fields), UUIDs, colors, MAC addresses, geo codes.
+    Identifier,
+    /// Points in time: epoch bases, Apple/Cocoa, FILETIME, datetime, relative.
+    Timestamp,
+    /// Elapsed time: duration, duration-ms.
+    Duration,
+    /// Data sizes: datasize and its IEC/SI variants.
+    DataSize,
+    /// Dimensional unit quantities (length, weight, temperature, ...).
+    Unit,
+    /// Plain numbers: int-be/int-le/decimal.
+    Number,
+    /// Expression evaluation result.
+    Expression,
+    /// Anything not participating in category-level blocking.
+    Other,
+}
 
-/// Target format IDs produced by unit conversions.
-const UNIT_TARGETS: &[&str] = &[
-    // Length
-    "meters",
-    "kilometers",
-    "centimeters",
-    "millimeters",
-    "feet",
-    "miles",
-    "inches",
-    // Weight
-    "grams",
-    "kilograms",
-    "milligrams",
-    "pounds",
-    "ounces",
-    // Volume
-    "milliliters",
-    "liters",
-    "gallons",
-    "fluid ounces",
-    "cups",
-    // Speed
-    "m/s",
-    "km/h",
-    "mph",
-    "knots",
-    // Pressure
-    "pascals",
-    "kilopascals",
-    "megapascals",
-    "bar",
-    "psi",
-    "atmospheres",
-    // Angle
-    "degrees",
-    "radians",
-    "gradians",
-    "turns",
-    // Area
-    "square meters",
-    "square kilometers",
-    "square centimeters",
-    "square feet",
-    "acres",
-    "hectares",
-    // Energy
-    "joules",
-    "kilojoules",
-    "megajoules",
-    "calories",
-    "kilocalories",
-    "kilowatt-hours",
-    // Temperature
-    "celsius",
-    "fahrenheit",
-    "kelvin",
-];
+/// Classify a format id or conversion-target id into a [`Category`].
+///
+/// This is the single source of truth for category-based blocking; adding a new
+/// format usually means adding its id (and any target ids it emits) to one arm
+/// here rather than writing new (source, target) pairs.
+fn category_of(id: &str) -> Category {
+    match id {
+        // --- Encodings / notations / binary containers ---
+        "hex" | "base64" | "binary" | "octal" | "url-encoded" | "hexdump" | "bytes" | "escape"
+        | "escape-hex" | "escape-unicode" | "hex-int" | "binary-int" | "octal-int"
+        | "utf8-bytes" | "ascii-decimal" | "codepoints" | "msgpack" | "plist" | "protobuf"
+        | "char" => Category::Encoding,
 
-/// Root-based blocking: targets that should never be reached from a given root interpretation.
-/// Unlike BLOCKED_PATHS which blocks immediate source→target, this blocks the target
-/// regardless of the path taken (e.g., "text" blocks ipv4 via text→bytes→ipv4).
-const ROOT_BLOCKED_TARGETS: &[(&str, &str)] = &[
-    // Text bytes shouldn't be interpreted as IP addresses
-    // (4 bytes of ASCII like "test" aren't an IPv4 address)
-    ("text", "ipv4"),
-    ("text", "ipv6"),
-    // Text bytes shouldn't be interpreted as colors
-    ("text", "color-rgb"),
-    ("text", "color-hex"),
-    ("text", "color-hsl"),
-    // Text bytes shouldn't be interpreted as integers or timestamps
-    // (already blocked via BLOCKED_PATHS for immediate, but this catches all paths)
-    ("text", "int-be"),
-    ("text", "int-le"),
-    ("text", "epoch-seconds"),
-    ("text", "epoch-millis"),
-    ("text", "apple-cocoa"),
-    ("text", "filetime"),
-    ("text", "duration"),
-    ("text", "duration-ms"),
-    ("text", "datasize"),
-    ("text", "datasize-iec"),
-    ("text", "datasize-si"),
-    // Text bytes shouldn't be interpreted as UUIDs
-    // (any 16 bytes can be formatted as UUID, but "🏳️‍🌈oj" isn't a UUID)
-    ("text", "uuid"),
-    // Hex bytes shouldn't be interpreted as IP addresses
-    // (DEADBEEF as bytes isn't an IP like 222.173.190.239)
-    ("hex", "ipv4"),
-    ("hex", "ipv6"),
-    ("hex", "ip"),
-    // Hex bytes shouldn't be interpreted as colors
-    // (use #DEADBEEF explicitly for color interpretation)
-    ("hex", "color-rgb"),
-    ("hex", "color-hsl"),
-    // MAC address bytes shouldn't be interpreted as IPs or colors
-    // (6 bytes of MAC aren't an IPv4/IPv6 address or color)
-    ("mac-address", "ipv4"),
-    ("mac-address", "ipv6"),
-    ("mac-address", "color-rgb"),
-    ("mac-address", "color-hsl"),
-];
+        // --- Human text ---
+        "text" | "utf8" => Category::Text,
 
-/// Nonsensical source→target combinations to filter out.
-/// These are conversions that technically work but are never useful.
-const BLOCKED_PATHS: &[(&str, &str)] = &[
-    // IP addresses aren't msgpack-encoded data
-    ("ipv4", "msgpack"),
-    ("ipv6", "msgpack"),
-    // UUIDs aren't msgpack-encoded data
-    ("uuid", "msgpack"),
-    // IP addresses aren't timestamps
-    ("ipv4", "epoch-seconds"),
-    ("ipv4", "epoch-millis"),
-    ("ipv4", "apple-cocoa"),
-    ("ipv4", "filetime"),
-    // UUIDs aren't timestamps (except v1, but that's handled separately)
-    ("uuid", "epoch-seconds"),
-    ("uuid", "epoch-millis"),
-    ("uuid", "apple-cocoa"),
-    ("uuid", "filetime"),
-    // Expression results - filter noise, keep primary result and hex/binary/octal representations
-    ("expr", "msgpack"),
-    ("expr", "octal"),
-    ("expr", "datasize"),
-    ("expr", "datasize-iec"),
-    ("expr", "datasize-si"),
-    ("expr", "duration"),
-    ("expr", "duration-ms"),
-    ("expr", "decimal"),
-    // Data sizes aren't durations
-    ("datasize", "duration"),
-    ("datasize", "duration-ms"),
-    // Durations aren't data sizes or re-interpreted as different time scales
-    ("duration", "datasize"),
-    ("duration", "datasize-iec"),
-    ("duration", "datasize-si"),
-    ("duration", "duration-ms"),
-    // Colors aren't timestamps or data sizes
-    ("color-hex", "duration"),
-    ("color-hex", "duration-ms"),
-    ("color-hex", "datasize"),
-    ("color-hex", "datasize-iec"),
-    ("color-hex", "datasize-si"),
-    ("color-rgb", "duration"),
-    ("color-rgb", "duration-ms"),
-    ("color-rgb", "datasize"),
-    ("color-rgb", "datasize-iec"),
-    ("color-rgb", "datasize-si"),
-    ("color-hsl", "duration"),
-    ("color-hsl", "duration-ms"),
-    ("color-hsl", "datasize"),
-    ("color-hsl", "datasize-iec"),
-    ("color-hsl", "datasize-si"),
-    // Hexdump output is for display only - don't re-encode it
-    ("hexdump", "bytes"),
-    ("hexdump", "url-encoded"),
-    ("hexdump", "escape-unicode"),
-    ("hexdump", "escape-hex"),
-    ("hexdump", "msgpack"),
-    // URL-encoded shouldn't chain further (double/triple encoding is noise)
-    ("url-encoded", "url-encoded"),
-    ("url-encoded", "bytes"),
-    ("url-encoded", "escape-unicode"),
-    ("url-encoded", "escape-hex"),
-    // Plain text shouldn't produce noisy intermediate conversions
-    ("text", "url-encoded"),
-    ("text", "graph"),
-    ("text", "text"),
-    ("text", "msgpack"),
-    ("text", "escape-unicode"),
-    // Escape sequences are terminal display formats
-    ("escape-hex", "bytes"),
-    ("escape-hex", "url-encoded"),
-    ("escape-unicode", "bytes"),
-    ("escape-unicode", "url-encoded"),
-    // Text bytes shouldn't be interpreted as integers (the bytes represent characters, not numbers)
-    ("text", "int-be"),
-    ("text", "int-le"),
-    // Circular: text → bytes → utf8 just produces the original text again
-    ("text", "utf8"),
-    // Text bytes shouldn't be interpreted as IP addresses or colors
-    // (4 bytes of ASCII text like "test" aren't an IPv4 address or RGBA color)
-    ("text", "ipv4"),
-    ("text", "ipv6"),
-    ("text", "color-rgb"),
-    ("text", "color-hex"),
-    ("text", "color-hsl"),
-];
+        // --- Structural identifiers ---
+        "ip" | "ipv4" | "ipv6" | "cidr" | "netmask" | "wildcard" | "network-class"
+        | "private-network" | "broadcast" | "host-range" | "host-count" | "address-count"
+        | "uuid" | "ulid" | "color" | "color-hex" | "color-rgb" | "color-hsl" | "mac-address"
+        | "geohash" | "coords" | "plus-code" | "mgrs" | "utm" | "dms" | "ddm" | "dd" => {
+            Category::Identifier
+        }
 
-/// Check if a source→target conversion should be blocked (hardcoded rules only).
-fn is_blocked_path_builtin(source_format: &str, target_format: &str) -> bool {
-    // Check explicit blocked paths
-    if BLOCKED_PATHS
-        .iter()
-        .any(|(src, tgt)| source_format == *src && target_format == *tgt)
-    {
+        // --- Time ---
+        "epoch" | "epoch-seconds" | "epoch-millis" | "epoch-micros" | "epoch-nanos"
+        | "apple-cocoa" | "filetime" | "datetime" | "relative-time" => Category::Timestamp,
+        "duration" | "duration-ms" => Category::Duration,
+        "datasize" | "datasize-iec" | "datasize-si" => Category::DataSize,
+
+        // --- Dimensional units ---
+        "length" | "weight" | "volume" | "speed" | "pressure" | "angle" | "area" | "energy"
+        | "temperature" | "currency" => Category::Unit,
+
+        // --- Plain numbers ---
+        "int-be" | "int-le" | "decimal" => Category::Number,
+
+        // --- Expression ---
+        "expr" | "result" => Category::Expression,
+
+        _ => Category::Other,
+    }
+}
+
+/// Structural identifiers require real syntax (dotted quads, hyphenated UUID
+/// groups, `#`-prefixed colours), so they must never be read out of an arbitrary
+/// byte blob - a run of ASCII text or a hex dump is not an IP / colour / UUID
+/// just because it has the right length. This applies to *any* raw-byte root
+/// regardless of path (e.g. `hex → bytes → ipv4`). Identifier roots are excluded
+/// here so that same-family conversions (colour→colour space, CIDR sub-fields)
+/// stay open; cross-family cases (e.g. mac→ip) are the residual pair list.
+fn root_blocks_identifier(root_cat: Category) -> bool {
+    matches!(root_cat, Category::Encoding | Category::Text)
+}
+
+/// Categories a raw-byte value can legitimately be *read as* a number/quantity:
+/// interpreting hex bytes as an integer, a timestamp, or a data size is the
+/// whole point of the tool. Plain human text, however, is none of these - "test"
+/// is not the integer 1952805748 or an epoch - so text roots block them too.
+fn is_numeric_interpretation(cat: Category) -> bool {
+    matches!(
+        cat,
+        Category::Number | Category::Timestamp | Category::Duration | Category::DataSize
+    )
+}
+
+/// A "quantity" is a number that measures something in a specific dimension.
+fn is_quantity_category(cat: Category) -> bool {
+    matches!(
+        cat,
+        Category::Timestamp | Category::Duration | Category::DataSize | Category::Unit
+    )
+}
+
+/// Category-level blocking policy. Returns true when a conversion from
+/// `source_cat` (immediate source) to `target_cat` is never useful.
+///
+/// Replaces the bulk of the old BLOCKED_PATHS pairs with two rules:
+///
+/// - A structural identifier (IP, UUID, colour, MAC) is a *decoded value*. Its
+///   underlying integer can still be shown (Identifier → Number is fine - a
+///   colour's `0xFF5733`, an IP's integer), but re-reading it as a *quantity*
+///   (a timestamp, duration, or data size) is nonsense: an IP is not an epoch,
+///   a colour is not "16 MB".
+/// - A quantity in one dimension is never a quantity in another dimension - a
+///   duration is not a data size, a temperature is not a length. (Same-dimension
+///   conversions like `length → length` are produced inside one format and never
+///   reach this cross-category check.)
+fn category_rule_blocks(source_cat: Category, target_cat: Category) -> bool {
+    // Identifiers must not be re-read as a measured quantity.
+    if source_cat == Category::Identifier && is_quantity_category(target_cat) {
         return true;
     }
 
-    // Block unit format cross-conversions
-    // (e.g., length -> temperature targets like "celsius")
-    if UNIT_FORMATS.contains(&source_format) && UNIT_TARGETS.contains(&target_format) {
-        // Check if target belongs to a different unit type
-        // Allow same-type conversions (length -> meters, etc.)
-        let source_owns_target = match source_format {
-            "length" => matches!(
-                target_format,
-                "meters"
-                    | "kilometers"
-                    | "centimeters"
-                    | "millimeters"
-                    | "feet"
-                    | "miles"
-                    | "inches"
-            ),
-            "weight" => matches!(
-                target_format,
-                "grams" | "kilograms" | "milligrams" | "pounds" | "ounces"
-            ),
-            "volume" => matches!(
-                target_format,
-                "milliliters" | "liters" | "gallons" | "fluid ounces" | "cups"
-            ),
-            "speed" => matches!(target_format, "m/s" | "km/h" | "mph" | "knots"),
-            "pressure" => matches!(
-                target_format,
-                "pascals" | "kilopascals" | "megapascals" | "bar" | "psi" | "atmospheres"
-            ),
-            "angle" => matches!(target_format, "degrees" | "radians" | "gradians" | "turns"),
-            "area" => matches!(
-                target_format,
-                "square meters"
-                    | "square kilometers"
-                    | "square centimeters"
-                    | "square feet"
-                    | "acres"
-                    | "hectares"
-            ),
-            "energy" => matches!(
-                target_format,
-                "joules"
-                    | "kilojoules"
-                    | "megajoules"
-                    | "calories"
-                    | "kilocalories"
-                    | "kilowatt-hours"
-            ),
-            "temperature" => matches!(target_format, "celsius" | "fahrenheit" | "kelvin"),
-            _ => false,
-        };
-        if !source_owns_target {
-            return true;
-        }
+    // No cross-dimension quantity conversions.
+    if is_quantity_category(source_cat)
+        && is_quantity_category(target_cat)
+        && source_cat != target_cat
+    {
+        return true;
     }
 
     false
 }
 
+/// Small residual list of (source, target) blocks that are genuinely specific
+/// and not worth generalising into a category rule.
+///
+/// Kept deliberately short - each entry is a concrete "this exact chain is
+/// noise" case that a category rule would either miss or over-apply:
+/// - terminal display/encoding formats that must not chain into further
+///   encodings (hexdump/url-encoded/escape-* are for viewing, not re-encoding);
+/// - identifiers and expression results that should not be re-serialised as
+///   binary containers or re-derived as numbers/sizes/durations;
+/// - a couple of `text` circular/noise edges.
+const RESIDUAL_BLOCKED_PATHS: &[(&str, &str)] = &[
+    // Structural identifiers / expression results aren't binary-container data.
+    ("ipv4", "msgpack"),
+    ("ipv6", "msgpack"),
+    ("uuid", "msgpack"),
+    ("expr", "msgpack"),
+    // Expression results: keep the primary result + hex/binary notations, drop
+    // the speculative numeric re-readings (these are Number/Unit/Duration cats
+    // but expr is Expression, so no category rule covers them).
+    ("expr", "octal"),
+    ("expr", "decimal"),
+    ("expr", "datasize"),
+    ("expr", "datasize-iec"),
+    ("expr", "datasize-si"),
+    ("expr", "duration"),
+    ("expr", "duration-ms"),
+    // Terminal display / encoding formats must not chain into more encodings.
+    ("hexdump", "bytes"),
+    ("hexdump", "url-encoded"),
+    ("hexdump", "escape-unicode"),
+    ("hexdump", "escape-hex"),
+    ("hexdump", "msgpack"),
+    ("url-encoded", "url-encoded"),
+    ("url-encoded", "bytes"),
+    ("url-encoded", "escape-unicode"),
+    ("url-encoded", "escape-hex"),
+    ("escape-hex", "bytes"),
+    ("escape-hex", "url-encoded"),
+    ("escape-unicode", "bytes"),
+    ("escape-unicode", "url-encoded"),
+    // Plain-text noise edges.
+    ("text", "url-encoded"),
+    ("text", "graph"),
+    ("text", "msgpack"),
+    ("text", "escape-unicode"),
+    // Circular: text → bytes → utf8 just reproduces the original text.
+    ("text", "utf8"),
+    // A duration shown in a different time scale is a redundant re-scaling.
+    ("duration", "duration-ms"),
+];
+
+/// Residual root-based blocks: a target that must not be reached from a given
+/// root on *any* path, for cases a category rule would over- or under-apply.
+///
+/// The only remaining case is cross-family identifier confusion: a MAC address
+/// is a structural identifier, so `root_blocks_identifier` doesn't cover it, yet
+/// its 6 bytes are not an IP address or a colour. (Same-family conversions like
+/// mac → its own notations stay open.)
+const RESIDUAL_ROOT_BLOCKED: &[(&str, &str)] = &[
+    ("mac-address", "ipv4"),
+    ("mac-address", "ipv6"),
+    ("mac-address", "color-rgb"),
+    ("mac-address", "color-hsl"),
+    ("mac-address", "color-hex"),
+];
+
+/// Check if a source→target conversion should be blocked (builtin rules only).
+fn is_blocked_path_builtin(source_format: &str, target_format: &str) -> bool {
+    let source_cat = category_of(source_format);
+    let target_cat = category_of(target_format);
+
+    // Category-level policy.
+    if category_rule_blocks(source_cat, target_cat) {
+        return true;
+    }
+
+    // Residual specific pairs.
+    RESIDUAL_BLOCKED_PATHS
+        .iter()
+        .any(|(src, tgt)| source_format == *src && target_format == *tgt)
+}
+
 /// Check if a target is blocked based on root interpretation (builtin rules).
+///
+/// Two category rules replace the entire hand-written ROOT_BLOCKED_TARGETS list:
+///
+/// 1. Structural identifiers (IP, colour, UUID) can't be read out of an
+///    arbitrary byte blob - block them for encoding / text / identifier roots,
+///    on any path.
+/// 2. Plain human text is not a number, timestamp, duration, or data size, so a
+///    `text` root additionally blocks those numeric interpretations. (Encoding
+///    roots like `hex` deliberately keep them - hex → int → epoch is the point.)
 fn is_root_blocked_builtin(root_format: &str, target_format: &str) -> bool {
-    ROOT_BLOCKED_TARGETS
+    let root_cat = category_of(root_format);
+    let target_cat = category_of(target_format);
+
+    if target_cat == Category::Identifier && root_blocks_identifier(root_cat) {
+        return true;
+    }
+
+    if root_cat == Category::Text && is_numeric_interpretation(target_cat) {
+        return true;
+    }
+
+    // Residual cross-family identifier cases (e.g. mac-address → ipv4).
+    RESIDUAL_ROOT_BLOCKED
         .iter()
         .any(|(root, target)| root_format == *root && target_format == *target)
 }
@@ -919,5 +887,55 @@ mod tests {
                 .map(|c| &c.target_format)
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn test_category_classification() {
+        assert_eq!(category_of("hex"), Category::Encoding);
+        assert_eq!(category_of("text"), Category::Text);
+        assert_eq!(category_of("ipv4"), Category::Identifier);
+        assert_eq!(category_of("color-hex"), Category::Identifier);
+        assert_eq!(category_of("epoch-seconds"), Category::Timestamp);
+        assert_eq!(category_of("duration-ms"), Category::Duration);
+        assert_eq!(category_of("datasize-iec"), Category::DataSize);
+        assert_eq!(category_of("length"), Category::Unit);
+        assert_eq!(category_of("int-be"), Category::Number);
+        assert_eq!(category_of("expr"), Category::Expression);
+        assert_eq!(category_of("json"), Category::Other);
+    }
+
+    #[test]
+    fn test_category_blocking_rules() {
+        // Raw-byte roots may be read as numbers/timestamps (that's the point)...
+        assert!(!is_root_blocked_builtin("hex", "epoch-seconds"));
+        assert!(!is_root_blocked_builtin("hex", "int-be"));
+        assert!(!is_root_blocked_builtin("hex", "datasize-iec"));
+        // ...but never as structural identifiers.
+        assert!(is_root_blocked_builtin("hex", "ipv4"));
+        assert!(is_root_blocked_builtin("hex", "color-hex"));
+        assert!(is_root_blocked_builtin("text", "uuid"));
+
+        // Plain text is not a number/timestamp/size either.
+        assert!(is_root_blocked_builtin("text", "int-be"));
+        assert!(is_root_blocked_builtin("text", "epoch-seconds"));
+        assert!(is_root_blocked_builtin("text", "datasize"));
+
+        // Identifiers keep their raw integer but are not re-read as quantities.
+        assert!(!is_blocked_path_builtin("ipv4", "decimal"));
+        assert!(is_blocked_path_builtin("ipv4", "epoch-seconds"));
+        assert!(is_blocked_path_builtin("uuid", "apple-cocoa"));
+        assert!(is_blocked_path_builtin("color-hex", "datasize"));
+
+        // No cross-dimension quantity conversions.
+        assert!(is_blocked_path_builtin("duration", "datasize"));
+        assert!(is_blocked_path_builtin("datasize", "duration"));
+
+        // Same-family identifier conversions stay open (colour spaces, CIDR).
+        assert!(!is_blocked_path_builtin("color-hex", "color-rgb"));
+        assert!(!is_blocked_path_builtin("color-hex", "color-hsl"));
+
+        // Cross-family identifiers are the residual root list (mac ≠ ip/colour).
+        assert!(is_root_blocked_builtin("mac-address", "ipv4"));
+        assert!(is_root_blocked_builtin("mac-address", "color-hex"));
     }
 }

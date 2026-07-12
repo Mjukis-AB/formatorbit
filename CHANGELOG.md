@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Blocking rules are now category-based** - the conversion graph classifies
+  every format and conversion target into a category (Encoding, Text,
+  Identifier, Timestamp, Duration, DataSize, Unit, Number, ...) and expresses its
+  noise policy as a few category-level rules: raw-byte roots can't yield
+  structural identifiers, plain text isn't a number/timestamp/size, identifiers
+  aren't re-read as quantities, and quantities don't cross dimensions. This
+  replaces ~92 hand-maintained (source, target) pairs plus a duplicated ~90-entry
+  unit-target list with ~35 residual pairs, and completes a previously
+  half-applied rule (raw hex is no longer offered as a `color-hex` swatch, matching
+  the existing block on `color-rgb`/`color-hsl`). User `BlockingConfig` (blocked
+  formats / paths / root paths) is unchanged.
+
 ### Fixed
 - **Deduped identical JSON renderings** - JWTs (and other structured inputs)
   no longer print a `json` and a `json-formatted` conversion with byte-identical

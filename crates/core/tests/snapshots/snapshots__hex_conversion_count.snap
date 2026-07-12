@@ -2,4 +2,4 @@
 source: crates/core/tests/snapshots.rs
 expression: count
 ---
-25
+24
