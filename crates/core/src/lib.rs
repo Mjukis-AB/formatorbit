@@ -225,7 +225,7 @@ impl Formatorbit {
             // Natural conversion queries ("5 km in miles", "100 USD to EUR").
             // Before the plain unit formats so the query interpretation wins
             // when the phrase shape matches.
-            Box::new(NaturalConvertFormat::default()),
+            Box::new(NaturalConvertFormat),
             // Unit conversions
             Box::new(LengthFormat),
             Box::new(WeightFormat),
@@ -337,6 +337,30 @@ impl Formatorbit {
         conversions
     }
 
+    fn convert_excluding_input(
+        &self,
+        value: &CoreValue,
+        source_format: &str,
+        source_input: &str,
+    ) -> Vec<Conversion> {
+        #[allow(unused_mut)]
+        let mut conversions = convert::find_all_conversions_for_input(
+            &self.formats,
+            value,
+            Some(source_format),
+            Some(source_format),
+            source_input,
+            self.config.as_ref(),
+        );
+
+        #[cfg(feature = "python")]
+        if let Some(ref plugins) = self.plugins {
+            conversions.extend(self.get_plugin_traits(value, source_format, plugins));
+        }
+
+        conversions
+    }
+
     /// Get trait conversions from plugins.
     #[cfg(feature = "python")]
     fn get_plugin_traits(
@@ -427,7 +451,8 @@ impl Formatorbit {
             .into_iter()
             .map(|interp| {
                 // Skip self-conversion (e.g., hex→hex)
-                let conversions = self.convert_excluding(&interp.value, &interp.source_format);
+                let conversions =
+                    self.convert_excluding_input(&interp.value, &interp.source_format, input);
                 ConversionResult {
                     input: input.to_string(),
                     interpretation: interp,
@@ -597,7 +622,8 @@ impl Formatorbit {
             .into_iter()
             .map(|interp| {
                 // Skip self-conversion (e.g., hex→hex)
-                let conversions = self.convert_excluding(&interp.value, &interp.source_format);
+                let conversions =
+                    self.convert_excluding_input(&interp.value, &interp.source_format, input);
                 ConversionResult {
                     input: input.to_string(),
                     interpretation: interp,

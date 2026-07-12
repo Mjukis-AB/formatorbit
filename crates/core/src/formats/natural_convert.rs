@@ -37,21 +37,10 @@ use crate::formats::units::{
     format_value, AngleFormat, AreaFormat, EnergyFormat, LengthFormat, PressureFormat, SpeedFormat,
     VolumeFormat, WeightFormat,
 };
-use std::sync::Mutex;
-
 use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
 
 #[derive(Default)]
-pub struct NaturalConvertFormat {
-    /// The most recent resolved answer: `(interpretation value, rendered target)`.
-    ///
-    /// `Format::source_conversions` only receives the parsed value, so `parse`
-    /// stashes the requested target's rendering here and `source_conversions`
-    /// re-emits it as the Primary result — but only when the stashed value
-    /// matches the value it is asked about, so a stale entry can never leak
-    /// onto an unrelated input.
-    last_answer: Mutex<Option<(CoreValue, String)>>,
-}
+pub struct NaturalConvertFormat;
 
 /// Result of resolving a conversion query.
 struct QueryAnswer {
@@ -327,15 +316,6 @@ impl Format for NaturalConvertFormat {
             return vec![];
         };
 
-        // Stash the target rendering so source_conversions can emit it as the
-        // Primary result (its signature only receives the value).
-        if let Ok(mut stash) = self.last_answer.lock() {
-            *stash = answer
-                .result
-                .as_ref()
-                .map(|r| (answer.value.clone(), r.clone()));
-        }
-
         vec![Interpretation {
             value: answer.value,
             source_format: "convert-query".to_string(),
@@ -358,16 +338,17 @@ impl Format for NaturalConvertFormat {
         vec![]
     }
 
-    fn source_conversions(&self, value: &CoreValue) -> Vec<Conversion> {
-        // Emit the requested target as the Primary result, using the rendering
-        // stashed by `parse`. The value match guards against stale entries.
-        let display = match self.last_answer.lock() {
-            Ok(stash) => match stash.as_ref() {
-                Some((stashed_value, display)) if stashed_value == value => display.clone(),
-                _ => return vec![],
-            },
-            Err(_) => return vec![],
+    fn source_conversions_for_input(&self, input: &str, value: &CoreValue) -> Vec<Conversion> {
+        let Some(answer) = Self::resolve(input) else {
+            return vec![];
         };
+        if &answer.value != value {
+            return vec![];
+        }
+        let Some(display) = answer.result else {
+            return vec![];
+        };
+
         vec![Conversion::new(value.clone(), "result", display.clone())
             .steps(vec![ConversionStep {
                 format: "result".to_string(),
@@ -436,7 +417,7 @@ mod tests {
 
     #[test]
     fn prose_does_not_match() {
-        let format = NaturalConvertFormat::default();
+        let format = NaturalConvertFormat;
         // No value+unit on the left → must not match.
         assert!(format.parse("log in now").is_empty());
         assert!(format.parse("please sign in here").is_empty());
@@ -447,7 +428,7 @@ mod tests {
 
     #[test]
     fn high_confidence_on_match() {
-        let format = NaturalConvertFormat::default();
+        let format = NaturalConvertFormat;
         let interps = format.parse("5 km in miles");
         assert_eq!(interps.len(), 1);
         assert!((interps[0].confidence - 0.95).abs() < 1e-6);
@@ -455,18 +436,54 @@ mod tests {
 
     #[test]
     fn source_conversions_emit_primary_result() {
-        let format = NaturalConvertFormat::default();
+        let format = NaturalConvertFormat;
         let interps = format.parse("5 km in miles");
         assert_eq!(interps.len(), 1);
 
-        let convs = format.source_conversions(&interps[0].value);
+        let convs = format.source_conversions_for_input("5 km in miles", &interps[0].value);
         assert_eq!(convs.len(), 1);
         assert_eq!(convs[0].target_format, "result");
         assert_eq!(convs[0].priority, ConversionPriority::Primary);
         assert!(convs[0].display.contains("3.1"), "got {}", convs[0].display);
 
-        // A different value must NOT pick up the stale stash.
+        // A different value must not receive this input's result.
         let unrelated = CoreValue::Length(42.0);
-        assert!(format.source_conversions(&unrelated).is_empty());
+        assert!(format
+            .source_conversions_for_input("5 km in miles", &unrelated)
+            .is_empty());
+    }
+
+    #[test]
+    fn source_conversions_are_request_local() {
+        let format = NaturalConvertFormat;
+        let value = CoreValue::Length(5000.0);
+
+        let miles = format.source_conversions_for_input("5 km to miles", &value);
+        let feet = format.source_conversions_for_input("5 km to feet", &value);
+
+        assert!(miles[0].display.contains("miles"));
+        assert!(feet[0].display.contains("feet"));
+    }
+
+    #[test]
+    fn convert_all_keeps_results_request_local() {
+        let forb = crate::Formatorbit::new();
+
+        let result = |input: &str| {
+            forb.convert_all(input)
+                .into_iter()
+                .find(|r| r.interpretation.source_format == "convert-query")
+                .and_then(|r| {
+                    r.conversions
+                        .into_iter()
+                        .find(|c| c.target_format == "result")
+                })
+                .map(|c| c.display)
+                .expect("conversion query should emit a primary result")
+        };
+
+        assert!(result("5 km to miles").contains("miles"));
+        assert!(result("5 km to feet").contains("feet"));
+        assert!(result("5 km to miles").contains("miles"));
     }
 }

@@ -373,6 +373,44 @@ pub fn find_all_conversions(
     source_format: Option<&str>,
     config: Option<&ConversionConfig>,
 ) -> Vec<Conversion> {
+    find_all_conversions_internal(
+        formats,
+        initial,
+        exclude_format,
+        source_format,
+        None,
+        config,
+    )
+}
+
+/// Find all conversions while preserving the original source input for
+/// source-specific conversions.
+pub(crate) fn find_all_conversions_for_input(
+    formats: &[Box<dyn Format>],
+    initial: &CoreValue,
+    exclude_format: Option<&str>,
+    source_format: Option<&str>,
+    source_input: &str,
+    config: Option<&ConversionConfig>,
+) -> Vec<Conversion> {
+    find_all_conversions_internal(
+        formats,
+        initial,
+        exclude_format,
+        source_format,
+        Some(source_input),
+        config,
+    )
+}
+
+fn find_all_conversions_internal(
+    formats: &[Box<dyn Format>],
+    initial: &CoreValue,
+    exclude_format: Option<&str>,
+    source_format: Option<&str>,
+    source_input: Option<&str>,
+    config: Option<&ConversionConfig>,
+) -> Vec<Conversion> {
     let blocking = config.map(|c| &c.blocking);
     let priority = config.map(|c| &c.priority);
     let mut results = Vec::new();
@@ -406,7 +444,11 @@ pub fn find_all_conversions(
     // not applicable to values from other sources during BFS.
     if let Some(source_fmt) = source_format {
         if let Some(format) = formats.iter().find(|f| f.id() == source_fmt) {
-            for mut conv in format.source_conversions(initial) {
+            let source_conversions = source_input.map_or_else(
+                || format.source_conversions(initial),
+                |input| format.source_conversions_for_input(input, initial),
+            );
+            for mut conv in source_conversions {
                 // Build path including source format
                 let mut path = vec![source_fmt.to_string()];
                 path.push(conv.target_format.clone());
@@ -711,11 +753,11 @@ fn semantic_subrank(conv: &Conversion) -> u8 {
 
 /// Sort conversions by priority, respecting user configuration.
 ///
-/// Ordering is: category (priority) → kind (Conversion > Representation > Trait)
-/// → semantic sub-rank (timestamps > other > size/duration) → path depth
-/// (shallower first) → user format offset. Priority always dominates so semantic
-/// results (datetime, uuid, ip) rank above encodings, and within a category real
-/// transformations beat notation variants and speculative numeric readings.
+/// Ordering is: category (priority) → user format offset → kind (Conversion >
+/// Representation > Trait) → semantic sub-rank (timestamps > other >
+/// size/duration) → path depth (shallower first). Category priority always
+/// dominates, while an explicit per-format offset overrides the default
+/// within-category heuristics.
 fn sort_conversions(results: &mut [Conversion], priority_config: Option<&PriorityConfig>) {
     results.sort_by(|a, b| {
         // Category key: user-configured order if present, else the enum order.
@@ -731,16 +773,16 @@ fn sort_conversions(results: &mut [Conversion], priority_config: Option<&Priorit
             return cat_a.cmp(&cat_b);
         }
 
-        // Within the same category: prefer real conversions over notation/traits,
-        // then the semantic sub-rank, then shallower paths, then user offset.
+        // Within the same category, user configuration takes precedence over
+        // the default kind/semantic/depth heuristics.
         let off_a = priority_config.map_or(0, |c| c.format_offset(&a.target_format));
         let off_b = priority_config.map_or(0, |c| c.format_offset(&b.target_format));
 
-        kind_rank(a.kind)
-            .cmp(&kind_rank(b.kind))
+        off_b
+            .cmp(&off_a)
+            .then_with(|| kind_rank(a.kind).cmp(&kind_rank(b.kind)))
             .then_with(|| semantic_subrank(a).cmp(&semantic_subrank(b)))
             .then_with(|| a.path.len().cmp(&b.path.len()))
-            .then_with(|| off_b.cmp(&off_a))
     });
 }
 
@@ -888,6 +930,33 @@ mod tests {
                 .map(|c| &c.target_format)
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn test_format_offset_overrides_default_within_category_order() {
+        use crate::types::PriorityAdjustment;
+        use std::collections::HashMap;
+
+        let mut conversions = vec![
+            Conversion::new(
+                CoreValue::String("configured".into()),
+                "configured",
+                "configured",
+            )
+            .kind(ConversionKind::Representation),
+            Conversion::new(CoreValue::String("default".into()), "default", "default"),
+        ];
+        let priority = PriorityConfig {
+            category_order: vec![],
+            format_priority: HashMap::from([
+                ("configured".to_string(), PriorityAdjustment::Offset(100)),
+                ("default".to_string(), PriorityAdjustment::Offset(-100)),
+            ]),
+        };
+
+        sort_conversions(&mut conversions, Some(&priority));
+
+        assert_eq!(conversions[0].target_format, "configured");
     }
 
     #[test]

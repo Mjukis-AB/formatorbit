@@ -114,23 +114,24 @@ impl ExprFormat {
             return expr.to_string();
         }
         let mut out = String::with_capacity(expr.len());
-        let bytes = expr.as_bytes();
         let mut i = 0;
-        while i < bytes.len() {
-            if bytes[i] == b'(' {
+        while i < expr.len() {
+            let ch = expr[i..].chars().next().expect("valid char boundary");
+            if ch == '(' {
                 // Find the matching close paren.
                 let mut depth = 1;
-                let mut j = i + 1;
-                while j < bytes.len() && depth > 0 {
-                    match bytes[j] {
-                        b'(' => depth += 1,
-                        b')' => depth -= 1,
+                let mut j = i + ch.len_utf8();
+                while j < expr.len() && depth > 0 {
+                    let nested = expr[j..].chars().next().expect("valid char boundary");
+                    match nested {
+                        '(' => depth += 1,
+                        ')' => depth -= 1,
                         _ => {}
                     }
-                    j += 1;
+                    j += nested.len_utf8();
                 }
                 if depth == 0 {
-                    let inner = &expr[i + 1..j - 1];
+                    let inner = &expr[i + ch.len_utf8()..j - ')'.len_utf8()];
                     out.push('(');
                     out.push_str(&Self::rewrite_bitwise(inner));
                     out.push(')');
@@ -138,8 +139,8 @@ impl ExprFormat {
                     continue;
                 }
             }
-            out.push(bytes[i] as char);
-            i += 1;
+            out.push(ch);
+            i += ch.len_utf8();
         }
         out
     }
@@ -533,6 +534,12 @@ mod tests {
         assert_int("(1 | 2) & 4", 0);
         // Nested chain inside parens still reduces: (1 | 2 | 4) == 7
         assert_int("(1 | 2 | 4)", 7);
+    }
+
+    #[test]
+    fn test_preprocess_preserves_utf8_around_parens() {
+        assert_eq!(ExprFormat::preprocess("Å + (1)"), "Å + (1)");
+        assert_eq!(ExprFormat::preprocess("(1) + π"), "(1) + π");
     }
 
     #[test]

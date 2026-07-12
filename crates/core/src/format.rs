@@ -93,6 +93,15 @@ pub trait Format: Send + Sync {
         vec![]
     }
 
+    /// Get source-only conversions with access to the original input.
+    ///
+    /// Most formats only need the parsed value and can use the default
+    /// implementation. Formats whose source conversion depends on request-local
+    /// syntax can override this instead of storing input-specific state.
+    fn source_conversions_for_input(&self, _input: &str, value: &CoreValue) -> Vec<Conversion> {
+        self.source_conversions(value)
+    }
+
     /// Short aliases for this format (e.g., "b64" for "base64").
     fn aliases(&self) -> &'static [&'static str] {
         &[]
