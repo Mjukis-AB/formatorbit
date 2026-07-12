@@ -196,21 +196,22 @@ impl Format for LengthFormat {
 
         // Primary result: decimal meters (canonical base unit value)
         let dec_display = format!("{} m", format_decimal(meters));
-        conversions.push(Conversion {
-            value: CoreValue::Length(meters),
-            target_format: "meters-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["meters-decimal".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Length(meters),
+                "meters-decimal",
+                dec_display.clone(),
+            )
+            .path(vec!["meters-decimal".to_string()])
+            .steps(vec![ConversionStep {
                 format: "meters-decimal".to_string(),
                 value: CoreValue::Length(meters),
                 display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Primary)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
@@ -226,20 +227,21 @@ impl Format for LengthFormat {
                 ConversionKind::Representation
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Length(converted * multiplier), // Keep in meters
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Length(converted * multiplier), // Keep in meters
+                    (*name).to_string(),
+                    display.clone(),
+                )
+                .path(vec![(*name).to_string()])
+                .steps(vec![ConversionStep {
                     format: (*name).to_string(),
                     value: CoreValue::Length(converted * multiplier),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(kind),
+            );
         }
 
         // Additional representations for the base unit (meters)
@@ -248,38 +250,36 @@ impl Format for LengthFormat {
         let sci_display = format!("{} m", format_scientific(meters));
 
         // SI prefix representation (e.g., "5 nm", "2.5 µm", "3 km")
-        conversions.push(Conversion {
-            value: CoreValue::Length(meters),
-            target_format: "meters-si".to_string(),
-            display: si_display.clone(),
-            path: vec!["meters-si".to_string()],
-            steps: vec![ConversionStep {
-                format: "meters-si".to_string(),
-                value: CoreValue::Length(meters),
-                display: si_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Length(meters), "meters-si", si_display.clone())
+                .path(vec!["meters-si".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "meters-si".to_string(),
+                    value: CoreValue::Length(meters),
+                    display: si_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         // Scientific notation (e.g., "5e-9 m")
-        conversions.push(Conversion {
-            value: CoreValue::Length(meters),
-            target_format: "meters-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["meters-scientific".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Length(meters),
+                "meters-scientific",
+                sci_display.clone(),
+            )
+            .path(vec!["meters-scientific".to_string()])
+            .steps(vec![ConversionStep {
                 format: "meters-scientific".to_string(),
                 value: CoreValue::Length(meters),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         conversions
     }

@@ -200,21 +200,18 @@ impl Format for AreaFormat {
 
         // Primary result: decimal square meters (canonical base unit value)
         let dec_display = format!("{} m²", format_decimal(sqm));
-        conversions.push(Conversion {
-            value: CoreValue::Area(sqm),
-            target_format: "sqm-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["sqm-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "sqm-decimal".to_string(),
-                value: CoreValue::Area(sqm),
-                display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Area(sqm), "sqm-decimal", dec_display.clone())
+                .path(vec!["sqm-decimal".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "sqm-decimal".to_string(),
+                    value: CoreValue::Area(sqm),
+                    display: dec_display,
+                }])
+                .priority(ConversionPriority::Primary)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
@@ -230,39 +227,33 @@ impl Format for AreaFormat {
                 ConversionKind::Representation
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Area(sqm),
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
-                    format: (*name).to_string(),
-                    value: CoreValue::Area(sqm),
-                    display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::Area(sqm), (*name).to_string(), display.clone())
+                    .path(vec![(*name).to_string()])
+                    .steps(vec![ConversionStep {
+                        format: (*name).to_string(),
+                        value: CoreValue::Area(sqm),
+                        display,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(kind),
+            );
         }
 
         // Additional representation: scientific notation
         let sci_display = format!("{} m²", format_scientific(sqm));
-        conversions.push(Conversion {
-            value: CoreValue::Area(sqm),
-            target_format: "sqm-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["sqm-scientific".to_string()],
-            steps: vec![ConversionStep {
-                format: "sqm-scientific".to_string(),
-                value: CoreValue::Area(sqm),
-                display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Area(sqm), "sqm-scientific", sci_display.clone())
+                .path(vec!["sqm-scientific".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "sqm-scientific".to_string(),
+                    value: CoreValue::Area(sqm),
+                    display: sci_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         conversions
     }

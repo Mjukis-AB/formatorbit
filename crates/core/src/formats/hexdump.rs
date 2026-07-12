@@ -1,9 +1,7 @@
 //! Hexdump (xxd-style) format for viewing raw bytes.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
-};
+use crate::types::{Conversion, ConversionKind, ConversionStep, CoreValue, Interpretation};
 
 pub struct HexdumpFormat;
 
@@ -115,24 +113,20 @@ impl Format for HexdumpFormat {
 
         let display = Self::format_hexdump(bytes, 8); // Show up to 8 lines in conversion
 
-        vec![Conversion {
+        vec![Conversion::new(
+            CoreValue::String(display.clone()),
+            "hexdump",
+            display.clone(),
+        )
+        .path(vec!["hexdump".to_string()])
+        .steps(vec![ConversionStep {
+            format: "hexdump".to_string(),
             value: CoreValue::String(display.clone()),
-            target_format: "hexdump".to_string(),
-            display: display.clone(),
-            path: vec!["hexdump".to_string()],
-            steps: vec![ConversionStep {
-                format: "hexdump".to_string(),
-                value: CoreValue::String(display.clone()),
-                display,
-            }],
-            is_lossy: false,
-            // Priority between Encoding and Raw - shows when no structured data found
-            priority: ConversionPriority::Encoding,
-            display_only: true, // Terminal format - don't re-encode the hexdump string
-            kind: ConversionKind::Representation,
-            hidden: false,
-            rich_display: vec![],
-        }]
+            display,
+        }])
+        // Terminal format - don't re-encode the hexdump string
+        .display_only(true)
+        .kind(ConversionKind::Representation)]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

@@ -411,27 +411,28 @@ impl Format for CurrencyFormat {
 
             let display = Self::format_amount(converted, target);
 
-            conversions.push(Conversion {
-                value: CoreValue::Currency {
-                    amount: converted,
-                    code: (*target).to_string(),
-                },
-                target_format: target.to_lowercase(),
-                display: display.clone(),
-                path: vec![target.to_lowercase()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Currency {
+                        amount: converted,
+                        code: (*target).to_string(),
+                    },
+                    target.to_lowercase(),
+                    display.clone(),
+                )
+                .path(vec![target.to_lowercase()])
+                .steps(vec![ConversionStep {
                     format: target.to_lowercase(),
                     value: CoreValue::Currency {
                         amount: converted,
                         code: (*target).to_string(),
                     },
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+            );
         }
 
         // Convert to/from plugin currencies
@@ -452,27 +453,28 @@ impl Format for CurrencyFormat {
                 format!("{} {}", Self::format_number(converted), plugin_code)
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Currency {
-                    amount: converted,
-                    code: plugin_code.clone(),
-                },
-                target_format: plugin_code.to_lowercase(),
-                display: display.clone(),
-                path: vec![plugin_code.to_lowercase()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Currency {
+                        amount: converted,
+                        code: plugin_code.clone(),
+                    },
+                    plugin_code.to_lowercase(),
+                    display.clone(),
+                )
+                .path(vec![plugin_code.to_lowercase()])
+                .steps(vec![ConversionStep {
                     format: plugin_code.to_lowercase(),
                     value: CoreValue::Currency {
                         amount: converted,
                         code: plugin_code.clone(),
                     },
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+            );
         }
 
         conversions

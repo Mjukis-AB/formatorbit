@@ -132,21 +132,18 @@ impl Format for SpeedFormat {
 
         // Primary result: decimal m/s (canonical base unit value)
         let dec_display = format!("{} m/s", format_decimal(mps));
-        conversions.push(Conversion {
-            value: CoreValue::Speed(mps),
-            target_format: "m/s-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["m/s-decimal".to_string()],
-            steps: vec![ConversionStep {
-                format: "m/s-decimal".to_string(),
-                value: CoreValue::Speed(mps),
-                display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Speed(mps), "m/s-decimal", dec_display.clone())
+                .path(vec!["m/s-decimal".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "m/s-decimal".to_string(),
+                    value: CoreValue::Speed(mps),
+                    display: dec_display,
+                }])
+                .priority(ConversionPriority::Primary)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
@@ -162,39 +159,33 @@ impl Format for SpeedFormat {
                 ConversionKind::Representation
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Speed(mps),
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
-                    format: (*name).to_string(),
-                    value: CoreValue::Speed(mps),
-                    display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::Speed(mps), (*name).to_string(), display.clone())
+                    .path(vec![(*name).to_string()])
+                    .steps(vec![ConversionStep {
+                        format: (*name).to_string(),
+                        value: CoreValue::Speed(mps),
+                        display,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(kind),
+            );
         }
 
         // Additional representation: scientific notation
         let sci_display = format!("{} m/s", format_scientific(mps));
-        conversions.push(Conversion {
-            value: CoreValue::Speed(mps),
-            target_format: "m/s-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["m/s-scientific".to_string()],
-            steps: vec![ConversionStep {
-                format: "m/s-scientific".to_string(),
-                value: CoreValue::Speed(mps),
-                display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Speed(mps), "m/s-scientific", sci_display.clone())
+                .path(vec!["m/s-scientific".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "m/s-scientific".to_string(),
+                    value: CoreValue::Speed(mps),
+                    display: sci_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         conversions
     }

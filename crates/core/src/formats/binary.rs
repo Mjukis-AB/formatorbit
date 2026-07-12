@@ -1,7 +1,7 @@
 //! Binary format (0b prefix, space-separated, etc.).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionKind, CoreValue, Interpretation};
 
 pub struct BinaryFormat;
 
@@ -176,21 +176,16 @@ impl Format for BinaryFormat {
 
         // Only show the spaced binary format - it's more readable
         // For compact 0b format, binary-int from IntegerFormat provides this
-        vec![Conversion {
-            value: CoreValue::String(Self::bytes_to_binary_grouped(bytes)),
-            target_format: "binary".to_string(),
-            display: Self::bytes_to_binary_grouped(bytes),
-            path: vec!["binary".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority: ConversionPriority::Encoding,
-            // Display-only: the string "01001101 10101010" shouldn't be
-            // converted further (e.g. to bytes of ASCII digits)
-            display_only: true,
-            kind: ConversionKind::Representation,
-            hidden: false,
-            rich_display: vec![],
-        }]
+        vec![Conversion::new(
+            CoreValue::String(Self::bytes_to_binary_grouped(bytes)),
+            "binary",
+            Self::bytes_to_binary_grouped(bytes),
+        )
+        .path(vec!["binary".to_string()])
+        // Display-only: the string "01001101 10101010" shouldn't be
+        // converted further (e.g. to bytes of ASCII digits)
+        .display_only(true)
+        .kind(ConversionKind::Representation)]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

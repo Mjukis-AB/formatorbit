@@ -436,59 +436,62 @@ impl Format for DecimalFormat {
 
             // Hex representation - Representation kind
             let hex_display = format!("0x{:X}", val);
-            conversions.push(Conversion {
-                value: CoreValue::String(hex_display.clone()),
-                target_format: "hex-int".to_string(),
-                display: hex_display.clone(),
-                path: vec!["hex-int".to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::String(hex_display.clone()),
+                    "hex-int",
+                    hex_display.clone(),
+                )
+                .path(vec!["hex-int".to_string()])
+                .steps(vec![ConversionStep {
                     format: "hex-int".to_string(),
                     value: CoreValue::String(hex_display.clone()),
                     display: hex_display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+            );
 
             // Binary representation (only for reasonably small numbers)
             if val <= 0xFFFF_FFFF {
                 let bin_display = format!("0b{:b}", val);
-                conversions.push(Conversion {
-                    value: CoreValue::String(bin_display.clone()),
-                    target_format: "binary-int".to_string(),
-                    display: bin_display.clone(),
-                    path: vec!["binary-int".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(bin_display.clone()),
+                        "binary-int",
+                        bin_display.clone(),
+                    )
+                    .path(vec!["binary-int".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "binary-int".to_string(),
                         value: CoreValue::String(bin_display.clone()),
                         display: bin_display,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Representation)
+                    .display_only(true),
+                );
             }
 
             // Octal representation
             let oct_display = format!("0o{:o}", val);
-            conversions.push(Conversion {
-                value: CoreValue::String(oct_display.clone()),
-                target_format: "octal-int".to_string(),
-                display: oct_display.clone(),
-                path: vec!["octal-int".to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::String(oct_display.clone()),
+                    "octal-int",
+                    oct_display.clone(),
+                )
+                .path(vec!["octal-int".to_string()])
+                .steps(vec![ConversionStep {
                     format: "octal-int".to_string(),
                     value: CoreValue::String(oct_display.clone()),
                     display: oct_display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+            );
 
             // ASCII/Unicode character representation
             // Show character for printable ASCII (32-126) and valid Unicode codepoints
@@ -547,21 +550,22 @@ impl Format for DecimalFormat {
                     };
 
                     if !display.is_empty() {
-                        conversions.push(Conversion {
-                            value: CoreValue::String(ch.to_string()),
-                            target_format: "char".to_string(),
-                            display: display.clone(),
-                            path: vec!["char".to_string()],
-                            steps: vec![ConversionStep {
+                        conversions.push(
+                            Conversion::new(
+                                CoreValue::String(ch.to_string()),
+                                "char",
+                                display.clone(),
+                            )
+                            .path(vec!["char".to_string()])
+                            .steps(vec![ConversionStep {
                                 format: "char".to_string(),
                                 value: CoreValue::String(ch.to_string()),
                                 display,
-                            }],
-                            priority: ConversionPriority::Semantic,
-                            kind: ConversionKind::Representation,
-                            display_only: true,
-                            ..Default::default()
-                        });
+                            }])
+                            .priority(ConversionPriority::Semantic)
+                            .kind(ConversionKind::Representation)
+                            .display_only(true),
+                        );
                     }
                 }
             }
@@ -574,42 +578,44 @@ impl Format for DecimalFormat {
             if val >= 2 && val.is_power_of_two() {
                 let exp = val.trailing_zeros();
                 let display = format!("2^{}", exp);
-                conversions.push(Conversion {
-                    value: CoreValue::String(display.clone()),
-                    target_format: "power-of-2".to_string(),
-                    display: display.clone(),
-                    path: vec!["power-of-2".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(display.clone()),
+                        "power-of-2",
+                        display.clone(),
+                    )
+                    .path(vec!["power-of-2".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "power-of-2".to_string(),
                         value: CoreValue::String(display.clone()),
                         display,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Trait,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Trait)
+                    .display_only(true),
+                );
             }
 
             // Perfect square detection (for values >= 4, skip 0 and 1)
             if val >= 4 {
                 if let Some(root) = perfect_square_root(*int_val) {
                     let display = format!("{}²", root);
-                    conversions.push(Conversion {
-                        value: CoreValue::String(display.clone()),
-                        target_format: "perfect-square".to_string(),
-                        display: display.clone(),
-                        path: vec!["perfect-square".to_string()],
-                        steps: vec![ConversionStep {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::String(display.clone()),
+                            "perfect-square",
+                            display.clone(),
+                        )
+                        .path(vec!["perfect-square".to_string()])
+                        .steps(vec![ConversionStep {
                             format: "perfect-square".to_string(),
                             value: CoreValue::String(display.clone()),
                             display,
-                        }],
-                        priority: ConversionPriority::Semantic,
-                        kind: ConversionKind::Trait,
-                        display_only: true,
-                        ..Default::default()
-                    });
+                        }])
+                        .priority(ConversionPriority::Semantic)
+                        .kind(ConversionKind::Trait)
+                        .display_only(true),
+                    );
                 }
             }
         }
@@ -620,21 +626,18 @@ impl Format for DecimalFormat {
         if *int_val >= 2 {
             if let Some(true) = is_prime(*int_val) {
                 let display = "prime".to_string();
-                conversions.push(Conversion {
-                    value: CoreValue::String(display.clone()),
-                    target_format: "prime".to_string(),
-                    display: display.clone(),
-                    path: vec!["prime".to_string()],
-                    steps: vec![ConversionStep {
-                        format: "prime".to_string(),
-                        value: CoreValue::String(display.clone()),
-                        display,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Trait,
-                    display_only: true,
-                    ..Default::default()
-                });
+                conversions.push(
+                    Conversion::new(CoreValue::String(display.clone()), "prime", display.clone())
+                        .path(vec!["prime".to_string()])
+                        .steps(vec![ConversionStep {
+                            format: "prime".to_string(),
+                            value: CoreValue::String(display.clone()),
+                            display,
+                        }])
+                        .priority(ConversionPriority::Semantic)
+                        .kind(ConversionKind::Trait)
+                        .display_only(true),
+                );
             }
         }
 
@@ -644,21 +647,22 @@ impl Format for DecimalFormat {
                 // Skip fib(0)=0 and fib(1)=1, fib(2)=1 as they're trivial
                 if idx >= 3 {
                     let display = format!("fib({})", idx);
-                    conversions.push(Conversion {
-                        value: CoreValue::String(display.clone()),
-                        target_format: "fibonacci".to_string(),
-                        display: display.clone(),
-                        path: vec!["fibonacci".to_string()],
-                        steps: vec![ConversionStep {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::String(display.clone()),
+                            "fibonacci",
+                            display.clone(),
+                        )
+                        .path(vec!["fibonacci".to_string()])
+                        .steps(vec![ConversionStep {
                             format: "fibonacci".to_string(),
                             value: CoreValue::String(display.clone()),
                             display,
-                        }],
-                        priority: ConversionPriority::Semantic,
-                        kind: ConversionKind::Trait,
-                        display_only: true,
-                        ..Default::default()
-                    });
+                        }])
+                        .priority(ConversionPriority::Semantic)
+                        .kind(ConversionKind::Trait)
+                        .display_only(true),
+                    );
                 }
             }
         }
@@ -666,42 +670,44 @@ impl Format for DecimalFormat {
         // Perfect number detection
         if is_perfect(*int_val) {
             let display = "perfect".to_string();
-            conversions.push(Conversion {
-                value: CoreValue::String(display.clone()),
-                target_format: "perfect-number".to_string(),
-                display: display.clone(),
-                path: vec!["perfect-number".to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::String(display.clone()),
+                    "perfect-number",
+                    display.clone(),
+                )
+                .path(vec!["perfect-number".to_string()])
+                .steps(vec![ConversionStep {
                     format: "perfect-number".to_string(),
                     value: CoreValue::String(display.clone()),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Trait,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Trait)
+                .display_only(true),
+            );
         }
 
         // Triangular number detection (for positive values, skip trivial 0, 1)
         if *int_val >= 3 {
             if let Some(k) = triangular_root(*int_val) {
                 let display = format!("triangular({})", k);
-                conversions.push(Conversion {
-                    value: CoreValue::String(display.clone()),
-                    target_format: "triangular".to_string(),
-                    display: display.clone(),
-                    path: vec!["triangular".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(display.clone()),
+                        "triangular",
+                        display.clone(),
+                    )
+                    .path(vec!["triangular".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "triangular".to_string(),
                         value: CoreValue::String(display.clone()),
                         display,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Trait,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Trait)
+                    .display_only(true),
+                );
             }
         }
 
@@ -710,21 +716,22 @@ impl Format for DecimalFormat {
             if let Some(k) = factorial_of(*int_val) {
                 if k >= 3 {
                     let display = format!("{}!", k);
-                    conversions.push(Conversion {
-                        value: CoreValue::String(display.clone()),
-                        target_format: "factorial".to_string(),
-                        display: display.clone(),
-                        path: vec!["factorial".to_string()],
-                        steps: vec![ConversionStep {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::String(display.clone()),
+                            "factorial",
+                            display.clone(),
+                        )
+                        .path(vec!["factorial".to_string()])
+                        .steps(vec![ConversionStep {
                             format: "factorial".to_string(),
                             value: CoreValue::String(display.clone()),
                             display,
-                        }],
-                        priority: ConversionPriority::Semantic,
-                        kind: ConversionKind::Trait,
-                        display_only: true,
-                        ..Default::default()
-                    });
+                        }])
+                        .priority(ConversionPriority::Semantic)
+                        .kind(ConversionKind::Trait)
+                        .display_only(true),
+                    );
                 }
             }
         }
@@ -732,41 +739,39 @@ impl Format for DecimalFormat {
         // Luhn checksum detection (OCR references, credit cards, IMEI, etc.)
         if *int_val >= 10 && is_valid_luhn(*int_val) {
             let display = "valid Luhn checksum".to_string();
-            conversions.push(Conversion {
-                value: CoreValue::String(display.clone()),
-                target_format: "luhn".to_string(),
-                display: display.clone(),
-                path: vec!["luhn".to_string()],
-                steps: vec![ConversionStep {
-                    format: "luhn".to_string(),
-                    value: CoreValue::String(display.clone()),
-                    display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Trait,
-                display_only: true,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::String(display.clone()), "luhn", display.clone())
+                    .path(vec!["luhn".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "luhn".to_string(),
+                        value: CoreValue::String(display.clone()),
+                        display,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Trait)
+                    .display_only(true),
+            );
         }
 
         // ISBN-10 detection (10 digits, check digit 0-9)
         if is_valid_isbn10_numeric(*int_val) {
             let display = "valid ISBN-10".to_string();
-            conversions.push(Conversion {
-                value: CoreValue::String(display.clone()),
-                target_format: "isbn-10".to_string(),
-                display: display.clone(),
-                path: vec!["isbn-10".to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::String(display.clone()),
+                    "isbn-10",
+                    display.clone(),
+                )
+                .path(vec!["isbn-10".to_string()])
+                .steps(vec![ConversionStep {
                     format: "isbn-10".to_string(),
                     value: CoreValue::String(display.clone()),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Trait,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Trait)
+                .display_only(true),
+            );
         }
 
         // ISBN-13 / EAN-13 detection (13 digits)
@@ -779,61 +784,56 @@ impl Format for DecimalFormat {
                 "valid EAN-13".to_string()
             };
             let format_name = if is_isbn { "isbn-13" } else { "ean-13" };
-            conversions.push(Conversion {
-                value: CoreValue::String(display.clone()),
-                target_format: format_name.to_string(),
-                display: display.clone(),
-                path: vec![format_name.to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::String(display.clone()),
+                    format_name.to_string(),
+                    display.clone(),
+                )
+                .path(vec![format_name.to_string()])
+                .steps(vec![ConversionStep {
                     format: format_name.to_string(),
                     value: CoreValue::String(display.clone()),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Trait,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Trait)
+                .display_only(true),
+            );
         }
 
         // UPC-A detection (12 digits)
         if is_valid_upc_a(*int_val) {
             let display = "valid UPC-A".to_string();
-            conversions.push(Conversion {
-                value: CoreValue::String(display.clone()),
-                target_format: "upc-a".to_string(),
-                display: display.clone(),
-                path: vec!["upc-a".to_string()],
-                steps: vec![ConversionStep {
-                    format: "upc-a".to_string(),
-                    value: CoreValue::String(display.clone()),
-                    display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Trait,
-                display_only: true,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::String(display.clone()), "upc-a", display.clone())
+                    .path(vec!["upc-a".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "upc-a".to_string(),
+                        value: CoreValue::String(display.clone()),
+                        display,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Trait)
+                    .display_only(true),
+            );
         }
 
         // EAN-8 detection (8 digits)
         if is_valid_ean8(*int_val) {
             let display = "valid EAN-8".to_string();
-            conversions.push(Conversion {
-                value: CoreValue::String(display.clone()),
-                target_format: "ean-8".to_string(),
-                display: display.clone(),
-                path: vec!["ean-8".to_string()],
-                steps: vec![ConversionStep {
-                    format: "ean-8".to_string(),
-                    value: CoreValue::String(display.clone()),
-                    display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Trait,
-                display_only: true,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::String(display.clone()), "ean-8", display.clone())
+                    .path(vec!["ean-8".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "ean-8".to_string(),
+                        value: CoreValue::String(display.clone()),
+                        display,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Trait)
+                    .display_only(true),
+            );
         }
 
         conversions
@@ -924,26 +924,17 @@ impl Format for BytesToIntFormat {
         };
         let be_display = be_value.to_string();
 
-        let mut conversions = vec![Conversion {
-            value: be_int,
-            target_format: "int-be".to_string(),
-            display: be_display.clone(),
-            path: vec!["int-be".to_string()],
-            steps: vec![ConversionStep {
+        let mut conversions = vec![Conversion::new(be_int, "int-be", be_display.clone())
+            .path(vec!["int-be".to_string()])
+            .steps(vec![ConversionStep {
                 format: "int-be".to_string(),
                 value: CoreValue::Int {
                     value: be_value,
                     original_bytes: Some(bytes.clone()),
                 },
                 display: be_display,
-            }],
-            is_lossy: false,
-            priority: ConversionPriority::Raw,
-            display_only: false,
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![],
-        }];
+            }])
+            .priority(ConversionPriority::Raw)];
 
         // Only add little-endian if it's different
         if le_value != be_value {
@@ -953,23 +944,16 @@ impl Format for BytesToIntFormat {
             };
             let le_display = le_value.to_string();
 
-            conversions.push(Conversion {
-                value: le_int.clone(),
-                target_format: "int-le".to_string(),
-                display: le_display.clone(),
-                path: vec!["int-le".to_string()],
-                steps: vec![ConversionStep {
-                    format: "int-le".to_string(),
-                    value: le_int,
-                    display: le_display,
-                }],
-                is_lossy: false,
-                priority: ConversionPriority::Raw,
-                display_only: false,
-                kind: ConversionKind::default(),
-                hidden: false,
-                rich_display: vec![],
-            });
+            conversions.push(
+                Conversion::new(le_int.clone(), "int-le", le_display.clone())
+                    .path(vec!["int-le".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "int-le".to_string(),
+                        value: le_int,
+                        display: le_display,
+                    }])
+                    .priority(ConversionPriority::Raw),
+            );
         }
 
         conversions

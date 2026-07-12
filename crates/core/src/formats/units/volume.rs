@@ -185,21 +185,22 @@ impl Format for VolumeFormat {
 
         // Primary result: decimal milliliters (canonical base unit value)
         let dec_display = format!("{} mL", format_decimal(ml));
-        conversions.push(Conversion {
-            value: CoreValue::Volume(ml),
-            target_format: "milliliters-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["milliliters-decimal".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Volume(ml),
+                "milliliters-decimal",
+                dec_display.clone(),
+            )
+            .path(vec!["milliliters-decimal".to_string()])
+            .steps(vec![ConversionStep {
                 format: "milliliters-decimal".to_string(),
                 value: CoreValue::Volume(ml),
                 display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Primary)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
@@ -215,57 +216,52 @@ impl Format for VolumeFormat {
                 ConversionKind::Representation
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Volume(ml),
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
-                    format: (*name).to_string(),
-                    value: CoreValue::Volume(ml),
-                    display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::Volume(ml), (*name).to_string(), display.clone())
+                    .path(vec![(*name).to_string()])
+                    .steps(vec![ConversionStep {
+                        format: (*name).to_string(),
+                        value: CoreValue::Volume(ml),
+                        display,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(kind),
+            );
         }
 
         // Additional representations for the base unit
         let si_display = format_with_si_prefix(ml / 1000.0, "L"); // Convert mL to L for SI prefix
         let sci_display = format!("{} mL", format_scientific(ml));
 
-        conversions.push(Conversion {
-            value: CoreValue::Volume(ml),
-            target_format: "liters-si".to_string(),
-            display: si_display.clone(),
-            path: vec!["liters-si".to_string()],
-            steps: vec![ConversionStep {
-                format: "liters-si".to_string(),
-                value: CoreValue::Volume(ml),
-                display: si_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Volume(ml), "liters-si", si_display.clone())
+                .path(vec!["liters-si".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "liters-si".to_string(),
+                    value: CoreValue::Volume(ml),
+                    display: si_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
-        conversions.push(Conversion {
-            value: CoreValue::Volume(ml),
-            target_format: "milliliters-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["milliliters-scientific".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Volume(ml),
+                "milliliters-scientific",
+                sci_display.clone(),
+            )
+            .path(vec!["milliliters-scientific".to_string()])
+            .steps(vec![ConversionStep {
                 format: "milliliters-scientific".to_string(),
                 value: CoreValue::Volume(ml),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         conversions
     }

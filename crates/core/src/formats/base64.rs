@@ -7,9 +7,7 @@ use base64::{
 use tracing::{debug, trace};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
-};
+use crate::types::{Conversion, ConversionStep, CoreValue, Interpretation};
 
 pub struct Base64Format;
 
@@ -247,23 +245,17 @@ impl Format for Base64Format {
             format!("{}... ({} more chars)", &full_b64[..max_chars], remaining)
         };
 
-        vec![Conversion {
-            value: CoreValue::String(full_b64),
-            target_format: "base64".to_string(),
-            display: display.clone(),
-            path: vec!["base64".to_string()],
-            steps: vec![ConversionStep {
-                format: "base64".to_string(),
-                value: CoreValue::Bytes(bytes.clone()),
-                display,
-            }],
-            is_lossy: false,
-            priority: ConversionPriority::Encoding,
-            display_only: true, // Don't explore further from base64 string (avoids codepoints noise)
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![],
-        }]
+        vec![
+            Conversion::new(CoreValue::String(full_b64), "base64", display.clone())
+                .path(vec!["base64".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "base64".to_string(),
+                    value: CoreValue::Bytes(bytes.clone()),
+                    display,
+                }])
+                // Don't explore further from base64 string (avoids codepoints noise)
+                .display_only(true),
+        ]
     }
 }
 

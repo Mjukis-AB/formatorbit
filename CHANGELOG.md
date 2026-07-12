@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   account (no sandbox), so you should only install plugins you trust.
 
 ### Changed
+- **Internal: `Conversion` now has a builder.** `Conversion::new(value,
+  target_format, display)` plus chainable `.path()`/`.steps()`/`.lossy()`/
+  `.priority()`/`.kind()`/`.display_only()`/`.hidden()`/`.rich_display()`
+  setters replace the ~11-field struct literal that was copy-pasted across ~50
+  format files. All ~130 call sites were migrated; behavior is unchanged (no
+  snapshot or test diffs). The struct fields, `Default` impl, and FFI/serde
+  surface are untouched.
 - **Tee-mode annotations now surface the most useful reading.** In `--tee`
   (pipe) mode, each line's annotation now leads with the interpretation's
   semantic summary when it has one (e.g. a UUID annotates as `UUID v4 (random)`

@@ -3,8 +3,8 @@
 use crate::format::{Format, FormatInfo};
 use crate::truncate_str;
 use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation, PacketSegment,
-    RichDisplay, RichDisplayOption,
+    Conversion, ConversionPriority, CoreValue, Interpretation, PacketSegment, RichDisplay,
+    RichDisplayOption,
 };
 
 pub struct MsgPackFormat;
@@ -108,23 +108,16 @@ impl Format for MsgPackFormat {
             ConversionPriority::Raw
         };
 
-        vec![Conversion {
-            value: CoreValue::Json(decoded.value),
-            target_format: "msgpack".to_string(),
-            display,
-            path: vec!["msgpack".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority,
-            display_only: false,
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![RichDisplayOption::new(RichDisplay::PacketLayout {
-                segments: decoded.segments,
-                compact,
-                detailed,
-            })],
-        }]
+        vec![
+            Conversion::new(CoreValue::Json(decoded.value), "msgpack", display)
+                .path(vec!["msgpack".to_string()])
+                .priority(priority)
+                .rich_display(vec![RichDisplayOption::new(RichDisplay::PacketLayout {
+                    segments: decoded.segments,
+                    compact,
+                    detailed,
+                })]),
+        ]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

@@ -186,21 +186,22 @@ impl Format for EnergyFormat {
 
         // Primary result: decimal joules (canonical base unit value)
         let dec_display = format!("{} J", format_decimal(joules));
-        conversions.push(Conversion {
-            value: CoreValue::Energy(joules),
-            target_format: "joules-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["joules-decimal".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Energy(joules),
+                "joules-decimal",
+                dec_display.clone(),
+            )
+            .path(vec!["joules-decimal".to_string()])
+            .steps(vec![ConversionStep {
                 format: "joules-decimal".to_string(),
                 value: CoreValue::Energy(joules),
                 display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Primary)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
@@ -216,57 +217,56 @@ impl Format for EnergyFormat {
                 ConversionKind::Representation
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Energy(joules),
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Energy(joules),
+                    (*name).to_string(),
+                    display.clone(),
+                )
+                .path(vec![(*name).to_string()])
+                .steps(vec![ConversionStep {
                     format: (*name).to_string(),
                     value: CoreValue::Energy(joules),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(kind),
+            );
         }
 
         // Additional representations for the base unit (joules)
         let si_display = format_with_si_prefix(joules, "J");
         let sci_display = format!("{} J", format_scientific(joules));
 
-        conversions.push(Conversion {
-            value: CoreValue::Energy(joules),
-            target_format: "joules-si".to_string(),
-            display: si_display.clone(),
-            path: vec!["joules-si".to_string()],
-            steps: vec![ConversionStep {
-                format: "joules-si".to_string(),
-                value: CoreValue::Energy(joules),
-                display: si_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Energy(joules), "joules-si", si_display.clone())
+                .path(vec!["joules-si".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "joules-si".to_string(),
+                    value: CoreValue::Energy(joules),
+                    display: si_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
-        conversions.push(Conversion {
-            value: CoreValue::Energy(joules),
-            target_format: "joules-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["joules-scientific".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Energy(joules),
+                "joules-scientific",
+                sci_display.clone(),
+            )
+            .path(vec!["joules-scientific".to_string()])
+            .steps(vec![ConversionStep {
                 format: "joules-scientific".to_string(),
                 value: CoreValue::Energy(joules),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         conversions
     }

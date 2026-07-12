@@ -397,38 +397,36 @@ impl Format for PermissionsFormat {
 
         vec![
             // Symbolic representation
-            Conversion {
-                value: CoreValue::String(symbolic.clone()),
-                target_format: "permission-symbolic".to_string(),
-                display: symbolic.clone(),
-                path: vec!["permission-symbolic".to_string()],
-                steps: vec![ConversionStep {
-                    format: "permission-symbolic".to_string(),
-                    value: CoreValue::String(symbolic),
-                    display: octal.clone(),
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
-                display_only: true,
-                rich_display: vec![build_rich_display(perm_value)],
-                ..Default::default()
-            },
-            // Octal representation
-            Conversion {
-                value: CoreValue::String(octal.clone()),
-                target_format: "permission-octal".to_string(),
+            Conversion::new(
+                CoreValue::String(symbolic.clone()),
+                "permission-symbolic",
+                symbolic.clone(),
+            )
+            .path(vec!["permission-symbolic".to_string()])
+            .steps(vec![ConversionStep {
+                format: "permission-symbolic".to_string(),
+                value: CoreValue::String(symbolic),
                 display: octal.clone(),
-                path: vec!["permission-octal".to_string()],
-                steps: vec![ConversionStep {
-                    format: "permission-octal".to_string(),
-                    value: CoreValue::String(octal.clone()),
-                    display: octal,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
-                display_only: true,
-                ..Default::default()
-            },
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true)
+            .rich_display(vec![build_rich_display(perm_value)]),
+            // Octal representation
+            Conversion::new(
+                CoreValue::String(octal.clone()),
+                "permission-octal",
+                octal.clone(),
+            )
+            .path(vec!["permission-octal".to_string()])
+            .steps(vec![ConversionStep {
+                format: "permission-octal".to_string(),
+                value: CoreValue::String(octal.clone()),
+                display: octal,
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
         ]
     }
 

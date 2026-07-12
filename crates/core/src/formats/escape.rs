@@ -10,7 +10,7 @@ use tracing::{debug, trace};
 
 use crate::format::{Format, FormatInfo};
 use crate::truncate_str;
-use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionStep, CoreValue, Interpretation};
 
 pub struct EscapeFormat;
 
@@ -247,37 +247,37 @@ impl Format for EscapeFormat {
         match value {
             CoreValue::Bytes(bytes) if !bytes.is_empty() && bytes.len() <= 64 => {
                 let escaped = Self::encode_hex_escapes(bytes);
-                conversions.push(Conversion {
-                    value: CoreValue::String(escaped.clone()),
-                    target_format: "escape-hex".to_string(),
-                    display: escaped.clone(),
-                    path: vec!["escape-hex".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(escaped.clone()),
+                        "escape-hex",
+                        escaped.clone(),
+                    )
+                    .path(vec!["escape-hex".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "escape-hex".to_string(),
                         value: CoreValue::String(escaped.clone()),
                         display: escaped,
-                    }],
-                    priority: ConversionPriority::Encoding,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .display_only(true),
+                );
             }
             CoreValue::String(s) if !s.is_empty() && s.len() <= 64 => {
                 let escaped = Self::encode_unicode_escapes(s);
-                conversions.push(Conversion {
-                    value: CoreValue::String(escaped.clone()),
-                    target_format: "escape-unicode".to_string(),
-                    display: escaped.clone(),
-                    path: vec!["escape-unicode".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(escaped.clone()),
+                        "escape-unicode",
+                        escaped.clone(),
+                    )
+                    .path(vec!["escape-unicode".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "escape-unicode".to_string(),
                         value: CoreValue::String(escaped.clone()),
                         display: escaped,
-                    }],
-                    priority: ConversionPriority::Encoding,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .display_only(true),
+                );
             }
             _ => {}
         }

@@ -440,23 +440,15 @@ pub fn find_all_conversions(
                         .unwrap_or_default();
                     path.push(format_id.clone());
 
-                    results.push(Conversion {
-                        value: initial.clone(),
-                        target_format: format_id.clone(),
-                        display: display.clone(),
-                        path,
-                        steps: vec![ConversionStep {
-                            format: format_id,
-                            value: initial.clone(),
-                            display,
-                        }],
-                        is_lossy: false,
-                        priority: ConversionPriority::default(),
-                        display_only: false,
-                        kind: ConversionKind::default(),
-                        hidden: false,
-                        rich_display: vec![],
-                    });
+                    results.push(
+                        Conversion::new(initial.clone(), format_id.clone(), display.clone())
+                            .path(path)
+                            .steps(vec![ConversionStep {
+                                format: format_id,
+                                value: initial.clone(),
+                                display,
+                            }]),
+                    );
                 }
             }
         }
@@ -534,19 +526,17 @@ pub fn find_all_conversions(
 
                             // Add to results
                             if seen_results.insert(result_key) {
-                                results.push(Conversion {
-                                    value: interp.value.clone(),
-                                    target_format: target_format.clone(),
-                                    display: display.clone(),
-                                    path: full_path.clone(),
-                                    steps: full_steps.clone(),
-                                    is_lossy: false,
-                                    priority: ConversionPriority::Structured,
-                                    kind: ConversionKind::Conversion,
-                                    display_only: false,
-                                    hidden: false,
-                                    rich_display: interp.rich_display.clone(),
-                                });
+                                results.push(
+                                    Conversion::new(
+                                        interp.value.clone(),
+                                        target_format.clone(),
+                                        display.clone(),
+                                    )
+                                    .path(full_path.clone())
+                                    .steps(full_steps.clone())
+                                    .priority(ConversionPriority::Structured)
+                                    .rich_display(interp.rich_display.clone()),
+                                );
                             }
 
                             // Add to queue for further exploration
@@ -598,19 +588,21 @@ pub fn find_all_conversions(
 
                     // Add to results if we haven't seen this exact (format, display) pair
                     if seen_results.insert(result_key) {
-                        results.push(Conversion {
-                            value: conv.value.clone(),
-                            target_format: conv.target_format.clone(),
-                            display: conv.display.clone(),
-                            path: full_path.clone(),
-                            steps: full_steps.clone(),
-                            is_lossy: conv.is_lossy,
-                            priority: conv.priority,
-                            kind: conv.kind,
-                            display_only: conv.display_only,
-                            hidden: conv.hidden,
-                            rich_display: conv.rich_display.clone(),
-                        });
+                        results.push(
+                            Conversion::new(
+                                conv.value.clone(),
+                                conv.target_format.clone(),
+                                conv.display.clone(),
+                            )
+                            .path(full_path.clone())
+                            .steps(full_steps.clone())
+                            .lossy(conv.is_lossy)
+                            .priority(conv.priority)
+                            .kind(conv.kind)
+                            .display_only(conv.display_only)
+                            .hidden(conv.hidden)
+                            .rich_display(conv.rich_display.clone()),
+                        );
                     }
 
                     // Add to queue for further exploration (unless terminal or already explored)

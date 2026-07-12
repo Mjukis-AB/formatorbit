@@ -138,21 +138,22 @@ impl Format for AngleFormat {
 
         // Primary result: decimal degrees (canonical base unit value)
         let dec_display = format!("{}°", format_decimal(degrees));
-        conversions.push(Conversion {
-            value: CoreValue::Angle(degrees),
-            target_format: "degrees-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["degrees-decimal".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Angle(degrees),
+                "degrees-decimal",
+                dec_display.clone(),
+            )
+            .path(vec!["degrees-decimal".to_string()])
+            .steps(vec![ConversionStep {
                 format: "degrees-decimal".to_string(),
                 value: CoreValue::Angle(degrees),
                 display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Primary)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         // Standard unit conversions
         // All angle units are different measurement systems, so all are Conversions
@@ -167,39 +168,41 @@ impl Format for AngleFormat {
                 ConversionKind::Conversion
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Angle(degrees),
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Angle(degrees),
+                    (*name).to_string(),
+                    display.clone(),
+                )
+                .path(vec![(*name).to_string()])
+                .steps(vec![ConversionStep {
                     format: (*name).to_string(),
                     value: CoreValue::Angle(degrees),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(kind),
+            );
         }
 
         // Additional representation: scientific notation
         let sci_display = format!("{}°", format_scientific(degrees));
-        conversions.push(Conversion {
-            value: CoreValue::Angle(degrees),
-            target_format: "degrees-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["degrees-scientific".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Angle(degrees),
+                "degrees-scientific",
+                sci_display.clone(),
+            )
+            .path(vec!["degrees-scientific".to_string()])
+            .steps(vec![ConversionStep {
                 format: "degrees-scientific".to_string(),
                 value: CoreValue::Angle(degrees),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         conversions
     }

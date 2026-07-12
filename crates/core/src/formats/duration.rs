@@ -479,24 +479,21 @@ impl Format for DurationFormat {
             let detail = format!("now + {} = {}", human, absolute);
             let display = format!("{} ({})", human, detail);
 
-            conversions.push(Conversion {
-                value: CoreValue::String(human.clone()),
-                target_format: "duration".to_string(),
-                display,
-                path: vec!["duration".to_string()],
-                steps: vec![ConversionStep {
-                    format: "duration".to_string(),
-                    value: CoreValue::String(human.clone()),
-                    display: "as seconds".to_string(),
-                }],
-                priority: ConversionPriority::Semantic,
-                display_only: true,
-                rich_display: vec![RichDisplayOption::new(RichDisplay::Duration {
-                    millis: val.saturating_mul(1000),
-                    human,
-                })],
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::String(human.clone()), "duration", display)
+                    .path(vec!["duration".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "duration".to_string(),
+                        value: CoreValue::String(human.clone()),
+                        display: "as seconds".to_string(),
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .display_only(true)
+                    .rich_display(vec![RichDisplayOption::new(RichDisplay::Duration {
+                        millis: val.saturating_mul(1000),
+                        human,
+                    })]),
+            );
         }
 
         // Duration as milliseconds interpretation
@@ -508,24 +505,21 @@ impl Format for DurationFormat {
                 let detail = format!("now + {} = {}", human, absolute);
                 let display = format!("{} ({})", human, detail);
 
-                conversions.push(Conversion {
-                    value: CoreValue::String(human.clone()),
-                    target_format: "duration-ms".to_string(),
-                    display,
-                    path: vec!["duration-ms".to_string()],
-                    steps: vec![ConversionStep {
-                        format: "duration-ms".to_string(),
-                        value: CoreValue::String(human.clone()),
-                        display: "as milliseconds".to_string(),
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    display_only: true,
-                    rich_display: vec![RichDisplayOption::new(RichDisplay::Duration {
-                        millis: val,
-                        human,
-                    })],
-                    ..Default::default()
-                });
+                conversions.push(
+                    Conversion::new(CoreValue::String(human.clone()), "duration-ms", display)
+                        .path(vec!["duration-ms".to_string()])
+                        .steps(vec![ConversionStep {
+                            format: "duration-ms".to_string(),
+                            value: CoreValue::String(human.clone()),
+                            display: "as milliseconds".to_string(),
+                        }])
+                        .priority(ConversionPriority::Semantic)
+                        .display_only(true)
+                        .rich_display(vec![RichDisplayOption::new(RichDisplay::Duration {
+                            millis: val,
+                            human,
+                        })]),
+                );
             }
         }
 

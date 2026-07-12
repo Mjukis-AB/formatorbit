@@ -72,19 +72,8 @@ impl Format for Utf8Format {
             CoreValue::Bytes(bytes) => {
                 // Try to convert bytes to UTF-8 string
                 if let Ok(s) = String::from_utf8(bytes.clone()) {
-                    vec![Conversion {
-                        value: CoreValue::String(s.clone()),
-                        target_format: "utf8".to_string(),
-                        display: s,
-                        path: vec!["utf8".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Encoding,
-                        display_only: false,
-                        kind: ConversionKind::default(),
-                        hidden: false,
-                        rich_display: vec![],
-                    }]
+                    vec![Conversion::new(CoreValue::String(s.clone()), "utf8", s)
+                        .path(vec!["utf8".to_string()])]
                 } else {
                     vec![]
                 }
@@ -96,19 +85,16 @@ impl Format for Utf8Format {
                 // Note: This is NOT display_only because we want hashes to be calculated.
                 // The bytes will chain to hex, base64, hashes, hexdump, etc.
                 // Hidden: the display "X bytes" is redundant with utf8-bytes showing byte count
-                conversions.push(Conversion {
-                    value: CoreValue::Bytes(s.as_bytes().to_vec()),
-                    target_format: "bytes".to_string(),
-                    display: format!("{} bytes", s.len()),
-                    path: vec!["bytes".to_string()],
-                    is_lossy: false,
-                    steps: vec![],
-                    priority: ConversionPriority::Raw,
-                    display_only: false,
-                    kind: ConversionKind::Conversion,
-                    hidden: true,
-                    rich_display: vec![],
-                });
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::Bytes(s.as_bytes().to_vec()),
+                        "bytes",
+                        format!("{} bytes", s.len()),
+                    )
+                    .path(vec!["bytes".to_string()])
+                    .priority(ConversionPriority::Raw)
+                    .hidden(true),
+                );
 
                 // ASCII codes (for short strings, max 20 bytes)
                 if s.len() <= 20 {
@@ -117,58 +103,47 @@ impl Format for Utf8Format {
                         .map(|b| b.to_string())
                         .collect::<Vec<_>>()
                         .join(" ");
-                    conversions.push(Conversion {
-                        value: CoreValue::String(ascii_dec.clone()),
-                        target_format: "ascii-decimal".to_string(),
-                        display: ascii_dec,
-                        path: vec!["ascii-decimal".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Encoding,
-                        display_only: true,
-                        kind: ConversionKind::Representation,
-                        hidden: false,
-                        rich_display: vec![],
-                    });
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::String(ascii_dec.clone()),
+                            "ascii-decimal",
+                            ascii_dec,
+                        )
+                        .path(vec!["ascii-decimal".to_string()])
+                        .kind(ConversionKind::Representation)
+                        .display_only(true),
+                    );
                     // Note: ascii-hex removed - utf8-bytes from CharFormat provides this
                 }
 
                 // ASCII/UTF-8 detection trait
                 let is_ascii = s.bytes().all(|b| b.is_ascii());
                 if is_ascii {
-                    conversions.push(Conversion {
-                        value: CoreValue::Bool(true),
-                        target_format: "is-ascii".to_string(),
-                        display: "ASCII".to_string(),
-                        path: vec!["is-ascii".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Semantic,
-                        display_only: true,
-                        kind: ConversionKind::Trait,
-                        hidden: false,
-                        rich_display: vec![],
-                    });
+                    conversions.push(
+                        Conversion::new(CoreValue::Bool(true), "is-ascii", "ASCII")
+                            .path(vec!["is-ascii".to_string()])
+                            .priority(ConversionPriority::Semantic)
+                            .kind(ConversionKind::Trait)
+                            .display_only(true),
+                    );
                 } else {
                     // Show char vs byte count for multi-byte UTF-8
                     let char_count = s.chars().count();
                     let byte_count = s.len();
-                    conversions.push(Conversion {
-                        value: CoreValue::String(format!(
-                            "{} chars, {} bytes",
-                            char_count, byte_count
-                        )),
-                        target_format: "encoding".to_string(),
-                        display: format!("UTF-8 ({} chars, {} bytes)", char_count, byte_count),
-                        path: vec!["encoding".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Semantic,
-                        display_only: true,
-                        kind: ConversionKind::Trait,
-                        hidden: false,
-                        rich_display: vec![],
-                    });
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::String(format!(
+                                "{} chars, {} bytes",
+                                char_count, byte_count
+                            )),
+                            "encoding",
+                            format!("UTF-8 ({} chars, {} bytes)", char_count, byte_count),
+                        )
+                        .path(vec!["encoding".to_string()])
+                        .priority(ConversionPriority::Semantic)
+                        .kind(ConversionKind::Trait)
+                        .display_only(true),
+                    );
                 }
 
                 conversions

@@ -457,21 +457,22 @@ impl Format for ColorFormat {
         } else {
             format!("#{:02X}{:02X}{:02X}", r, g, b)
         };
-        conversions.push(Conversion {
-            value: CoreValue::String(hex_display.clone()),
-            target_format: "color-hex".to_string(),
-            display: hex_display.clone(),
-            path: vec!["color-hex".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::String(hex_display.clone()),
+                "color-hex",
+                hex_display.clone(),
+            )
+            .path(vec!["color-hex".to_string()])
+            .steps(vec![ConversionStep {
                 format: "color-hex".to_string(),
                 value: CoreValue::String(hex_display.clone()),
                 display: hex_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            display_only: true,
-            rich_display: color_display.clone(),
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .display_only(true)
+            .rich_display(color_display.clone()),
+        );
 
         // rgb()/rgba() format
         let rgb_display = if let Some(alpha) = a {
@@ -480,21 +481,22 @@ impl Format for ColorFormat {
         } else {
             format!("rgb({}, {}, {})", r, g, b)
         };
-        conversions.push(Conversion {
-            value: CoreValue::String(rgb_display.clone()),
-            target_format: "color-rgb".to_string(),
-            display: rgb_display.clone(),
-            path: vec!["color-rgb".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::String(rgb_display.clone()),
+                "color-rgb",
+                rgb_display.clone(),
+            )
+            .path(vec!["color-rgb".to_string()])
+            .steps(vec![ConversionStep {
                 format: "color-rgb".to_string(),
                 value: CoreValue::String(rgb_display.clone()),
                 display: rgb_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            display_only: true,
-            rich_display: color_display.clone(),
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .display_only(true)
+            .rich_display(color_display.clone()),
+        );
 
         // hsl()/hsla() format
         let (h, s, l) = Self::rgb_to_hsl(r, g, b);
@@ -504,21 +506,22 @@ impl Format for ColorFormat {
         } else {
             format!("hsl({}, {}%, {}%)", h, s, l)
         };
-        conversions.push(Conversion {
-            value: CoreValue::String(hsl_display.clone()),
-            target_format: "color-hsl".to_string(),
-            display: hsl_display.clone(),
-            path: vec!["color-hsl".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::String(hsl_display.clone()),
+                "color-hsl",
+                hsl_display.clone(),
+            )
+            .path(vec!["color-hsl".to_string()])
+            .steps(vec![ConversionStep {
                 format: "color-hsl".to_string(),
                 value: CoreValue::String(hsl_display.clone()),
                 display: hsl_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            display_only: true,
-            rich_display: color_display,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .display_only(true)
+            .rich_display(color_display),
+        );
 
         conversions
     }

@@ -1,7 +1,7 @@
 //! Apple plist format (XML and binary).
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct PlistFormat;
 
@@ -145,19 +145,13 @@ impl Format for PlistFormat {
         let json = Self::plist_to_json(&plist_value);
         let display = serde_json::to_string_pretty(&json).unwrap_or_default();
 
-        vec![Conversion {
-            value: CoreValue::Json(json),
-            target_format: "plist".to_string(),
-            display: format!("(decoded) {}", display),
-            path: vec!["plist".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority: ConversionPriority::Structured,
-            display_only: false,
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![],
-        }]
+        vec![Conversion::new(
+            CoreValue::Json(json),
+            "plist",
+            format!("(decoded) {}", display),
+        )
+        .path(vec!["plist".to_string()])
+        .priority(ConversionPriority::Structured)]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

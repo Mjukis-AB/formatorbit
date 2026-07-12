@@ -356,19 +356,16 @@ impl Format for OfficeFormat {
         let description = Self::format_description(&meta);
         let rich_display = Self::build_rich_display(&meta);
 
-        vec![Conversion {
-            value: CoreValue::String(description.clone()),
-            target_format: "office-info".to_string(),
-            display: description,
-            path: vec!["office-info".to_string()],
-            steps: vec![],
-            is_lossy: false,
-            priority: ConversionPriority::Structured,
-            display_only: true,
-            kind: ConversionKind::Representation,
-            hidden: false,
-            rich_display,
-        }]
+        vec![Conversion::new(
+            CoreValue::String(description.clone()),
+            "office-info",
+            description,
+        )
+        .path(vec!["office-info".to_string()])
+        .priority(ConversionPriority::Structured)
+        .kind(ConversionKind::Representation)
+        .display_only(true)
+        .rich_display(rich_display)]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

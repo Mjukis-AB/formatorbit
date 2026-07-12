@@ -3,7 +3,7 @@
 use uuid::Uuid;
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct UuidFormat;
 
@@ -89,19 +89,13 @@ impl Format for UuidFormat {
             return vec![];
         };
 
-        vec![Conversion {
-            value: CoreValue::String(uuid.to_string()),
-            target_format: "uuid".to_string(),
-            display: uuid.to_string(),
-            path: vec!["uuid".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority: ConversionPriority::Semantic,
-            display_only: false,
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![],
-        }]
+        vec![Conversion::new(
+            CoreValue::String(uuid.to_string()),
+            "uuid",
+            uuid.to_string(),
+        )
+        .path(vec!["uuid".to_string()])
+        .priority(ConversionPriority::Semantic)]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

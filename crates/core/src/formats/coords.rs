@@ -523,132 +523,115 @@ impl Format for CoordsFormat {
 
         // Primary: Decimal Degrees
         let dd = Self::format_dd(lat, lon);
-        conversions.push(Conversion {
-            value: CoreValue::Coordinates { lat, lon },
-            target_format: "dd".to_string(),
-            display: dd.clone(),
-            path: vec!["dd".to_string()],
-            steps: vec![ConversionStep {
-                format: "dd".to_string(),
-                value: CoreValue::Coordinates { lat, lon },
-                display: dd,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Coordinates { lat, lon }, "dd", dd.clone())
+                .path(vec!["dd".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "dd".to_string(),
+                    value: CoreValue::Coordinates { lat, lon },
+                    display: dd,
+                }])
+                .priority(ConversionPriority::Primary)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         // DMS
         let dms = Self::format_dms(lat, lon);
-        conversions.push(Conversion {
-            value: CoreValue::Coordinates { lat, lon },
-            target_format: "dms".to_string(),
-            display: dms.clone(),
-            path: vec!["dms".to_string()],
-            steps: vec![ConversionStep {
-                format: "dms".to_string(),
-                value: CoreValue::Coordinates { lat, lon },
-                display: dms,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Coordinates { lat, lon }, "dms", dms.clone())
+                .path(vec!["dms".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "dms".to_string(),
+                    value: CoreValue::Coordinates { lat, lon },
+                    display: dms,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         // DDM
         let ddm = Self::format_ddm(lat, lon);
-        conversions.push(Conversion {
-            value: CoreValue::Coordinates { lat, lon },
-            target_format: "ddm".to_string(),
-            display: ddm.clone(),
-            path: vec!["ddm".to_string()],
-            steps: vec![ConversionStep {
-                format: "ddm".to_string(),
-                value: CoreValue::Coordinates { lat, lon },
-                display: ddm,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Coordinates { lat, lon }, "ddm", ddm.clone())
+                .path(vec!["ddm".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "ddm".to_string(),
+                    value: CoreValue::Coordinates { lat, lon },
+                    display: ddm,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
         // Geohash (precision 9 ~ 5m accuracy)
         if let Some(gh) = Self::format_geohash(lat, lon, 9) {
-            conversions.push(Conversion {
-                value: CoreValue::Coordinates { lat, lon },
-                target_format: "geohash".to_string(),
-                display: gh.clone(),
-                path: vec!["geohash".to_string()],
-                steps: vec![ConversionStep {
-                    format: "geohash".to_string(),
-                    value: CoreValue::Coordinates { lat, lon },
-                    display: gh,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Conversion,
-                display_only: true,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::Coordinates { lat, lon }, "geohash", gh.clone())
+                    .path(vec!["geohash".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "geohash".to_string(),
+                        value: CoreValue::Coordinates { lat, lon },
+                        display: gh,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Conversion)
+                    .display_only(true),
+            );
         }
 
         // Plus Code
         if let Some(plus) = Self::format_plus_code(lat, lon) {
-            conversions.push(Conversion {
-                value: CoreValue::Coordinates { lat, lon },
-                target_format: "plus-code".to_string(),
-                display: plus.clone(),
-                path: vec!["plus-code".to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Coordinates { lat, lon },
+                    "plus-code",
+                    plus.clone(),
+                )
+                .path(vec!["plus-code".to_string()])
+                .steps(vec![ConversionStep {
                     format: "plus-code".to_string(),
                     value: CoreValue::Coordinates { lat, lon },
                     display: plus,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Conversion,
-                display_only: true,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Conversion)
+                .display_only(true),
+            );
         }
 
         // UTM
         if let Some(utm) = Self::format_utm(lat, lon) {
-            conversions.push(Conversion {
-                value: CoreValue::Coordinates { lat, lon },
-                target_format: "utm".to_string(),
-                display: utm.clone(),
-                path: vec!["utm".to_string()],
-                steps: vec![ConversionStep {
-                    format: "utm".to_string(),
-                    value: CoreValue::Coordinates { lat, lon },
-                    display: utm,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Conversion,
-                display_only: true,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::Coordinates { lat, lon }, "utm", utm.clone())
+                    .path(vec!["utm".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "utm".to_string(),
+                        value: CoreValue::Coordinates { lat, lon },
+                        display: utm,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Conversion)
+                    .display_only(true),
+            );
         }
 
         // MGRS
         if let Some(mgrs) = Self::format_mgrs(lat, lon) {
-            conversions.push(Conversion {
-                value: CoreValue::Coordinates { lat, lon },
-                target_format: "mgrs".to_string(),
-                display: mgrs.clone(),
-                path: vec!["mgrs".to_string()],
-                steps: vec![ConversionStep {
-                    format: "mgrs".to_string(),
-                    value: CoreValue::Coordinates { lat, lon },
-                    display: mgrs,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Conversion,
-                display_only: true,
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::Coordinates { lat, lon }, "mgrs", mgrs.clone())
+                    .path(vec!["mgrs".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "mgrs".to_string(),
+                        value: CoreValue::Coordinates { lat, lon },
+                        display: mgrs,
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Conversion)
+                    .display_only(true),
+            );
         }
 
         // Note: SWEREF 99 TM output is not implemented yet due to complex projection formulas.

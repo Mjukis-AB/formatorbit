@@ -691,19 +691,17 @@ impl Format for CronFormat {
         let mut conversions = Vec::new();
 
         // Add conversion showing the human-readable description
-        conversions.push(Conversion {
-            value: CoreValue::String(expr.describe()),
-            target_format: "cron-description".to_string(),
-            display: expr.describe(),
-            path: vec!["cron-description".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority: ConversionPriority::Semantic,
-            display_only: true,
-            kind: ConversionKind::Representation,
-            hidden: false,
-            rich_display: vec![],
-        });
+        conversions.push(
+            Conversion::new(
+                CoreValue::String(expr.describe()),
+                "cron-description",
+                expr.describe(),
+            )
+            .path(vec!["cron-description".to_string()])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         // Add conversion for next execution time as DateTime
         if let Some(next) = next_times.first() {
@@ -711,23 +709,22 @@ impl Format for CronFormat {
             let iso = utc_time.to_rfc3339();
             let relative = format_relative(*next);
 
-            conversions.push(Conversion {
-                value: CoreValue::DateTime(utc_time),
-                target_format: "cron-next".to_string(),
-                display: format!("{} ({})", next.format("%Y-%m-%d %H:%M:%S"), relative),
-                path: vec!["cron-next".to_string()],
-                is_lossy: false,
-                steps: vec![],
-                priority: ConversionPriority::Semantic,
-                display_only: false,
-                kind: ConversionKind::Conversion,
-                hidden: false,
-                rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
-                    epoch_millis: utc_time.timestamp_millis(),
-                    iso,
-                    relative,
-                })],
-            });
+            conversions.push(
+                Conversion::new(
+                    CoreValue::DateTime(utc_time),
+                    "cron-next",
+                    format!("{} ({})", next.format("%Y-%m-%d %H:%M:%S"), relative),
+                )
+                .path(vec!["cron-next".to_string()])
+                .priority(ConversionPriority::Semantic)
+                .rich_display(vec![RichDisplayOption::new(
+                    RichDisplay::DateTime {
+                        epoch_millis: utc_time.timestamp_millis(),
+                        iso,
+                        relative,
+                    },
+                )]),
+            );
         }
 
         conversions

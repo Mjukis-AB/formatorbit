@@ -208,47 +208,41 @@ impl Format for DataSizeFormat {
         // IEC (binary) format
         let iec = Self::format_iec(bytes);
         if !iec.ends_with(" B") {
-            conversions.push(Conversion {
-                value: CoreValue::String(iec.clone()),
-                target_format: "datasize-iec".to_string(),
-                display: iec.clone(),
-                path: vec!["datasize-iec".to_string()],
-                steps: vec![ConversionStep {
-                    format: "datasize-iec".to_string(),
-                    value: CoreValue::String(iec.clone()),
-                    display: iec.clone(),
-                }],
-                priority: ConversionPriority::Semantic,
-                display_only: true,
-                rich_display: vec![RichDisplayOption::new(RichDisplay::DataSize {
-                    bytes,
-                    human: iec,
-                })],
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::String(iec.clone()), "datasize-iec", iec.clone())
+                    .path(vec!["datasize-iec".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "datasize-iec".to_string(),
+                        value: CoreValue::String(iec.clone()),
+                        display: iec.clone(),
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .display_only(true)
+                    .rich_display(vec![RichDisplayOption::new(RichDisplay::DataSize {
+                        bytes,
+                        human: iec,
+                    })]),
+            );
         }
 
         // SI (decimal) format
         let si = Self::format_si(bytes);
         if !si.ends_with(" B") && si != Self::format_iec(bytes) {
-            conversions.push(Conversion {
-                value: CoreValue::String(si.clone()),
-                target_format: "datasize-si".to_string(),
-                display: si.clone(),
-                path: vec!["datasize-si".to_string()],
-                steps: vec![ConversionStep {
-                    format: "datasize-si".to_string(),
-                    value: CoreValue::String(si.clone()),
-                    display: si.clone(),
-                }],
-                priority: ConversionPriority::Semantic,
-                display_only: true,
-                rich_display: vec![RichDisplayOption::new(RichDisplay::DataSize {
-                    bytes,
-                    human: si,
-                })],
-                ..Default::default()
-            });
+            conversions.push(
+                Conversion::new(CoreValue::String(si.clone()), "datasize-si", si.clone())
+                    .path(vec!["datasize-si".to_string()])
+                    .steps(vec![ConversionStep {
+                        format: "datasize-si".to_string(),
+                        value: CoreValue::String(si.clone()),
+                        display: si.clone(),
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .display_only(true)
+                    .rich_display(vec![RichDisplayOption::new(RichDisplay::DataSize {
+                        bytes,
+                        human: si,
+                    })]),
+            );
         }
 
         conversions

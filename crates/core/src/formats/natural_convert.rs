@@ -39,9 +39,7 @@ use crate::formats::units::{
 };
 use std::sync::Mutex;
 
-use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
-};
+use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
 
 #[derive(Default)]
 pub struct NaturalConvertFormat {
@@ -370,23 +368,14 @@ impl Format for NaturalConvertFormat {
             },
             Err(_) => return vec![],
         };
-        vec![Conversion {
-            value: value.clone(),
-            target_format: "result".to_string(),
-            display: display.clone(),
-            path: vec![],
-            steps: vec![ConversionStep {
+        vec![Conversion::new(value.clone(), "result", display.clone())
+            .steps(vec![ConversionStep {
                 format: "result".to_string(),
                 value: value.clone(),
                 display,
-            }],
-            is_lossy: false,
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Conversion,
-            display_only: true,
-            hidden: false,
-            rich_display: vec![],
-        }]
+            }])
+            .priority(ConversionPriority::Primary)
+            .display_only(true)]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

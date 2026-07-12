@@ -326,28 +326,30 @@ impl Format for UrlParserFormat {
             let removed_str = removed.join(", ");
             let display = format!("{} (removed: {})", cleaned_url, removed_str);
 
-            conversions.push(Conversion {
-                value: CoreValue::String(cleaned_url.clone()),
-                target_format: "url-cleaned".to_string(),
-                display,
-                path: vec!["url-cleaned".to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::String(cleaned_url.clone()),
+                    "url-cleaned",
+                    display,
+                )
+                .path(vec!["url-cleaned".to_string()])
+                .steps(vec![ConversionStep {
                     format: "url-cleaned".to_string(),
                     value: CoreValue::String(cleaned_url.clone()),
                     display: cleaned_url,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind: ConversionKind::Representation,
-                display_only: true,
-                is_lossy: false,
-                hidden: false,
-                rich_display: vec![RichDisplayOption::new(RichDisplay::KeyValue {
-                    pairs: vec![
-                        ("Cleaned URL".to_string(), url_str.clone()),
-                        ("Removed".to_string(), removed_str),
-                    ],
-                })],
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true)
+                .rich_display(vec![RichDisplayOption::new(
+                    RichDisplay::KeyValue {
+                        pairs: vec![
+                            ("Cleaned URL".to_string(), url_str.clone()),
+                            ("Removed".to_string(), removed_str),
+                        ],
+                    },
+                )]),
+            );
         }
 
         conversions

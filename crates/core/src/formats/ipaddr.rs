@@ -4,8 +4,7 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation, RichDisplay,
-    RichDisplayOption,
+    Conversion, ConversionPriority, CoreValue, Interpretation, RichDisplay, RichDisplayOption,
 };
 
 pub struct IpAddrFormat;
@@ -217,19 +216,13 @@ impl Format for IpAddrFormat {
         match bytes.len() {
             4 => {
                 let addr = Ipv4Addr::new(bytes[0], bytes[1], bytes[2], bytes[3]);
-                vec![Conversion {
-                    value: CoreValue::String(addr.to_string()),
-                    target_format: "ipv4".to_string(),
-                    display: addr.to_string(),
-                    path: vec!["ipv4".to_string()],
-                    is_lossy: false,
-                    steps: vec![],
-                    priority: ConversionPriority::Semantic,
-                    display_only: false,
-                    kind: ConversionKind::default(),
-                    hidden: false,
-                    rich_display: vec![],
-                }]
+                vec![Conversion::new(
+                    CoreValue::String(addr.to_string()),
+                    "ipv4",
+                    addr.to_string(),
+                )
+                .path(vec!["ipv4".to_string()])
+                .priority(ConversionPriority::Semantic)]
             }
             16 => {
                 let arr: [u8; 16] = match bytes.as_slice().try_into() {
@@ -238,19 +231,13 @@ impl Format for IpAddrFormat {
                 };
                 let addr = Ipv6Addr::from(arr);
 
-                let conversions = vec![Conversion {
-                    value: CoreValue::String(addr.to_string()),
-                    target_format: "ipv6".to_string(),
-                    display: addr.to_string(),
-                    path: vec!["ipv6".to_string()],
-                    is_lossy: false,
-                    steps: vec![],
-                    priority: ConversionPriority::Semantic,
-                    display_only: false,
-                    kind: ConversionKind::default(),
-                    hidden: false,
-                    rich_display: vec![],
-                }];
+                let conversions = vec![Conversion::new(
+                    CoreValue::String(addr.to_string()),
+                    "ipv6",
+                    addr.to_string(),
+                )
+                .path(vec!["ipv6".to_string()])
+                .priority(ConversionPriority::Semantic)];
 
                 // Also try as UUID since both are 16 bytes
                 // (UUID format will handle this separately)

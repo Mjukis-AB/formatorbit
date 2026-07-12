@@ -14,8 +14,8 @@
 use crate::format::{Format, FormatInfo};
 use crate::truncate_str;
 use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, CoreValue, PacketSegment,
-    ProtoField as PublicProtoField, ProtoValue as PublicProtoValue, RichDisplay, RichDisplayOption,
+    Conversion, ConversionPriority, CoreValue, PacketSegment, ProtoField as PublicProtoField,
+    ProtoValue as PublicProtoValue, RichDisplay, RichDisplayOption,
 };
 
 pub struct ProtobufFormat;
@@ -725,23 +725,16 @@ impl Format for ProtobufFormat {
             ConversionPriority::Raw
         };
 
-        vec![Conversion {
-            value: CoreValue::Protobuf(public_fields),
-            target_format: "protobuf".to_string(),
-            display,
-            path: vec!["protobuf".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority,
-            display_only: false,
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![RichDisplayOption::new(RichDisplay::PacketLayout {
-                segments,
-                compact,
-                detailed,
-            })],
-        }]
+        vec![
+            Conversion::new(CoreValue::Protobuf(public_fields), "protobuf", display)
+                .path(vec!["protobuf".to_string()])
+                .priority(priority)
+                .rich_display(vec![RichDisplayOption::new(RichDisplay::PacketLayout {
+                    segments,
+                    compact,
+                    detailed,
+                })]),
+        ]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

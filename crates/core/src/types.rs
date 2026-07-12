@@ -778,7 +778,22 @@ pub struct Conversion {
 }
 
 impl Conversion {
-    /// Create a new Conversion with default rich_display (empty).
+    /// Create a new `Conversion` from the three required fields, with all other
+    /// fields set to their defaults (empty path/steps, not lossy, `Encoding`
+    /// priority, `Conversion` kind, not display-only, not hidden, no rich
+    /// display).
+    ///
+    /// Chain the `.path()`, `.priority()`, `.kind()`, `.lossy()`, `.steps()`,
+    /// `.display_only()`, `.hidden()`, and `.rich_display()` setters to override
+    /// individual fields:
+    ///
+    /// ```
+    /// # use formatorbit_core::types::{Conversion, ConversionKind, ConversionPriority, CoreValue};
+    /// let c = Conversion::new(CoreValue::Int { value: 255, original_bytes: None }, "decimal", "255")
+    ///     .path(vec!["decimal".to_string()])
+    ///     .priority(ConversionPriority::Primary)
+    ///     .kind(ConversionKind::Representation);
+    /// ```
     pub fn new(
         value: CoreValue,
         target_format: impl Into<String>,
@@ -797,6 +812,64 @@ impl Conversion {
             hidden: false,
             rich_display: vec![],
         }
+    }
+
+    /// Set the legacy format-id path (e.g. `["hex", "int-be"]`).
+    #[must_use]
+    pub fn path(mut self, path: Vec<String>) -> Self {
+        self.path = path;
+        self
+    }
+
+    /// Set the full conversion path with intermediate values.
+    #[must_use]
+    pub fn steps(mut self, steps: Vec<ConversionStep>) -> Self {
+        self.steps = steps;
+        self
+    }
+
+    /// Mark this conversion as lossy (or not).
+    #[must_use]
+    pub fn lossy(mut self, is_lossy: bool) -> Self {
+        self.is_lossy = is_lossy;
+        self
+    }
+
+    /// Set the sorting priority.
+    #[must_use]
+    pub fn priority(mut self, priority: ConversionPriority) -> Self {
+        self.priority = priority;
+        self
+    }
+
+    /// Set the conversion kind (transformation, representation, or trait).
+    #[must_use]
+    pub fn kind(mut self, kind: ConversionKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
+    /// Mark this conversion as display-only: the BFS won't explore further
+    /// conversions from its value.
+    #[must_use]
+    pub fn display_only(mut self, display_only: bool) -> Self {
+        self.display_only = display_only;
+        self
+    }
+
+    /// Mark this conversion as hidden: used for internal chaining, not shown in
+    /// output.
+    #[must_use]
+    pub fn hidden(mut self, hidden: bool) -> Self {
+        self.hidden = hidden;
+        self
+    }
+
+    /// Set the rich display options.
+    #[must_use]
+    pub fn rich_display(mut self, rich_display: Vec<RichDisplayOption>) -> Self {
+        self.rich_display = rich_display;
+        self
     }
 }
 

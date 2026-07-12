@@ -176,21 +176,22 @@ impl Format for WeightFormat {
 
         // Primary result: decimal grams (canonical base unit value)
         let dec_display = format!("{} g", format_decimal(grams));
-        conversions.push(Conversion {
-            value: CoreValue::Weight(grams),
-            target_format: "grams-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["grams-decimal".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Weight(grams),
+                "grams-decimal",
+                dec_display.clone(),
+            )
+            .path(vec!["grams-decimal".to_string()])
+            .steps(vec![ConversionStep {
                 format: "grams-decimal".to_string(),
                 value: CoreValue::Weight(grams),
                 display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Primary)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
@@ -206,57 +207,56 @@ impl Format for WeightFormat {
                 ConversionKind::Representation
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Weight(grams),
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Weight(grams),
+                    (*name).to_string(),
+                    display.clone(),
+                )
+                .path(vec![(*name).to_string()])
+                .steps(vec![ConversionStep {
                     format: (*name).to_string(),
                     value: CoreValue::Weight(grams),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(kind),
+            );
         }
 
         // Additional representations for the base unit (grams)
         let si_display = format_with_si_prefix(grams, "g");
         let sci_display = format!("{} g", format_scientific(grams));
 
-        conversions.push(Conversion {
-            value: CoreValue::Weight(grams),
-            target_format: "grams-si".to_string(),
-            display: si_display.clone(),
-            path: vec!["grams-si".to_string()],
-            steps: vec![ConversionStep {
-                format: "grams-si".to_string(),
-                value: CoreValue::Weight(grams),
-                display: si_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Weight(grams), "grams-si", si_display.clone())
+                .path(vec!["grams-si".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "grams-si".to_string(),
+                    value: CoreValue::Weight(grams),
+                    display: si_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
-        conversions.push(Conversion {
-            value: CoreValue::Weight(grams),
-            target_format: "grams-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["grams-scientific".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Weight(grams),
+                "grams-scientific",
+                sci_display.clone(),
+            )
+            .path(vec!["grams-scientific".to_string()])
+            .steps(vec![ConversionStep {
                 format: "grams-scientific".to_string(),
                 value: CoreValue::Weight(grams),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         conversions
     }

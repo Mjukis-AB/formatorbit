@@ -3,8 +3,7 @@
 use super::mac_oui_data::lookup_vendor;
 use crate::format::{Format, FormatInfo};
 use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation, RichDisplay,
-    RichDisplayOption,
+    Conversion, ConversionPriority, CoreValue, Interpretation, RichDisplay, RichDisplayOption,
 };
 
 pub struct MacAddressFormat;
@@ -291,19 +290,18 @@ impl Format for MacAddressFormat {
             ),
         ];
 
-        vec![Conversion {
-            value: CoreValue::String(formatted.clone()),
-            target_format: "mac-address".to_string(),
-            display: description,
-            path: vec!["mac-address".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Conversion,
-            display_only: true, // Don't further convert MAC string
-            hidden: false,
-            rich_display: vec![RichDisplayOption::new(RichDisplay::KeyValue { pairs })],
-        }]
+        vec![Conversion::new(
+            CoreValue::String(formatted.clone()),
+            "mac-address",
+            description,
+        )
+        .path(vec!["mac-address".to_string()])
+        .priority(ConversionPriority::Semantic)
+        // Don't further convert MAC string
+        .display_only(true)
+        .rich_display(vec![RichDisplayOption::new(RichDisplay::KeyValue {
+            pairs,
+        })])]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

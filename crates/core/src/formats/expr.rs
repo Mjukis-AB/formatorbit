@@ -7,7 +7,7 @@
 //! - `2 ^ 16` → 65536
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, ConversionPriority, CoreValue, Interpretation};
 
 pub struct ExprFormat;
 
@@ -335,51 +335,35 @@ impl Format for ExprFormat {
         // This is only called when expr was the source parser, so it won't
         // pollute other interpretations like color-hex or datasize.
         match value {
-            CoreValue::Int { value: i, .. } => vec![Conversion {
-                value: CoreValue::Int {
-                    value: *i,
-                    original_bytes: None,
-                },
-                target_format: "result".to_string(),
-                display: i.to_string(),
-                path: vec![], // Will be set by BFS
-                is_lossy: false,
-                steps: vec![], // Will be set by BFS
-                priority: ConversionPriority::Primary,
-                kind: ConversionKind::Conversion,
-                display_only: true, // Don't explore further from result
-                hidden: false,
-                rich_display: vec![],
-            }],
-            CoreValue::Float(f) => vec![Conversion {
-                value: CoreValue::Float(*f),
-                target_format: "result".to_string(),
-                display: f.to_string(),
-                path: vec![], // Will be set by BFS
-                is_lossy: false,
-                steps: vec![], // Will be set by BFS
-                priority: ConversionPriority::Primary,
-                kind: ConversionKind::Conversion,
-                display_only: true, // Don't explore further from result
-                hidden: false,
-                rich_display: vec![],
-            }],
-            CoreValue::Currency { amount, code } => vec![Conversion {
-                value: CoreValue::Currency {
-                    amount: *amount,
-                    code: code.clone(),
-                },
-                target_format: "result".to_string(),
-                display: format!("{:.2} {}", amount, code),
-                path: vec![], // Will be set by BFS
-                is_lossy: false,
-                steps: vec![], // Will be set by BFS
-                priority: ConversionPriority::Primary,
-                kind: ConversionKind::Conversion,
-                display_only: true, // Don't explore further from result
-                hidden: false,
-                rich_display: vec![],
-            }],
+            CoreValue::Int { value: i, .. } => vec![
+                Conversion::new(
+                    CoreValue::Int {
+                        value: *i,
+                        original_bytes: None,
+                    },
+                    "result",
+                    i.to_string(),
+                )
+                .priority(ConversionPriority::Primary)
+                .display_only(true), // Don't explore further from result
+            ],
+            CoreValue::Float(f) => vec![
+                Conversion::new(CoreValue::Float(*f), "result", f.to_string())
+                    .priority(ConversionPriority::Primary)
+                    .display_only(true), // Don't explore further from result
+            ],
+            CoreValue::Currency { amount, code } => vec![
+                Conversion::new(
+                    CoreValue::Currency {
+                        amount: *amount,
+                        code: code.clone(),
+                    },
+                    "result",
+                    format!("{:.2} {}", amount, code),
+                )
+                .priority(ConversionPriority::Primary)
+                .display_only(true), // Don't explore further from result
+            ],
             _ => vec![],
         }
     }

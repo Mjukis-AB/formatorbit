@@ -686,27 +686,26 @@ impl Format for ConstantsFormat {
         let displays: Vec<&str> = matches.iter().map(|c| c.trait_display).collect();
         let combined_display = displays.join(", ");
 
-        vec![Conversion {
+        vec![Conversion::new(
+            CoreValue::String(combined_display.clone()),
+            "constants",
+            combined_display.clone(),
+        )
+        .path(vec!["constants".to_string()])
+        .steps(vec![ConversionStep {
+            format: "constants".to_string(),
             value: CoreValue::String(combined_display.clone()),
-            target_format: "constants".to_string(),
-            display: combined_display.clone(),
-            path: vec!["constants".to_string()],
-            steps: vec![ConversionStep {
-                format: "constants".to_string(),
-                value: CoreValue::String(combined_display.clone()),
-                display: combined_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Trait,
-            display_only: true,
-            rich_display: vec![RichDisplayOption::new(RichDisplay::KeyValue {
-                pairs: matches
-                    .iter()
-                    .map(|c| (c.name.to_string(), c.value.to_string()))
-                    .collect(),
-            })],
-            ..Default::default()
-        }]
+            display: combined_display,
+        }])
+        .priority(ConversionPriority::Semantic)
+        .kind(ConversionKind::Trait)
+        .display_only(true)
+        .rich_display(vec![RichDisplayOption::new(RichDisplay::KeyValue {
+            pairs: matches
+                .iter()
+                .map(|c| (c.name.to_string(), c.value.to_string()))
+                .collect(),
+        })])]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

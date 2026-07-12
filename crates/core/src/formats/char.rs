@@ -220,66 +220,69 @@ impl Format for CharFormat {
 
                 // Decimal codepoint
                 let dec_display = cp.to_string();
-                conversions.push(Conversion {
-                    value: CoreValue::Int {
-                        value: cp as i128,
-                        original_bytes: None,
-                    },
-                    target_format: "decimal".to_string(),
-                    display: dec_display.clone(),
-                    path: vec!["decimal".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::Int {
+                            value: cp as i128,
+                            original_bytes: None,
+                        },
+                        "decimal",
+                        dec_display.clone(),
+                    )
+                    .path(vec!["decimal".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "decimal".to_string(),
                         value: CoreValue::Int {
                             value: cp as i128,
                             original_bytes: None,
                         },
                         display: dec_display,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Representation)
+                    .display_only(true),
+                );
 
                 // Hex codepoint
                 let hex_display = format!("0x{:X}", cp);
-                conversions.push(Conversion {
-                    value: CoreValue::String(hex_display.clone()),
-                    target_format: "hex-int".to_string(),
-                    display: hex_display.clone(),
-                    path: vec!["hex-int".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(hex_display.clone()),
+                        "hex-int",
+                        hex_display.clone(),
+                    )
+                    .path(vec!["hex-int".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "hex-int".to_string(),
                         value: CoreValue::String(hex_display.clone()),
                         display: hex_display,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Representation)
+                    .display_only(true),
+                );
 
                 // UTF-8 bytes
                 if let Some(ch) = char::from_u32(cp) {
                     let mut buf = [0u8; 4];
                     let utf8_str = ch.encode_utf8(&mut buf);
                     let utf8_hex = Self::utf8_hex(utf8_str);
-                    conversions.push(Conversion {
-                        value: CoreValue::String(utf8_hex.clone()),
-                        target_format: "utf8-bytes".to_string(),
-                        display: utf8_hex.clone(),
-                        path: vec!["utf8-bytes".to_string()],
-                        steps: vec![ConversionStep {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::String(utf8_hex.clone()),
+                            "utf8-bytes",
+                            utf8_hex.clone(),
+                        )
+                        .path(vec!["utf8-bytes".to_string()])
+                        .steps(vec![ConversionStep {
                             format: "utf8-bytes".to_string(),
                             value: CoreValue::String(utf8_hex.clone()),
                             display: utf8_hex,
-                        }],
-                        priority: ConversionPriority::Encoding,
-                        kind: ConversionKind::Conversion,
-                        display_only: true,
-                        ..Default::default()
-                    });
+                        }])
+                        .priority(ConversionPriority::Encoding)
+                        .kind(ConversionKind::Conversion)
+                        .display_only(true),
+                    );
                 }
             }
             CoreValue::String(s) => {
@@ -298,21 +301,22 @@ impl Format for CharFormat {
                     .map(|c| format!("U+{:04X}", *c as u32))
                     .collect::<Vec<_>>()
                     .join(" ");
-                conversions.push(Conversion {
-                    value: CoreValue::String(codepoints.clone()),
-                    target_format: "codepoints".to_string(),
-                    display: codepoints.clone(),
-                    path: vec!["codepoints".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(codepoints.clone()),
+                        "codepoints",
+                        codepoints.clone(),
+                    )
+                    .path(vec!["codepoints".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "codepoints".to_string(),
                         value: CoreValue::String(codepoints.clone()),
                         display: codepoints,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Representation,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Representation)
+                    .display_only(true),
+                );
 
                 // Note: Character count (length) removed - Utf8Format's is-ascii/encoding
                 // traits already show character count information
@@ -321,21 +325,22 @@ impl Format for CharFormat {
                 let utf8_hex = Self::utf8_hex(s);
                 let byte_count = s.len();
                 let utf8_display = format!("{} ({} bytes)", utf8_hex, byte_count);
-                conversions.push(Conversion {
-                    value: CoreValue::String(utf8_hex.clone()),
-                    target_format: "utf8-bytes".to_string(),
-                    display: utf8_display.clone(),
-                    path: vec!["utf8-bytes".to_string()],
-                    steps: vec![ConversionStep {
+                conversions.push(
+                    Conversion::new(
+                        CoreValue::String(utf8_hex.clone()),
+                        "utf8-bytes",
+                        utf8_display.clone(),
+                    )
+                    .path(vec!["utf8-bytes".to_string()])
+                    .steps(vec![ConversionStep {
                         format: "utf8-bytes".to_string(),
                         value: CoreValue::String(utf8_hex),
                         display: utf8_display,
-                    }],
-                    priority: ConversionPriority::Encoding,
-                    kind: ConversionKind::Conversion,
-                    display_only: true,
-                    ..Default::default()
-                });
+                    }])
+                    .priority(ConversionPriority::Encoding)
+                    .kind(ConversionKind::Conversion)
+                    .display_only(true),
+                );
             }
             _ => {}
         }

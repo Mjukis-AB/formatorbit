@@ -3,7 +3,7 @@
 use percent_encoding::{percent_decode_str, utf8_percent_encode, NON_ALPHANUMERIC};
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{Conversion, ConversionKind, ConversionPriority, CoreValue, Interpretation};
+use crate::types::{Conversion, CoreValue, Interpretation};
 
 pub struct UrlEncodingFormat;
 
@@ -208,19 +208,12 @@ impl Format for UrlEncodingFormat {
             return vec![];
         }
 
-        vec![Conversion {
-            value: CoreValue::String(encoded.clone()),
-            target_format: "url-encoded".to_string(),
-            display: encoded,
-            path: vec!["url-encoded".to_string()],
-            is_lossy: false,
-            steps: vec![],
-            priority: ConversionPriority::Encoding,
-            display_only: true, // Terminal format - don't chain further
-            kind: ConversionKind::Conversion,
-            hidden: false,
-            rich_display: vec![],
-        }]
+        vec![
+            Conversion::new(CoreValue::String(encoded.clone()), "url-encoded", encoded)
+                .path(vec!["url-encoded".to_string()])
+                // Terminal format - don't chain further
+                .display_only(true),
+        ]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

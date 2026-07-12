@@ -372,23 +372,25 @@ impl Formatorbit {
 
             // Call the trait's check method
             if let Some(description) = trait_plugin.check(value) {
-                traits.push(Conversion {
-                    value: value.clone(),
-                    target_format: trait_plugin.id().to_string(),
-                    display: description.clone(),
-                    path: vec![source_format.to_string(), trait_plugin.id().to_string()],
-                    is_lossy: false,
-                    steps: vec![ConversionStep {
+                traits.push(
+                    Conversion::new(
+                        value.clone(),
+                        trait_plugin.id().to_string(),
+                        description.clone(),
+                    )
+                    .path(vec![
+                        source_format.to_string(),
+                        trait_plugin.id().to_string(),
+                    ])
+                    .steps(vec![ConversionStep {
                         format: trait_plugin.id().to_string(),
                         value: value.clone(),
                         display: description,
-                    }],
-                    priority: ConversionPriority::Semantic,
-                    kind: ConversionKind::Trait,
-                    display_only: true,
-                    hidden: false,
-                    rich_display: vec![],
-                });
+                    }])
+                    .priority(ConversionPriority::Semantic)
+                    .kind(ConversionKind::Trait)
+                    .display_only(true),
+                );
             }
         }
 

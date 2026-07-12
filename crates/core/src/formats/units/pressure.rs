@@ -176,21 +176,22 @@ impl Format for PressureFormat {
 
         // Primary result: decimal pascals (canonical base unit value)
         let dec_display = format!("{} Pa", format_decimal(pa));
-        conversions.push(Conversion {
-            value: CoreValue::Pressure(pa),
-            target_format: "pascals-decimal".to_string(),
-            display: dec_display.clone(),
-            path: vec!["pascals-decimal".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Pressure(pa),
+                "pascals-decimal",
+                dec_display.clone(),
+            )
+            .path(vec!["pascals-decimal".to_string()])
+            .steps(vec![ConversionStep {
                 format: "pascals-decimal".to_string(),
                 value: CoreValue::Pressure(pa),
                 display: dec_display,
-            }],
-            priority: ConversionPriority::Primary,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Primary)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         // Standard unit conversions
         for (name, abbrev, multiplier) in DISPLAY_UNITS {
@@ -206,57 +207,56 @@ impl Format for PressureFormat {
                 ConversionKind::Representation
             };
 
-            conversions.push(Conversion {
-                value: CoreValue::Pressure(pa),
-                target_format: (*name).to_string(),
-                display: display.clone(),
-                path: vec![(*name).to_string()],
-                steps: vec![ConversionStep {
+            conversions.push(
+                Conversion::new(
+                    CoreValue::Pressure(pa),
+                    (*name).to_string(),
+                    display.clone(),
+                )
+                .path(vec![(*name).to_string()])
+                .steps(vec![ConversionStep {
                     format: (*name).to_string(),
                     value: CoreValue::Pressure(pa),
                     display,
-                }],
-                priority: ConversionPriority::Semantic,
-                kind,
-                ..Default::default()
-            });
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(kind),
+            );
         }
 
         // Additional representations for the base unit (pascals)
         let si_display = format_with_si_prefix(pa, "Pa");
         let sci_display = format!("{} Pa", format_scientific(pa));
 
-        conversions.push(Conversion {
-            value: CoreValue::Pressure(pa),
-            target_format: "pascals-si".to_string(),
-            display: si_display.clone(),
-            path: vec!["pascals-si".to_string()],
-            steps: vec![ConversionStep {
-                format: "pascals-si".to_string(),
-                value: CoreValue::Pressure(pa),
-                display: si_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Pressure(pa), "pascals-si", si_display.clone())
+                .path(vec!["pascals-si".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "pascals-si".to_string(),
+                    value: CoreValue::Pressure(pa),
+                    display: si_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation)
+                .display_only(true),
+        );
 
-        conversions.push(Conversion {
-            value: CoreValue::Pressure(pa),
-            target_format: "pascals-scientific".to_string(),
-            display: sci_display.clone(),
-            path: vec!["pascals-scientific".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Pressure(pa),
+                "pascals-scientific",
+                sci_display.clone(),
+            )
+            .path(vec!["pascals-scientific".to_string()])
+            .steps(vec![ConversionStep {
                 format: "pascals-scientific".to_string(),
                 value: CoreValue::Pressure(pa),
                 display: sci_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
 
         conversions
     }

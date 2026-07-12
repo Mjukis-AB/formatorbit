@@ -389,131 +389,138 @@ fn build_conversions_v4(cidr: &CidrV4) -> Vec<Conversion> {
 
     // Netmask
     let netmask = cidr.netmask().to_string();
-    conversions.push(Conversion {
-        value: CoreValue::String(netmask.clone()),
-        target_format: "netmask".to_string(),
-        display: netmask.clone(),
-        path: vec!["netmask".to_string()],
-        steps: vec![ConversionStep {
+    conversions.push(
+        Conversion::new(
+            CoreValue::String(netmask.clone()),
+            "netmask",
+            netmask.clone(),
+        )
+        .path(vec!["netmask".to_string()])
+        .steps(vec![ConversionStep {
             format: "netmask".to_string(),
             value: CoreValue::String(netmask.clone()),
             display: netmask,
-        }],
-        priority: ConversionPriority::Semantic,
-        kind: ConversionKind::Representation,
-        display_only: true,
-        ..Default::default()
-    });
+        }])
+        .priority(ConversionPriority::Semantic)
+        .kind(ConversionKind::Representation)
+        .display_only(true),
+    );
 
     // Broadcast
     let broadcast = cidr.broadcast().to_string();
-    conversions.push(Conversion {
-        value: CoreValue::String(broadcast.clone()),
-        target_format: "broadcast".to_string(),
-        display: broadcast.clone(),
-        path: vec!["broadcast".to_string()],
-        steps: vec![ConversionStep {
+    conversions.push(
+        Conversion::new(
+            CoreValue::String(broadcast.clone()),
+            "broadcast",
+            broadcast.clone(),
+        )
+        .path(vec!["broadcast".to_string()])
+        .steps(vec![ConversionStep {
             format: "broadcast".to_string(),
             value: CoreValue::String(broadcast.clone()),
             display: broadcast,
-        }],
-        priority: ConversionPriority::Semantic,
-        kind: ConversionKind::Representation,
-        display_only: true,
-        ..Default::default()
-    });
+        }])
+        .priority(ConversionPriority::Semantic)
+        .kind(ConversionKind::Representation)
+        .display_only(true),
+    );
 
     // Host range
     if let (Some(first), Some(last)) = (cidr.first_host(), cidr.last_host()) {
         let range = format!("{} - {}", first, last);
-        conversions.push(Conversion {
-            value: CoreValue::String(range.clone()),
-            target_format: "host-range".to_string(),
-            display: range.clone(),
-            path: vec!["host-range".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::String(range.clone()),
+                "host-range",
+                range.clone(),
+            )
+            .path(vec!["host-range".to_string()])
+            .steps(vec![ConversionStep {
                 format: "host-range".to_string(),
                 value: CoreValue::String(range.clone()),
                 display: range,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
+        );
     }
 
     // Host count (as trait)
     let host_count = format!("{} usable hosts", format_host_count(cidr.host_count()));
-    conversions.push(Conversion {
-        value: CoreValue::String(host_count.clone()),
-        target_format: "host-count".to_string(),
-        display: host_count.clone(),
-        path: vec!["host-count".to_string()],
-        steps: vec![ConversionStep {
+    conversions.push(
+        Conversion::new(
+            CoreValue::String(host_count.clone()),
+            "host-count",
+            host_count.clone(),
+        )
+        .path(vec!["host-count".to_string()])
+        .steps(vec![ConversionStep {
             format: "host-count".to_string(),
             value: CoreValue::String(host_count.clone()),
             display: host_count,
-        }],
-        priority: ConversionPriority::Semantic,
-        kind: ConversionKind::Trait,
-        display_only: true,
-        ..Default::default()
-    });
+        }])
+        .priority(ConversionPriority::Semantic)
+        .kind(ConversionKind::Trait)
+        .display_only(true),
+    );
 
     // Wildcard mask
     let wildcard = cidr.wildcard().to_string();
-    conversions.push(Conversion {
-        value: CoreValue::String(wildcard.clone()),
-        target_format: "wildcard".to_string(),
-        display: wildcard.clone(),
-        path: vec!["wildcard".to_string()],
-        steps: vec![ConversionStep {
+    conversions.push(
+        Conversion::new(
+            CoreValue::String(wildcard.clone()),
+            "wildcard",
+            wildcard.clone(),
+        )
+        .path(vec!["wildcard".to_string()])
+        .steps(vec![ConversionStep {
             format: "wildcard".to_string(),
             value: CoreValue::String(wildcard.clone()),
             display: wildcard,
-        }],
-        priority: ConversionPriority::Semantic,
-        kind: ConversionKind::Representation,
-        display_only: true,
-        ..Default::default()
-    });
+        }])
+        .priority(ConversionPriority::Semantic)
+        .kind(ConversionKind::Representation)
+        .display_only(true),
+    );
 
     // Network class (as trait)
     let class = cidr.network_class();
-    conversions.push(Conversion {
-        value: CoreValue::String(class.to_string()),
-        target_format: "network-class".to_string(),
-        display: class.to_string(),
-        path: vec!["network-class".to_string()],
-        steps: vec![ConversionStep {
+    conversions.push(
+        Conversion::new(
+            CoreValue::String(class.to_string()),
+            "network-class",
+            class.to_string(),
+        )
+        .path(vec!["network-class".to_string()])
+        .steps(vec![ConversionStep {
             format: "network-class".to_string(),
             value: CoreValue::String(class.to_string()),
             display: class.to_string(),
-        }],
-        priority: ConversionPriority::Semantic,
-        kind: ConversionKind::Trait,
-        display_only: true,
-        ..Default::default()
-    });
+        }])
+        .priority(ConversionPriority::Semantic)
+        .kind(ConversionKind::Trait)
+        .display_only(true),
+    );
 
     // Private network trait
     if cidr.is_private() {
-        conversions.push(Conversion {
-            value: CoreValue::String("Private network".to_string()),
-            target_format: "private-network".to_string(),
-            display: "Private network (RFC 1918)".to_string(),
-            path: vec!["private-network".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::String("Private network".to_string()),
+                "private-network",
+                "Private network (RFC 1918)".to_string(),
+            )
+            .path(vec!["private-network".to_string()])
+            .steps(vec![ConversionStep {
                 format: "private-network".to_string(),
                 value: CoreValue::String("Private network".to_string()),
                 display: "Private network (RFC 1918)".to_string(),
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Trait,
-            display_only: true,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Trait)
+            .display_only(true),
+        );
     }
 
     conversions
@@ -525,21 +532,22 @@ fn build_conversions_v6(cidr: &CidrV6) -> Vec<Conversion> {
 
     // Total addresses
     let total = format!("{} addresses", cidr.total_addresses_str());
-    conversions.push(Conversion {
-        value: CoreValue::String(total.clone()),
-        target_format: "address-count".to_string(),
-        display: total.clone(),
-        path: vec!["address-count".to_string()],
-        steps: vec![ConversionStep {
+    conversions.push(
+        Conversion::new(
+            CoreValue::String(total.clone()),
+            "address-count",
+            total.clone(),
+        )
+        .path(vec!["address-count".to_string()])
+        .steps(vec![ConversionStep {
             format: "address-count".to_string(),
             value: CoreValue::String(total.clone()),
             display: total,
-        }],
-        priority: ConversionPriority::Semantic,
-        kind: ConversionKind::Trait,
-        display_only: true,
-        ..Default::default()
-    });
+        }])
+        .priority(ConversionPriority::Semantic)
+        .kind(ConversionKind::Trait)
+        .display_only(true),
+    );
 
     conversions
 }

@@ -213,54 +213,49 @@ impl Format for TemperatureFormat {
 
         // Celsius
         let c_display = format!("{}°C", Self::format_value(celsius));
-        conversions.push(Conversion {
-            value: CoreValue::Temperature(kelvin),
-            target_format: "celsius".to_string(),
-            display: c_display.clone(),
-            path: vec!["celsius".to_string()],
-            steps: vec![ConversionStep {
-                format: "celsius".to_string(),
-                value: CoreValue::Temperature(kelvin),
-                display: c_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Temperature(kelvin), "celsius", c_display.clone())
+                .path(vec!["celsius".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "celsius".to_string(),
+                    value: CoreValue::Temperature(kelvin),
+                    display: c_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation),
+        );
 
         // Fahrenheit
         let f_display = format!("{}°F", Self::format_value(fahrenheit));
-        conversions.push(Conversion {
-            value: CoreValue::Temperature(kelvin),
-            target_format: "fahrenheit".to_string(),
-            display: f_display.clone(),
-            path: vec!["fahrenheit".to_string()],
-            steps: vec![ConversionStep {
+        conversions.push(
+            Conversion::new(
+                CoreValue::Temperature(kelvin),
+                "fahrenheit",
+                f_display.clone(),
+            )
+            .path(vec!["fahrenheit".to_string()])
+            .steps(vec![ConversionStep {
                 format: "fahrenheit".to_string(),
                 value: CoreValue::Temperature(kelvin),
                 display: f_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            ..Default::default()
-        });
+            }])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation),
+        );
 
         // Kelvin
         let k_display = format!("{} K", Self::format_value(kelvin));
-        conversions.push(Conversion {
-            value: CoreValue::Temperature(kelvin),
-            target_format: "kelvin".to_string(),
-            display: k_display.clone(),
-            path: vec!["kelvin".to_string()],
-            steps: vec![ConversionStep {
-                format: "kelvin".to_string(),
-                value: CoreValue::Temperature(kelvin),
-                display: k_display,
-            }],
-            priority: ConversionPriority::Semantic,
-            kind: ConversionKind::Representation,
-            ..Default::default()
-        });
+        conversions.push(
+            Conversion::new(CoreValue::Temperature(kelvin), "kelvin", k_display.clone())
+                .path(vec!["kelvin".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "kelvin".to_string(),
+                    value: CoreValue::Temperature(kelvin),
+                    display: k_display,
+                }])
+                .priority(ConversionPriority::Semantic)
+                .kind(ConversionKind::Representation),
+        );
 
         conversions
     }

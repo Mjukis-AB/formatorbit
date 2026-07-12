@@ -1,9 +1,7 @@
 //! JSON format.
 
 use crate::format::{Format, FormatInfo};
-use crate::types::{
-    Conversion, ConversionKind, ConversionPriority, ConversionStep, CoreValue, Interpretation,
-};
+use crate::types::{Conversion, ConversionPriority, ConversionStep, CoreValue, Interpretation};
 
 pub struct JsonFormat;
 
@@ -74,23 +72,18 @@ impl Format for JsonFormat {
 
         let formatted = serde_json::to_string_pretty(json).unwrap_or_default();
 
-        vec![Conversion {
+        vec![Conversion::new(
+            CoreValue::Json(json.clone()),
+            "json-formatted",
+            formatted.clone(),
+        )
+        .path(vec!["json-formatted".to_string()])
+        .steps(vec![ConversionStep {
+            format: "json-formatted".to_string(),
             value: CoreValue::Json(json.clone()),
-            target_format: "json-formatted".to_string(),
-            display: formatted.clone(),
-            path: vec!["json-formatted".to_string()],
-            steps: vec![ConversionStep {
-                format: "json-formatted".to_string(),
-                value: CoreValue::Json(json.clone()),
-                display: formatted,
-            }],
-            is_lossy: false,
-            priority: ConversionPriority::Structured,
-            display_only: false,
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![],
-        }]
+            display: formatted,
+        }])
+        .priority(ConversionPriority::Structured)]
     }
 
     fn aliases(&self) -> &'static [&'static str] {

@@ -603,19 +603,18 @@ impl Format for ImageFormat {
         let rich_display = Self::build_rich_display(&meta);
 
         // Main image interpretation
-        conversions.push(crate::types::Conversion {
-            value: CoreValue::String(description.clone()),
-            target_format: "image-info".to_string(),
-            display: description,
-            path: vec!["image-info".to_string()],
-            steps: vec![],
-            is_lossy: false,
-            priority: crate::types::ConversionPriority::Structured,
-            display_only: true,
-            kind: crate::types::ConversionKind::Representation,
-            hidden: false,
-            rich_display,
-        });
+        conversions.push(
+            crate::types::Conversion::new(
+                CoreValue::String(description.clone()),
+                "image-info",
+                description,
+            )
+            .path(vec!["image-info".to_string()])
+            .priority(crate::types::ConversionPriority::Structured)
+            .kind(crate::types::ConversionKind::Representation)
+            .display_only(true)
+            .rich_display(rich_display),
+        );
 
         conversions
     }

@@ -125,51 +125,37 @@ impl DateTimeFormat {
         let relative = Self::format_relative(*dt);
 
         vec![
-            Conversion {
-                value: CoreValue::Int {
+            Conversion::new(
+                CoreValue::Int {
                     value: epoch_secs as i128,
                     original_bytes: None,
                 },
-                target_format: "epoch-seconds".to_string(),
-                display: epoch_secs.to_string(),
-                path: vec!["epoch-seconds".to_string()],
-                is_lossy: false,
-                steps: vec![],
-                priority: ConversionPriority::Semantic,
-                display_only: true,
-                kind: ConversionKind::Conversion,
-                hidden: false,
-                rich_display: vec![],
-            },
-            Conversion {
-                value: CoreValue::Int {
+                "epoch-seconds",
+                epoch_secs.to_string(),
+            )
+            .path(vec!["epoch-seconds".to_string()])
+            .priority(ConversionPriority::Semantic)
+            .display_only(true),
+            Conversion::new(
+                CoreValue::Int {
                     value: epoch_millis as i128,
                     original_bytes: None,
                 },
-                target_format: "epoch-millis".to_string(),
-                display: epoch_millis.to_string(),
-                path: vec!["epoch-millis".to_string()],
-                is_lossy: false,
-                steps: vec![],
-                priority: ConversionPriority::Semantic,
-                display_only: true,
-                kind: ConversionKind::Conversion,
-                hidden: false,
-                rich_display: vec![],
-            },
-            Conversion {
-                value: CoreValue::String(relative.clone()),
-                target_format: "relative-time".to_string(),
-                display: relative,
-                path: vec!["relative-time".to_string()],
-                is_lossy: false,
-                steps: vec![],
-                priority: ConversionPriority::Semantic,
-                display_only: true,
-                kind: ConversionKind::Representation,
-                hidden: false,
-                rich_display: vec![],
-            },
+                "epoch-millis",
+                epoch_millis.to_string(),
+            )
+            .path(vec!["epoch-millis".to_string()])
+            .priority(ConversionPriority::Semantic)
+            .display_only(true),
+            Conversion::new(
+                CoreValue::String(relative.clone()),
+                "relative-time",
+                relative,
+            )
+            .path(vec!["relative-time".to_string()])
+            .priority(ConversionPriority::Semantic)
+            .kind(ConversionKind::Representation)
+            .display_only(true),
         ]
     }
 
@@ -565,23 +551,20 @@ impl DateTimeFormat {
                 if let Some(dt) = Utc.timestamp_opt(secs, 0).single() {
                     let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
-                    conversions.push(Conversion {
-                        value: CoreValue::DateTime(dt),
-                        target_format: "epoch-seconds".to_string(),
-                        display: format!("{} ({})", iso, relative),
-                        path: vec!["epoch-seconds".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Semantic,
-                        display_only: false,
-                        kind: ConversionKind::default(),
-                        hidden: false,
-                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::DateTime(dt),
+                            "epoch-seconds",
+                            format!("{} ({})", iso, relative),
+                        )
+                        .path(vec!["epoch-seconds".to_string()])
+                        .priority(ConversionPriority::Semantic)
+                        .rich_display(vec![RichDisplayOption::new(RichDisplay::DateTime {
                             epoch_millis: secs * 1000,
                             iso: iso.clone(),
                             relative,
-                        })],
-                    });
+                        })]),
+                    );
                 }
             }
 
@@ -592,23 +575,20 @@ impl DateTimeFormat {
                 if let Some(dt) = Utc.timestamp_opt(epoch_secs, nanos).single() {
                     let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
-                    conversions.push(Conversion {
-                        value: CoreValue::DateTime(dt),
-                        target_format: "epoch-millis".to_string(),
-                        display: format!("{} ({})", iso, relative),
-                        path: vec!["epoch-millis".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Semantic,
-                        display_only: false,
-                        kind: ConversionKind::default(),
-                        hidden: false,
-                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::DateTime(dt),
+                            "epoch-millis",
+                            format!("{} ({})", iso, relative),
+                        )
+                        .path(vec!["epoch-millis".to_string()])
+                        .priority(ConversionPriority::Semantic)
+                        .rich_display(vec![RichDisplayOption::new(RichDisplay::DateTime {
                             epoch_millis: secs,
                             iso: iso.clone(),
                             relative,
-                        })],
-                    });
+                        })]),
+                    );
                 }
             }
 
@@ -618,23 +598,20 @@ impl DateTimeFormat {
                 if let Some(dt) = Utc.timestamp_opt(unix_secs, 0).single() {
                     let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
-                    conversions.push(Conversion {
-                        value: CoreValue::DateTime(dt),
-                        target_format: "apple-cocoa".to_string(),
-                        display: format!("{} ({})", iso, relative),
-                        path: vec!["apple-cocoa".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Semantic,
-                        display_only: false,
-                        kind: ConversionKind::default(),
-                        hidden: false,
-                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::DateTime(dt),
+                            "apple-cocoa",
+                            format!("{} ({})", iso, relative),
+                        )
+                        .path(vec!["apple-cocoa".to_string()])
+                        .priority(ConversionPriority::Semantic)
+                        .rich_display(vec![RichDisplayOption::new(RichDisplay::DateTime {
                             epoch_millis: unix_secs * 1000,
                             iso: iso.clone(),
                             relative,
-                        })],
-                    });
+                        })]),
+                    );
                 }
             }
         }
@@ -646,23 +623,20 @@ impl DateTimeFormat {
                 if let Some(dt) = Utc.timestamp_opt(unix_secs, nanos).single() {
                     let iso = dt.to_rfc3339();
                     let relative = Self::format_relative(dt);
-                    conversions.push(Conversion {
-                        value: CoreValue::DateTime(dt),
-                        target_format: "filetime".to_string(),
-                        display: format!("{} ({})", iso, relative),
-                        path: vec!["filetime".to_string()],
-                        is_lossy: false,
-                        steps: vec![],
-                        priority: ConversionPriority::Semantic,
-                        display_only: false,
-                        kind: ConversionKind::default(),
-                        hidden: false,
-                        rich_display: vec![RichDisplayOption::new(RichDisplay::DateTime {
+                    conversions.push(
+                        Conversion::new(
+                            CoreValue::DateTime(dt),
+                            "filetime",
+                            format!("{} ({})", iso, relative),
+                        )
+                        .path(vec!["filetime".to_string()])
+                        .priority(ConversionPriority::Semantic)
+                        .rich_display(vec![RichDisplayOption::new(RichDisplay::DateTime {
                             epoch_millis: unix_secs * 1000 + (nanos / 1_000_000) as i64,
                             iso: iso.clone(),
                             relative,
-                        })],
-                    });
+                        })]),
+                    );
                 }
             }
         }

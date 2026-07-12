@@ -473,23 +473,16 @@ impl Format for HexFormat {
         // Show truncated hex for large data
         let display = Self::encode_truncated(bytes, MAX_HEX_DISPLAY_BYTES);
 
-        vec![Conversion {
-            value: CoreValue::String(Self::encode(bytes)),
-            target_format: "hex".to_string(),
-            display,
-            path: vec!["hex".to_string()],
-            steps: vec![ConversionStep {
-                format: "hex".to_string(),
-                value: CoreValue::String(Self::encode(bytes)),
-                display: Self::encode_truncated(bytes, MAX_HEX_DISPLAY_BYTES),
-            }],
-            is_lossy: false,
-            priority: ConversionPriority::Encoding,
-            display_only: true, // Don't explore further from hex string (avoids codepoints noise)
-            kind: ConversionKind::default(),
-            hidden: false,
-            rich_display: vec![],
-        }]
+        vec![
+            Conversion::new(CoreValue::String(Self::encode(bytes)), "hex", display)
+                .path(vec!["hex".to_string()])
+                .steps(vec![ConversionStep {
+                    format: "hex".to_string(),
+                    value: CoreValue::String(Self::encode(bytes)),
+                    display: Self::encode_truncated(bytes, MAX_HEX_DISPLAY_BYTES),
+                }])
+                .display_only(true),
+        ] // Don't explore further from hex string (avoids codepoints noise)
     }
 
     fn source_conversions(&self, value: &CoreValue) -> Vec<Conversion> {
@@ -510,29 +503,26 @@ impl Format for HexFormat {
             let int_value: i128 = bytes.iter().fold(0i128, |acc, &b| (acc << 8) | (b as i128));
             let display = int_value.to_string();
 
-            return vec![Conversion {
-                value: CoreValue::Int {
+            return vec![Conversion::new(
+                CoreValue::Int {
                     value: int_value,
                     original_bytes: Some(bytes.clone()),
                 },
-                target_format: "decimal".to_string(),
-                display: display.clone(),
-                path: vec!["decimal".to_string()],
-                steps: vec![ConversionStep {
-                    format: "decimal".to_string(),
-                    value: CoreValue::Int {
-                        value: int_value,
-                        original_bytes: None,
-                    },
-                    display,
-                }],
-                is_lossy: false,
-                priority: ConversionPriority::Primary,
-                display_only: true,
-                kind: ConversionKind::Representation,
-                hidden: false,
-                rich_display: vec![],
-            }];
+                "decimal",
+                display.clone(),
+            )
+            .path(vec!["decimal".to_string()])
+            .steps(vec![ConversionStep {
+                format: "decimal".to_string(),
+                value: CoreValue::Int {
+                    value: int_value,
+                    original_bytes: None,
+                },
+                display,
+            }])
+            .priority(ConversionPriority::Primary)
+            .display_only(true)
+            .kind(ConversionKind::Representation)];
         }
 
         vec![]
