@@ -6,7 +6,66 @@
 //!
 //! Run with: cargo test -p formatorbit-cli --test readme_examples
 
-use std::process::Command;
+use std::process::{Command, Stdio};
+
+/// A throwaway `$HOME` so tests never read the developer's real config
+/// (`~/Library/Application Support/forb/config.toml`), which can invert the
+/// category order and change output ordering. Each call gets a unique dir.
+fn isolated_home() -> std::path::PathBuf {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("forb_readme_test_{}_{}", std::process::id(), n));
+    std::fs::create_dir_all(&dir).expect("create isolated HOME");
+    dir
+}
+
+/// Run `forb` with the shipped-default config (isolated HOME) and no color.
+/// Returns (stdout, stderr).
+fn run_forb_default(args: &[&str]) -> (String, String) {
+    let forb = env!("CARGO_BIN_EXE_forb");
+    let home = isolated_home();
+    let output = Command::new(forb)
+        .args(args)
+        .env("HOME", &home)
+        .env("NO_COLOR", "1")
+        // Ensure network-touching behavior stays off regardless of ambient env.
+        .env("FORB_CHECK_UPDATES", "0")
+        .output()
+        .expect("run forb");
+    (
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    )
+}
+
+/// Run `forb` with piped stdin (isolated HOME, no color). Returns (stdout, stderr).
+fn run_forb_piped(args: &[&str], stdin_data: &str) -> (String, String) {
+    use std::io::Write;
+    let forb = env!("CARGO_BIN_EXE_forb");
+    let home = isolated_home();
+    let mut child = Command::new(forb)
+        .args(args)
+        .env("HOME", &home)
+        .env("NO_COLOR", "1")
+        .env("FORB_CHECK_UPDATES", "0")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn forb");
+    child
+        .stdin
+        .take()
+        .expect("stdin")
+        .write_all(stdin_data.as_bytes())
+        .expect("write stdin");
+    let output = child.wait_with_output().expect("wait forb");
+    (
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    )
+}
 
 /// Extract forb commands from README.md
 fn extract_forb_commands() -> Vec<(String, Option<String>)> {
@@ -265,4 +324,92 @@ fn test_core_examples() {
             stdout
         );
     }
+}
+
+/// Locks in the README front-page example (`forb 691E01B8`) against the
+/// shipped-default config. Phase 1 re-ranked conversions so the output now
+/// leads with `decimal` then `epoch-seconds`; this test fails if that drifts.
+///
+/// Asserts only on stable substrings — never on relative-time strings
+/// ("7 months ago") or the "(N more)" tail, both of which change over time.
+#[test]
+fn test_readme_front_page_example() {
+    let (stdout, _stderr) = run_forb_default(&["691E01B8"]);
+
+    assert!(
+        stdout.contains("▶ hex"),
+        "front-page example should be interpreted as hex, got:\n{stdout}"
+    );
+    // The canonical decimal value must lead the conversions.
+    assert!(
+        stdout.contains("decimal: 1763574200"),
+        "front-page example should show decimal 1763574200, got:\n{stdout}"
+    );
+    // The big-endian epoch timestamp (date part is stable regardless of "now").
+    assert!(
+        stdout.contains("epoch-seconds: 2025-11-19T17:43:20"),
+        "front-page example should show the epoch-seconds timestamp, got:\n{stdout}"
+    );
+
+    // Ranking guard: decimal must appear before epoch-seconds, and the
+    // spurious hex→ipv4 reading must NOT lead (it was removed in Phase 1).
+    let dec = stdout.find("decimal: 1763574200").expect("decimal present");
+    let epoch = stdout
+        .find("epoch-seconds: 2025-11-19")
+        .expect("epoch present");
+    assert!(
+        dec < epoch,
+        "decimal should rank before epoch-seconds, got:\n{stdout}"
+    );
+}
+
+/// Locks in the README tee-mode example. `cat server.log | forb --tee`
+/// annotates each line with the highest-value interpretation: a UUID line
+/// shows its version/variant, a hex-bytes line shows the decimal value.
+#[test]
+fn test_readme_tee_example() {
+    let log = "[2024-01-15 10:30:45] User 550e8400-e29b-41d4-a716-446655440000 logged in\n\
+               [2024-01-15 10:30:46] Received payload: 69 1E 01 B8\n";
+    let (stdout, _stderr) = run_forb_piped(&["--tee"], log);
+
+    // Original lines are passed through.
+    assert!(
+        stdout.contains("logged in") && stdout.contains("Received payload"),
+        "tee should pass through original lines, got:\n{stdout}"
+    );
+    // UUID annotates with version/variant, NOT a nonsense ipv6 re-encoding.
+    assert!(
+        stdout.contains("uuid: UUID v4"),
+        "UUID line should annotate with version/variant, got:\n{stdout}"
+    );
+    assert!(
+        !stdout.contains("uuid: ipv6"),
+        "UUID line must not annotate with a nonsense ipv6 re-encoding, got:\n{stdout}"
+    );
+    // Hex bytes annotate with the integer value.
+    assert!(
+        stdout.contains("hex: decimal: 1763574200"),
+        "hex-bytes line should annotate with the decimal value, got:\n{stdout}"
+    );
+}
+
+/// Bare piped multi-line input (no `--tee`) is analyzed as a single blob, but
+/// forb should print a one-line stderr hint pointing at `--tee`. This keeps the
+/// README's documented behavior honest and non-breaking.
+#[test]
+fn test_bare_multiline_pipe_hints_tee() {
+    let log = "550e8400-e29b-41d4-a716-446655440000\n69 1E 01 B8\n";
+    let (_stdout, stderr) = run_forb_piped(&[], log);
+
+    assert!(
+        stderr.contains("--tee"),
+        "multi-line piped input should hint at --tee on stderr, got stderr:\n{stderr}"
+    );
+
+    // Single-line piped input must NOT emit the hint.
+    let (_stdout1, stderr1) = run_forb_piped(&[], "691E01B8\n");
+    assert!(
+        !stderr1.contains("--tee"),
+        "single-line piped input should not hint at --tee, got stderr:\n{stderr1}"
+    );
 }

@@ -147,6 +147,29 @@ fn print_highlighted_line(
     Ok(())
 }
 
+/// Whether an interpretation's `description` is a generic size placeholder
+/// rather than a semantic summary.
+///
+/// Byte-ish formats (hex, base64, raw bytes) describe themselves as e.g.
+/// `"4 bytes"` or `"125 chars (ASCII)"` — those carry no meaning, so the
+/// annotation should use the top conversion instead. Semantic formats (uuid,
+/// ulid, ipv4, color, epoch, ...) put the meaning in the description, and we
+/// keep it verbatim.
+fn is_generic_description(desc: &str) -> bool {
+    let desc = desc.trim();
+    // Strip a leading count like "4 " / "125 " and check the remaining noun.
+    let rest = match desc.split_once(' ') {
+        Some((count, rest)) if count.chars().all(|c| c.is_ascii_digit()) => rest,
+        _ => return false,
+    };
+    // "bytes", "chars", "chars (ASCII)", "char", "byte", ...
+    let noun = rest.split_whitespace().next().unwrap_or("");
+    matches!(
+        noun,
+        "byte" | "bytes" | "char" | "chars" | "character" | "characters"
+    )
+}
+
 /// Print annotation for a token.
 fn print_annotation(
     out: &mut impl Write,
@@ -203,10 +226,28 @@ fn print_annotation(
         })
         .collect();
 
-    let conversions_str = if conv_summary.is_empty() {
-        interp.description.clone()
+    // Decide what to annotate the token with. Two sources compete:
+    //   1. The interpretation's own `description` — for many semantic formats
+    //      (uuid, ulid, ipv4, color, epoch) this IS the most meaningful summary
+    //      (e.g. "UUID v4 (random)", "IPv4: 10.0.0.1 (Private)").
+    //   2. The top-ranked conversion — for byte-ish formats (hex, base64) the
+    //      description is a generic "N bytes" placeholder and the value lives in
+    //      the first conversion (e.g. int/epoch).
+    // Prefer the description when it carries semantics; otherwise use the top
+    // conversion (which, post-ranking, is the highest-priority / most-semantic
+    // one). This keeps hex bytes annotating as int/epoch while a UUID annotates
+    // with its version/variant instead of a nonsense re-encoding.
+    let conversions_str = if is_generic_description(&interp.description) {
+        // Description is uninformative — use the top conversion, falling back to
+        // the description only if there are no conversions at all.
+        if conv_summary.is_empty() {
+            interp.description.clone()
+        } else {
+            conv_summary.join(", ")
+        }
     } else {
-        conv_summary.join(", ")
+        // Description is semantic — lead with it.
+        interp.description.clone()
     };
 
     writeln!(
@@ -262,4 +303,34 @@ fn print_json_line(
 
     writeln!(out, "{}", serde_json::to_string(&output).unwrap())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generic_descriptions_detected() {
+        assert!(is_generic_description("4 bytes"));
+        assert!(is_generic_description("1 byte"));
+        assert!(is_generic_description("125 chars (ASCII)"));
+        assert!(is_generic_description("5 chars"));
+    }
+
+    #[test]
+    fn semantic_descriptions_kept() {
+        // These carry meaning and must NOT be treated as generic, so the tee
+        // annotation leads with them instead of a nonsense conversion.
+        assert!(!is_generic_description("UUID v4 (random)"));
+        assert!(!is_generic_description(
+            "ULID (created: 2016-07-30T23:54:10.259+00:00)"
+        ));
+        assert!(!is_generic_description("IPv4: 192.168.1.1 (Private)"));
+        assert!(!is_generic_description(
+            "2023-12-24T22:26:29+00:00 (2 years ago)"
+        ));
+        assert!(!is_generic_description("RGB: RGB(255, 87, 51)"));
+        // A number alone is not "<count> <noun>".
+        assert!(!is_generic_description("42"));
+    }
 }

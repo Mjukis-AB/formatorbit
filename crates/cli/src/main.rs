@@ -1089,6 +1089,18 @@ fn main() {
                 eprintln!("{}: Empty input", "error".red().bold());
                 std::process::exit(1);
             }
+            // Bare piped multi-line input is analyzed as a single text blob.
+            // Users who piped a log likely wanted per-line annotations, so
+            // hint at --tee. Non-breaking: behavior is unchanged, hint goes to
+            // stderr, and only when the output is not machine-readable.
+            if trimmed.contains('\n') && !cli.json && !cli.raw {
+                eprintln!(
+                    "{}: multi-line input is analyzed as one blob; use {} for per-line annotations (e.g. {})",
+                    "hint".yellow().bold(),
+                    "--tee".bold(),
+                    "cat file | forb --tee".bold()
+                );
+            }
             (trimmed, None)
         }
     } else if let Some(input) = cli.input {

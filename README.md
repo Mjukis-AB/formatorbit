@@ -11,23 +11,23 @@ $ forb 691E01B8
 
 ▶ hex (92% confidence)
   4 bytes
-  → ipv4: 105.30.1.184
-  → epoch-seconds: 2025-11-19T17:43:20+00:00
-  ≈ binary: 01101001 00011110 00000001 10111000
-  ≈ base64: aR4BuA==
-  ≈ int-be: 1763574200
-  … (8 more, use -l 0 to show all)
+  ≈ decimal: 1763574200 (via hex → decimal)
+  → epoch-seconds: 2025-11-19T17:43:20+00:00 (via hex → int-be → epoch-seconds)
+  → apple-cocoa: 2056-11-19T17:43:20+00:00 (via hex → int-be → apple-cocoa)
+  → epoch-seconds: 2067-10-29T02:31:05+00:00 (via hex → int-le → epoch-seconds)
+  → apple-cocoa: 2098-10-29T02:31:05+00:00 (via hex → int-le → apple-cocoa)
+  … (22 more, use -l 0 to show all)
 ```
 
-Conversions are sorted by usefulness - structured data (JSON, MessagePack, Protobuf) first, then semantic types (datetime, UUID, IP), then encodings. Structured data is pretty-printed with syntax highlighting.
+Conversions are sorted by usefulness - the canonical value first, then semantic types (datetime, UUID, IP), then encodings, then raw. Structured data (JSON, MessagePack, Protobuf) is pretty-printed with syntax highlighting. (Relative-time hints like `(7 months ago)` are shown next to timestamps in real output; they're omitted here since they change over time.)
 
 ```mermaid
 graph LR
   input(["691E01B8"])
   hex["hex (92%)"]
   input -->|parse| hex
-  hex --> ipv4["105.30.1.184"]
-  hex -->|int-be| epoch["2025-11-19T17:43:20Z"]
+  hex -->|decimal| dec["1763574200"]
+  hex -->|int-be → epoch| epoch["2025-11-19T17:43:20Z"]
   hex --> base64["aR4BuA=="]
   hex --> binary["01101001..."]
 ```
@@ -132,36 +132,43 @@ forb "0 2 * * MON-FRI"
 forb "https://example.com/page?utm_source=ads&id=123"
 ```
 
-### Pipe Mode
+### Tee Mode (per-line annotations)
 
-Pipe logs through `forb` to automatically annotate interesting values:
+Use `--tee` (`-T`) to pass a stream through `forb` while annotating interesting values on each line — like Unix `tee`, but with inline decoding. This is the mode for logs:
 
 ```bash
-cat server.log | forb
+cat server.log | forb --tee
 ```
 
 ```
 [2024-01-15 10:30:45] User 550e8400-e29b-41d4-a716-446655440000 logged in
-                           ↳ uuid: UUID v4 (random) → hex: 550E8400E29B41D4A716446655440000
-
+                           ↳ uuid: UUID v4 (random)
 [2024-01-15 10:30:46] Received payload: 69 1E 01 B8
-                                        ↳ hex: 4 bytes → int-be: 1763574200, epoch: 2025-11-19T17:43:20Z
+                                        ↳ hex: decimal: 1763574200
 ```
 
-#### Pipe Mode Options
+It also works live on a stream:
+
+```bash
+tail -f server.log | forb --tee
+```
+
+> **Note:** Without `--tee`, bare piped multi-line input (`cat server.log | forb`) is analyzed as a *single text blob*, not line by line. forb prints a one-line hint suggesting `--tee` when it sees multi-line piped input.
+
+#### Tee Mode Options
 
 ```bash
 # Lower threshold to catch more matches (default: 0.8)
-cat logs.txt | forb -t 0.5
+cat logs.txt | forb --tee -t 0.5
 
 # Highlight matched values inline
-cat logs.txt | forb -H
+cat logs.txt | forb --tee -H
 
 # Only look for specific formats
-cat logs.txt | forb -o uuid,hex,ts
+cat logs.txt | forb --tee -o uuid,hex
 
 # JSON output for scripting
-cat logs.txt | forb -j
+cat logs.txt | forb --tee -j
 ```
 
 ### Output Options
@@ -359,11 +366,12 @@ $ forb "69 1E 01 B8"
 
 ▶ hex (92% confidence)
   4 bytes (space-separated)
-  → ipv4: 105.30.1.184
+  ≈ decimal: 1763574200
   → epoch-seconds: 2025-11-19T17:43:20+00:00
-  → binary: 01101001 00011110 00000001 10111000
-  → base64: aR4BuA==
-  … (8 more, use -l 0 to show all)
+  → apple-cocoa: 2056-11-19T17:43:20+00:00
+  ≈ base64: aR4BuA==
+  ≈ binary: 01101001 00011110 00000001 10111000
+  … (23 more, use -l 0 to show all)
 ```
 
 ### Identifying UUIDs
@@ -376,6 +384,7 @@ $ forb 550e8400-e29b-41d4-a716-446655440000
   → ipv6: 550e:8400:e29b:41d4:a716:4466:5544:0
   → hex: 550E8400E29B41D4A716446655440000
   → base64: VQ6EAOKbQdSnFkRmVUQAAA==
+  … (more, use -l 0 to show all)
 ```
 
 ### Decoding Timestamps
@@ -383,11 +392,14 @@ $ forb 550e8400-e29b-41d4-a716-446655440000
 ```bash
 $ forb 1703456789
 
+▶ epoch-seconds (87% confidence)
+  2023-12-24T22:26:29+00:00
+  ≈ relative-time: (relative to now)
+  → datetime: 2023-12-24T22:26:29+00:00
+
 ▶ decimal (85% confidence)
   Integer: 1703456789
-  → epoch-seconds: 2023-12-24T23:06:29+00:00
-  → hex: 6588C555
-  → binary: 01100101 10001000 11000101 01010101
+  → epoch-seconds: 2023-12-24T22:26:29+00:00
 ```
 
 ### Analyzing Colors
@@ -396,7 +408,9 @@ $ forb 1703456789
 $ forb '#FF5733'
 
 ▶ color-hex (95% confidence)
-  RGB: RGB(255, 87, 51) / HSL(11°, 100%, 60%)
+  RGB: RGB(255, 87, 51) / HSL(10°, 100%, 60%)
+  → color-rgb: rgb(255, 87, 51)
+  → color-hsl: hsl(10, 100%, 60%)
 ```
 
 ```bash
@@ -413,11 +427,12 @@ $ forb 'rgb(35, 50, 35)'
 ```bash
 $ forb '0xFF + 1'
 
-▶ expr (85% confidence)
+▶ expr (75% confidence)
   0xFF + 1 = 256
+  ✓ 2^8, 16²
+  → result: 256
   ≈ hex-int: 0x100
   ≈ binary-int: 0b100000000
-  ✓ power-of-2: 2^8
 ```
 
 ### Durations & Data Sizes
@@ -426,8 +441,9 @@ $ forb '0xFF + 1'
 $ forb '1h30m'
 
 ▶ duration (90% confidence)
-  1h30m = 5400 seconds (2025-12-25T08:00:00Z)
-  → datasize-iec: 5.27 KiB
+  1h30m = 5400 seconds (now + 1h30m)
+  ≈ hex-int: 0x1518
+  ≈ binary-int: 0b1010100011000
 ```
 
 ```bash
@@ -435,7 +451,8 @@ $ forb '1MiB'
 
 ▶ datasize (90% confidence)
   1MiB = 1,048,576 bytes (binary)
-  → power-of-2: 2^20
+  ✓ 2^20, 1024²
+  → datasize-iec: 1 MiB
   → datasize-si: 1.05 MB
 ```
 
@@ -529,30 +546,35 @@ Length, weight, volume, speed, pressure, energy, angle, and area with automatic 
 $ forb '5km'
 
 ▶ length (85% confidence)
-  5 km
+  5000 m
   ≈ meters-decimal: 5000 m
-  ≈ meters: 5000 m
   → feet: 16404.20 ft
   → miles: 3.11 mi
+  → inches: 196850.39 in
+  ≈ meters: 5000 m
+  … (6 more, use -l 0 to show all)
 ```
 
 ```bash
 $ forb '150lbs'
 
 ▶ weight (85% confidence)
-  150 lbs
-  → kilograms: 68.04 kg
-  → grams: 68038.86 g
+  68038.80 g
+  ≈ grams-decimal: 68038.8 g
+  → pounds: 150 lb
+  → ounces: 2400 oz
+  ≈ kilograms: 68.04 kg
 ```
 
 ```bash
 $ forb '60mph'
 
-▶ speed (90% confidence)
-  60 mph
-  → km/h: 96.56 km/h
-  → m/s: 26.82 m/s
+▶ speed (85% confidence)
+  26.82 m/s
+  ≈ m/s-decimal: 26.82 m/s
+  → mph: 60 mph
   → knots: 52.14 knots
+  ≈ km/h: 96.56 km/h
 ```
 
 ### Temperature
@@ -562,8 +584,8 @@ $ forb '30C'
 
 ▶ temperature (85% confidence)
   30°C (Celsius)
-  → fahrenheit: 86°F
-  → kelvin: 303.15 K
+  ≈ fahrenheit: 86°F
+  ≈ kelvin: 303.15 K
 ```
 
 ```bash
@@ -571,8 +593,8 @@ $ forb '72F'
 
 ▶ temperature (85% confidence)
   72°F (Fahrenheit)
-  → celsius: 22.22°C
-  → kelvin: 295.37 K
+  ≈ celsius: 22.22°C
+  ≈ kelvin: 295.37 K
 ```
 
 ### Coordinates
@@ -584,8 +606,7 @@ $ forb "59.3293, 18.0686"
 
 ▶ coords (90% confidence)
   Decimal Degrees: 59.329300, 18.068600
-  ≈ dms: 59° 19' 45.48" N, 18° 4' 6.96" E
-  ≈ ddm: 59° 19.7580' N, 18° 4.1160' E
+  ≈ dd: 59.329300, 18.068600
   → geohash: u6sce0t4h
   → plus-code: 9FFW83H9+PC
   → utm: 34V 333230 6580391
@@ -662,11 +683,11 @@ Tracking parameters (utm_*, fbclid, gclid, etc.) are automatically identified an
 ### Processing Logs
 
 ```bash
-$ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655440000' | forb -t 0.5
+$ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655440000' | forb --tee -t 0.5
 
 [INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655440000
-                    ↳ ipv4: ip: 192.168.1.100, hex: C0A80164
-                                               ↳ uuid: UUID v4 (random) → hex: 550E8400E29B41D4A716446655440000
+                    ↳ ipv4: IPv4: 192.168.1.100 (Private)
+                                          ↳ uuid: UUID v4 (random)
 ```
 
 ## How It Works
@@ -704,7 +725,7 @@ $ echo '[INFO] Request from 192.168.1.100 with ID 550e8400-e29b-41d4-a716-446655
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  4. OUTPUT: Rank by confidence, sort conversions by priority            │
-│     ▶ hex (92%) → ipv4, epoch-seconds, base64, binary...                │
+│     ▶ hex (92%) → decimal, epoch-seconds, base64, binary...             │
 │     ▶ decimal (70%) → epoch-seconds, hex-int, binary-int...             │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -894,8 +915,8 @@ Use `--show-paths` to see blockable paths for any input:
 $ forb --show-paths 691E01B8
 ▶ hex (92% confidence)
   4 bytes
-  → ipv4: 105.30.1.184 [hex:ipv4]
-  → epoch-seconds: 2025-11-19T17:43:20Z [hex:int-be:epoch-seconds]
+  ≈ decimal: 1763574200 [hex:decimal]
+  → epoch-seconds: 2025-11-19T17:43:20+00:00 [hex:int-be:epoch-seconds]
 ```
 
 ## Plugins

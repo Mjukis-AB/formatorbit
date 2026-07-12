@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   account (no sandbox), so you should only install plugins you trust.
 
 ### Changed
+- **Tee-mode annotations now surface the most useful reading.** In `--tee`
+  (pipe) mode, each line's annotation now leads with the interpretation's
+  semantic summary when it has one (e.g. a UUID annotates as `UUID v4 (random)`
+  and a ULID with its creation timestamp) instead of a low-value re-encoding
+  like `ipv6: 550e:8400:...`. Byte-ish formats whose description is just a size
+  placeholder (hex, base64) still annotate with their top-ranked conversion
+  (e.g. hex bytes → `decimal: 1763574200`).
+- **Bare multi-line piped input now hints at `--tee`.** `cat server.log | forb`
+  still analyzes the whole stream as one text blob (unchanged), but now prints a
+  one-line stderr hint suggesting `--tee` for per-line annotations. Single-line
+  pipes and machine-readable output (`-j`/`--raw`) are unaffected.
 - **Blocking rules are now category-based** - the conversion graph classifies
   every format and conversion target into a category (Encoding, Text,
   Identifier, Timestamp, Duration, DataSize, Unit, Number, ...) and expresses its
@@ -37,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   formats / paths / root paths) is unchanged.
 
 ### Fixed
+- **README examples now match real output and are CI-tested.** The front-page
+  `forb 691E01B8` example and the log/pipe example had drifted from actual
+  behavior (they showed a since-removed `hex → ipv4` reading and an
+  `ipv4`-leading order, and documented `cat log | forb` as producing per-line
+  annotations when that actually requires `--tee`). The examples were
+  regenerated against the shipped-default config, the pipe section now shows the
+  real `--tee` invocation and output, and hermetic tests in
+  `tests/readme_examples.rs` (isolated `HOME`, stable substrings only) now guard
+  the front-page and tee examples so this drift fails CI.
 - **Deduped identical JSON renderings** - JWTs (and other structured inputs)
   no longer print a `json` and a `json-formatted` conversion with byte-identical
   pretty-printed content back to back; only the single canonical rendering is
