@@ -82,6 +82,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the same integer. `forb 691E01B8` now shows the epoch timestamp
   (`2025-11-19T17:43:20`) within the default output instead of burying it.
 
+### Removed
+- **Deleted stale, misleading artifacts.** `crates/ffi/include/formatorbit.h`
+  documented a hand-written C ABI (`formatorbit_convert_all`,
+  `formatorbit_free_string`, ...) that does not exist — the FFI layer is
+  UniFFI-generated with zero `#[no_mangle]` symbols, and nothing referenced the
+  header. `docs/PROGRESS.md` was wildly out of date ("13 formats, plugins not
+  started"). `Formula/forb.rb` was pinned to v0.1.0 and unused: the release
+  workflow regenerates the Homebrew formula from scratch and pushes it to the
+  external `mjukis-ab/homebrew-tap` repo, so the in-repo `Formula/` directory
+  fed nothing.
+
+### Fixed (changelog metadata)
+- Corrected the release dates for 0.1.0, 0.2.0, and 0.3.0, which were
+  mistyped as `2024-12-*` (a year too early — the project started 2025-12-22).
+
 ### Added
 - **MAC address format with OUI vendor lookup** - parse MAC addresses and identify vendors:
   - Supports multiple notations: colon (00:1A:2B:3C:4D:5E), hyphen (00-1A-2B-3C-4D-5E), Cisco (001A.2B3C.4D5E), space-separated, and raw hex
@@ -489,7 +504,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Duplicate escape format removed (kept escape-hex/escape-unicode)
 - Conversion paths now show full chain from source format
 
-## [0.3.0] - 2024-12-22
+## [0.3.0] - 2025-12-22
 
 ### Added
 - **Protobuf wire format decoder** - decode protobuf binary without a schema, showing field numbers, wire types, and values
@@ -521,14 +536,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Reduced conversion noise in pipe mode output
 
-## [0.2.0] - 2024-12-15
+## [0.2.0] - 2025-12-15
 
 ### Added
 - Conversion priority sorting (structured data first, then semantic types, then encodings)
 - `--limit` (`-l`) flag to control number of conversions shown (default: 5)
 - Homebrew tap installation
 
-## [0.1.0] - 2024-12-10
+## [0.1.0] - 2025-12-10
 
 ### Added
 - Initial release
