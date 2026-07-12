@@ -3,7 +3,7 @@
 //! This module finds and loads Python at runtime rather than linking at compile time.
 //! This allows the binary to work without Python installed - plugins simply won't be available.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Result of attempting to discover Python.
 #[derive(Debug)]
@@ -256,7 +256,7 @@ fn get_system_python_paths() -> Vec<PathBuf> {
 }
 
 /// Find libpython in a Python prefix directory.
-fn find_libpython_in_prefix(prefix: &PathBuf) -> Option<PathBuf> {
+fn find_libpython_in_prefix(prefix: &Path) -> Option<PathBuf> {
     // Try lib subdirectory
     let lib_dir = prefix.join("lib");
     if let Some(path) = find_libpython_in_dir(&lib_dir) {
@@ -268,7 +268,7 @@ fn find_libpython_in_prefix(prefix: &PathBuf) -> Option<PathBuf> {
 }
 
 /// Find libpython shared library in a directory.
-fn find_libpython_in_dir(dir: &PathBuf) -> Option<PathBuf> {
+fn find_libpython_in_dir(dir: &Path) -> Option<PathBuf> {
     if !dir.exists() {
         return None;
     }
@@ -327,7 +327,7 @@ fn get_libpython_names() -> Vec<String> {
 }
 
 /// Try to detect Python version from a path.
-fn detect_version_from_path(path: &PathBuf) -> Option<String> {
+fn detect_version_from_path(path: &Path) -> Option<String> {
     let path_str = path.to_string_lossy();
 
     // Look for version patterns like "3.12", "3.11", etc.
@@ -341,7 +341,7 @@ fn detect_version_from_path(path: &PathBuf) -> Option<String> {
 }
 
 /// Try to detect Python version from library path.
-fn detect_version_from_lib_path(lib_path: &PathBuf) -> Option<String> {
+fn detect_version_from_lib_path(lib_path: &Path) -> Option<String> {
     let filename = lib_path.file_name()?.to_string_lossy();
 
     // Extract version from filename like "libpython3.12.dylib"

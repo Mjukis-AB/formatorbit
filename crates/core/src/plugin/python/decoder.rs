@@ -21,7 +21,11 @@ pub struct DecoderRegistration {
 pub struct PyDecoderPlugin {
     id: String,
     name: String,
+    /// Category and examples are captured from the `@forb.decoder` decorator for
+    /// metadata/UI completeness but are not consumed by the decoder trait yet.
+    #[allow(dead_code)]
     category: String,
+    #[allow(dead_code)]
     examples: Vec<String>,
     aliases: Vec<String>,
     meta: PluginMeta,

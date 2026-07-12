@@ -123,7 +123,7 @@ impl VisualizerPlugin for PyVisualizerPlugin {
 /// Shared by the visualizer plugin path and by decoder/trait interpretations
 /// (via `Interpretation.rich_display`), so it is `pub(super)` for the whole
 /// `python` module rather than private to this file.
-pub(super) fn py_to_rich_display(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<RichDisplay> {
+pub(super) fn py_to_rich_display(_py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<RichDisplay> {
     // Check if it's our RichDisplay class
     let type_name: String = obj.getattr("_type")?.extract()?;
     let data = obj.getattr("_data")?;
@@ -154,7 +154,7 @@ pub(super) fn py_to_rich_display(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyRe
         }
         "tree" => {
             let root_obj = data.get_item("root")?;
-            let root = py_to_tree_node(py, &root_obj)?;
+            let root = py_to_tree_node(&root_obj)?;
             Ok(RichDisplay::Tree { root })
         }
         "color" => {
@@ -215,7 +215,7 @@ pub(super) fn py_to_rich_display(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyRe
 }
 
 /// Convert a Python TreeNode to Rust.
-fn py_to_tree_node(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<TreeNode> {
+fn py_to_tree_node(obj: &Bound<'_, PyAny>) -> PyResult<TreeNode> {
     let label: String = obj.getattr("label")?.extract()?;
     let value_obj = obj.getattr("value")?;
     let value: Option<String> = if value_obj.is_none() {
@@ -227,7 +227,7 @@ fn py_to_tree_node(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<TreeNode>
     let children_list = children_obj.downcast::<PyList>()?;
     let mut children = Vec::new();
     for child in children_list.iter() {
-        children.push(py_to_tree_node(py, &child)?);
+        children.push(py_to_tree_node(&child)?);
     }
     Ok(TreeNode {
         label,

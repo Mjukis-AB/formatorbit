@@ -176,7 +176,7 @@ class TreeNode:
 }
 
 /// Convert a Python object to CoreValue.
-pub fn py_to_core_value(py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<CoreValue> {
+pub fn py_to_core_value(_py: Python<'_>, obj: &Bound<'_, PyAny>) -> PyResult<CoreValue> {
     // Check if it's our CoreValue class
     if let Ok(type_name) = obj.getattr("_type") {
         let type_str: String = type_name.extract()?;

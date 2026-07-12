@@ -86,13 +86,13 @@ impl ExprFuncPlugin {
                         .iter()
                         .map(|v| evalexpr_to_py(py, v))
                         .collect::<Result<_, _>>()
-                        .map_err(|e| evalexpr::EvalexprError::CustomMessage(e))?;
+                        .map_err(evalexpr::EvalexprError::CustomMessage)?;
                     PyTuple::new(py, items)
                         .map_err(|e| evalexpr::EvalexprError::CustomMessage(e.to_string()))?
                 }
                 single => {
                     let item = evalexpr_to_py(py, single)
-                        .map_err(|e| evalexpr::EvalexprError::CustomMessage(e))?;
+                        .map_err(evalexpr::EvalexprError::CustomMessage)?;
                     PyTuple::new(py, [item])
                         .map_err(|e| evalexpr::EvalexprError::CustomMessage(e.to_string()))?
                 }

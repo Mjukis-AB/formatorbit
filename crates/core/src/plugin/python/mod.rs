@@ -27,17 +27,17 @@ use std::sync::OnceLock;
 // This is used by decorators to register plugins as they're defined.
 std::thread_local! {
     static PENDING_DECODERS: std::cell::RefCell<Vec<decoder::DecoderRegistration>> =
-        std::cell::RefCell::new(Vec::new());
+        const { std::cell::RefCell::new(Vec::new()) };
     static PENDING_EXPR_VARS: std::cell::RefCell<Vec<expr::ExprVarRegistration>> =
-        std::cell::RefCell::new(Vec::new());
+        const { std::cell::RefCell::new(Vec::new()) };
     static PENDING_EXPR_FUNCS: std::cell::RefCell<Vec<expr::ExprFuncRegistration>> =
-        std::cell::RefCell::new(Vec::new());
+        const { std::cell::RefCell::new(Vec::new()) };
     static PENDING_TRAITS: std::cell::RefCell<Vec<trait_plugin::TraitRegistration>> =
-        std::cell::RefCell::new(Vec::new());
+        const { std::cell::RefCell::new(Vec::new()) };
     static PENDING_VISUALIZERS: std::cell::RefCell<Vec<visualizer::VisualizerRegistration>> =
-        std::cell::RefCell::new(Vec::new());
+        const { std::cell::RefCell::new(Vec::new()) };
     static PENDING_CURRENCIES: std::cell::RefCell<Vec<currency::CurrencyRegistration>> =
-        std::cell::RefCell::new(Vec::new());
+        const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// Global Python runtime (initialized once).
