@@ -81,6 +81,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   traits), with timestamps ranked ahead of speculative size/duration readings of
   the same integer. `forb 691E01B8` now shows the epoch timestamp
   (`2025-11-19T17:43:20`) within the default output instead of burying it.
+- **IP addresses no longer offer colour conversions.** `forb 192.168.1.1` (and
+  IPv6) previously listed `color-hex`/`color-rgb`/`color-hsl` readings — an IP's
+  bytes rendered as a colour (`#C0A80101`), which is pure noise. IPs and colours
+  are both structural identifiers, so the Identifier→Identifier category rule
+  deliberately stays open (colour→colour-space conversions rely on it); this
+  cross-family pair is blocked via the residual root list, alongside the existing
+  MAC-address cases. `forb 192.168.1.1 -l 0` conversion count drops from 17 to
+  14; genuine colour inputs (`#FF5733`) are unaffected.
 - **Chained bitwise/shift expressions now evaluate correctly.** The expression
   parser rewrites infix bitwise/shift operators into evalexpr functions
   (`a | b` → `bitor(a, b)`), but previously split each operator only once, so

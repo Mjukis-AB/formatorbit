@@ -206,16 +206,25 @@ const RESIDUAL_BLOCKED_PATHS: &[(&str, &str)] = &[
 /// Residual root-based blocks: a target that must not be reached from a given
 /// root on *any* path, for cases a category rule would over- or under-apply.
 ///
-/// The only remaining case is cross-family identifier confusion: a MAC address
-/// is a structural identifier, so `root_blocks_identifier` doesn't cover it, yet
-/// its 6 bytes are not an IP address or a colour. (Same-family conversions like
-/// mac → its own notations stay open.)
+/// These are all cross-family identifier confusion: both the root and the target
+/// are structural identifiers (so `root_blocks_identifier` doesn't fire and the
+/// Identifier→Identifier category rule deliberately stays open for same-family
+/// space conversions like colour→colour), yet the two families are unrelated:
+/// - a MAC address's 6 bytes are not an IP address or a colour;
+/// - an IP address's 4/16 bytes are not an RGB(A) colour — `192.168.1.1` is not
+///   `#C0A80101`. Colour readings of an IP were pure noise.
 const RESIDUAL_ROOT_BLOCKED: &[(&str, &str)] = &[
     ("mac-address", "ipv4"),
     ("mac-address", "ipv6"),
     ("mac-address", "color-rgb"),
     ("mac-address", "color-hsl"),
     ("mac-address", "color-hex"),
+    ("ipv4", "color-rgb"),
+    ("ipv4", "color-hsl"),
+    ("ipv4", "color-hex"),
+    ("ipv6", "color-rgb"),
+    ("ipv6", "color-hsl"),
+    ("ipv6", "color-hex"),
 ];
 
 /// Check if a source→target conversion should be blocked (builtin rules only).
